@@ -1,0 +1,26 @@
+Options -Indexes
+
+# Allow cross-origin for API
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*"
+</IfModule>
+
+# PHP settings
+<IfModule mod_php.c>
+    php_value upload_max_filesize 20M
+    php_value post_max_size 20M
+    php_value max_execution_time 60
+    php_value allow_url_fopen On
+</IfModule>
+
+# Rewrite rules (không bắt buộc với SPA thuần PHP)
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /SheetApp/
+
+    # API routes
+    RewriteRule ^api/(.*)$ api/$1 [L]
+
+    # Storage files (sheets)
+    RewriteRule ^storage/(.*)$ storage/$1 [L]
+</IfModule>

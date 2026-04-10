@@ -1,0 +1,119 @@
+<!-- TOP TOOLBAR -->
+<header class="toolbar" id="toolbar">
+  <div class="toolbar-left">
+    <!-- PREV/NEXT NAV -->
+    <div class="nav-arrows" id="nav-arrows">
+      <button id="btn-prev-song" class="icon-btn" title="Bài trước (↑)" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <button id="btn-next-song" class="icon-btn" title="Bài tiếp theo (↓)" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+    <div class="song-info" id="song-info">
+      <h1 id="song-title" class="song-title">Chọn bài hát để bắt đầu</h1>
+      <span id="song-key" class="song-key-badge"></span>
+    </div>
+  </div>
+
+  <div class="toolbar-controls" id="toolbar-controls">
+    <!-- TRANSPOSE -->
+    <div class="control-group">
+      <label class="control-label">Transpose</label>
+      <div class="transpose-controls">
+        <button id="btn-transpose-down" class="icon-btn transpose-btn" title="Hạ 1 cung" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <span id="transpose-display" class="transpose-display">0</span>
+        <button id="btn-transpose-up" class="icon-btn transpose-btn" title="Tăng 1 cung" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+        </button>
+      </div>
+      <button id="btn-transpose-reset" class="btn btn-ghost btn-xs" disabled>Reset</button>
+    </div>
+
+    <!-- ZOOM -->
+    <div class="control-group">
+      <label class="control-label">Zoom <span id="zoom-value-label">100%</span></label>
+      <div class="zoom-slider-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="zoom-icon-sm"><circle cx="11" cy="11" r="8"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+        <input id="zoom-slider" type="range" min="50" max="250" value="100" step="5" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="zoom-icon-sm"><circle cx="11" cy="11" r="8"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+      </div>
+    </div>
+
+    <!-- PLAY AUDIO -->
+    <div class="control-group">
+      <button id="btn-play-audio" class="btn btn-ghost btn-sm" disabled title="Phát nhạc đệm (Audio)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;fill:currentColor;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        Phát
+      </button>
+      <!-- STOP AUDIO -->
+      <button id="btn-stop-audio" class="btn btn-ghost btn-sm hidden" title="Dừng phát nhạc" style="color:var(--danger)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;fill:currentColor;"><rect x="6" y="6" width="12" height="12"></rect></svg>
+        Dừng
+      </button>
+      <!-- AUDIO SPEED -->
+      <select id="audio-speed" class="form-input" style="padding: 0.2rem 0.4rem; height: 26px; font-size: 0.75rem; border-color: transparent;" disabled title="Tốc độ phát">
+        <option value="0.5">0.5x</option>
+        <option value="0.75">0.75x</option>
+        <option value="1.0" selected>1.0x</option>
+        <option value="1.25">1.25x</option>
+        <option value="1.5">1.5x</option>
+      </select>
+    </div>
+
+    <!-- AUTO SCROLL -->
+    <div class="control-group">
+      <button id="btn-auto-scroll" class="btn btn-ghost btn-sm" disabled title="Tự động cuộn bản nhạc">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+        Cuộn
+      </button>
+      <select id="scroll-speed" class="form-input" style="padding: 0.2rem 0.4rem; height: 26px; font-size: 0.75rem; border-color: transparent;" disabled title="Tốc độ cuộn">
+        <option value="1">Rùa</option>
+        <option value="2" selected>Chậm</option>
+        <option value="3">Vừa</option>
+        <option value="4">Nhanh</option>
+      </select>
+    </div>
+
+    <!-- MIXER -->
+    <div class="control-group">
+      <button id="btn-mixer" class="btn btn-ghost btn-sm" disabled title="Bật/Tắt nhạc cụ">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+        Mixer
+      </button>
+    </div>
+
+    <!-- STAGE DARK MODE -->
+    <div class="control-group">
+      <button id="btn-dark-mode" class="btn btn-ghost btn-sm" title="Bật giao diện Sân Khấu (Kéo màn hình đen)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </div>
+
+    <!-- SESSION NOTE -->
+    <div class="control-group">
+      <button id="btn-session-panel" class="btn btn-ghost btn-sm" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Nhật Ký
+      </button>
+    </div>
+
+    <!-- PRINT -->
+    <div class="control-group">
+      <button id="btn-print" class="btn btn-ghost btn-sm" disabled title="In sheet nhạc">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        In
+      </button>
+    </div>
+
+    <!-- FULLSCREEN -->
+    <div class="control-group">
+      <button id="btn-fullscreen" class="icon-btn" title="Toàn màn hình (F)" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+      </button>
+    </div>
+
+  </div>
+</header>
