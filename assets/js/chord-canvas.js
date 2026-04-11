@@ -144,9 +144,10 @@ const ChordCanvas = (() => {
     // Quản lý hiển thị Hợp âm gốc của OSMD
     const nativeChords = svg.querySelectorAll('text[font-family*="OSMDChordFont"]');
     if (_currentSet === 'default') {
-      nativeChords.forEach(c => c.style.display = '');
+      nativeChords.forEach(c => c.removeAttribute('fill'));
     } else {
-      nativeChords.forEach(c => c.style.display = 'none');
+      // Tô đỏ native chords thay vì ẩn đi! (Native rendering cho Custom Set)
+      nativeChords.forEach(c => c.setAttribute('fill', '#dc2626'));
     }
 
     const rawChordMap = _currentSet === 'default'
@@ -233,18 +234,13 @@ const ChordCanvas = (() => {
            'display:' + (_editEnabled ? 'block' : 'none')
          ]);
       } else {
-         span.textContent = chord; // Vẽ chữ đè lên
+         span.textContent = ''; // Xóa sạch Text đè DOM, chỉ giữ lưới tàng hình để click edit! Native OSMD đã lo vẽ chữ.
          ChordCanvasUI.applyAbsolute(span, cx, cy, [
            'white-space:nowrap', 'user-select:none', 
-           'opacity:1', 'color:var(--danger, #dc2626)', 'font-weight:700',
-           'font-size:' + Math.round(15 * scale) + 'px',
-           'font-family: Arial, sans-serif',
+           'opacity:0', 'width:30px', 'height:20px',
            'pointer-events:auto', 'cursor:pointer',
-           'transform: translate(-50%, -100%)' // Căn giữa
+           'display:' + (_editEnabled ? 'block' : 'none')
          ]);
-         // Hover effect cho custom
-         span.addEventListener('mouseover', () => { if (_editEnabled) span.style.color = 'var(--accent)'; });
-         span.addEventListener('mouseout', () => span.style.color = 'var(--danger, #dc2626)');
       }
       
       span.addEventListener('click', e => { 
@@ -470,10 +466,16 @@ const ChordCanvas = (() => {
   }
 
   /* ─── Exports ────────────────────────────────────────────────── */
+  function resetSet() {
+      _currentSet = 'default';
+      _customChords = {};
+      _updateSetUI();
+  }
+
   return {
     init, onOSMDRendered, reposition, loadSong, clearSong,
     setAddMode, toggleAddMode, switchSet, createSet, deleteSet,
-    showNewSetModal,
+    showNewSetModal, resetSet,
     confirmDeleteSet: async () => {
       const sel  = document.getElementById('chord-set-selector');
       const name = sel?.value;
@@ -495,7 +497,8 @@ const ChordCanvas = (() => {
       if (window.App?.reloadCurrentXML) await window.App.reloadCurrentXML();
       window.App?.showToast?.('Đã xoá toàn bộ hợp âm!', 'success');
     },
-    getCurrentSet: () => _currentSet
+    getCurrentSet: () => _currentSet,
+    getCustomChords: () => _customChords
   };
 })();
 

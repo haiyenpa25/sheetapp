@@ -111,6 +111,10 @@ const App = (() => {
     currentTranspose = 0;
     SheetAudioPlayer.stop();
     if (window.AutoScroller) window.AutoScroller.stop();
+    
+    // Xoá trắng Cache Cấu hình cũ để không bị lây nhiễm (State bug fix)
+    if (window.ChordCanvas?.resetSet) window.ChordCanvas.resetSet();
+    
     ChordCanvas.loadSong(song.id);
     AnnotationCanvas.loadSong(song.id);
     PageNav.reset();
@@ -214,6 +218,12 @@ const App = (() => {
     const disp = document.getElementById('transpose-display');
     if (disp) disp.style.opacity = '0.5';
 
+    // Scroll Lock Mechanism
+    const container = document.querySelector('.sheet-viewer-wrapper');
+    const scrollY = window.scrollY;
+    const wrapScroll = container ? container.scrollTop : 0;
+    if (container) container.style.minHeight = container.scrollHeight + 'px';
+
     try {
       let processedXml = originalXml;
       const currentSet = window.ChordCanvas?.getCurrentSet?.() || 'default';
@@ -247,6 +257,11 @@ const App = (() => {
       AppUI.showToast('Lỗi khi dịch giọng', 'error');
     } finally {
       if (disp) disp.style.opacity = '';
+      if (container) {
+          container.style.minHeight = '';
+          container.scrollTop = wrapScroll;
+      }
+      window.scrollTo(0, scrollY);
     }
   }
 
