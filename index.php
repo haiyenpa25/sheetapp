@@ -25,6 +25,8 @@ echo cssTag('components.css');
   <!-- OSMD & TONE.JS (Audio Player) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/osmd-audio-player/umd/OsmdAudioPlayer.min.js"></script>
+  <!-- TONAL.JS (Music Theory & Transposition) -->
+  <script src="https://cdn.jsdelivr.net/npm/tonal/browser/tonal.min.js"></script>
 </head>
 <body>
 

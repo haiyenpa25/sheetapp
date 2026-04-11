@@ -95,6 +95,17 @@ const AppUI = (() => {
     if (btnDown) btnDown.style.opacity = currentTranspose <= -8 ? '.35' : '';
   }
 
+  function updateCapoBadge(capoValue) {
+    const badge = document.getElementById('capo-badge');
+    if (!badge) return;
+    if (capoValue > 0) {
+      badge.textContent = `Capo ${capoValue}`;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
+
   function updateSongInfo(song, transpose) {
     const titleEl = document.getElementById('song-title');
     const keyEl   = document.getElementById('song-key');
@@ -166,5 +177,5 @@ const AppUI = (() => {
     }).join('');
   }
 
-  return { showToast, showWelcome, showLoading, hideLoading, setLoadingText, showOSMD, enableControls, updateTransposeDisplay, updateSongInfo, toggleFullscreen, updateSessionPanel };
+  return { showToast, showWelcome, showLoading, hideLoading, setLoadingText, showOSMD, enableControls, updateTransposeDisplay, updateCapoBadge, updateSongInfo, toggleFullscreen, updateSessionPanel };
 })();

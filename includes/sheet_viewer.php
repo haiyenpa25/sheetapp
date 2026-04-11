@@ -75,6 +75,8 @@
           </button>
         </div>
         <button id="btn-transpose-reset" class="btn btn-ghost btn-xs" disabled style="padding: 0.2rem 0.4rem;">Reset</button>
+        <!-- AI CAPO BADGE -->
+        <span id="capo-badge" class="hidden" style="margin-left:8px; font-size:11px; background:var(--primary); color:white; padding: 2px 6px; border-radius:12px; font-weight:600; cursor:help; white-space:nowrap;" title="Đề xuất kẹp Capo tự động để dễ bấm hợp âm nhất">Capo 0</span>
       </div>
 
     </div>

@@ -159,6 +159,19 @@ const App = (() => {
 
       AppUI.updateTransposeDisplay(currentTranspose);
       AppUI.updateSongInfo(song, currentTranspose);
+      
+      if (window.TransposeEngine) {
+          let chordList = [];
+          if (currentSet !== 'default' && window.ChordCanvas) {
+              const obj = window.ChordCanvas.getCustomChords?.();
+              if (obj) chordList = Object.values(obj);
+          }
+          if (chordList.length === 0) {
+              chordList = TransposeEngine.extractChordsFromXML(xmlToLoad);
+          }
+          AppUI.updateCapoBadge(TransposeEngine.suggestBestCapo(chordList));
+      }
+
       AppUI.showOSMD();
 
       if (window.ChordCanvas?.onOSMDRendered) window.ChordCanvas.onOSMDRendered();
@@ -215,6 +228,19 @@ const App = (() => {
 
       await OSMDRenderer.reload(xml);
       SessionTracker.setTranspose(currentTranspose);
+      
+      if (window.TransposeEngine) {
+          let chordList = [];
+          if (currentSet !== 'default' && window.ChordCanvas) {
+              const obj = window.ChordCanvas.getCustomChords?.();
+              if (obj) chordList = Object.values(obj);
+          }
+          if (chordList.length === 0) {
+              chordList = TransposeEngine.extractChordsFromXML(xml);
+          }
+          AppUI.updateCapoBadge(TransposeEngine.suggestBestCapo(chordList));
+      }
+
       if (window.ChordCanvas) window.ChordCanvas.onOSMDRendered();
       if (window.AnnotationCanvas) window.AnnotationCanvas.onOSMDRendered();
     } catch (err) {
