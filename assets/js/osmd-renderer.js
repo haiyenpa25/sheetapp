@@ -11,6 +11,7 @@ const OSMDRenderer = (() => {
   let currentTranspose = 0;
   let isLoaded = false;
   let onReadyCallback = null;
+  let _isCompactMode = false;
 
   /**
    * Khởi tạo OSMD vào một container DOM.
@@ -68,6 +69,7 @@ const OSMDRenderer = (() => {
     try {
       await osmd.load(xmlString);
       osmd.zoom = currentZoom;
+      _applyCompactMode();
       await osmd.render();
       isLoaded = true;
       if (onReadyCallback) onReadyCallback(osmd);
@@ -88,6 +90,8 @@ const OSMDRenderer = (() => {
     try {
       await osmd.load(xmlString);
       osmd.zoom = currentZoom;
+      if (window.InstrumentMixer?.restoreState) window.InstrumentMixer.restoreState();
+      _applyCompactMode();
       await osmd.render();
       if (onReadyCallback) onReadyCallback(osmd);  // Gọi lại để ChordCanvas rebuild
       return osmd;
@@ -135,13 +139,60 @@ const OSMDRenderer = (() => {
     currentXmlString = null;
   }
 
-  // Debounce utility
   function _debounce(fn, ms) {
     let t;
     return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
   }
 
-  return { init, load, reload, setZoom, getInstance, getIsLoaded, getCurrentXml, getCurrentZoom, onReady, destroy };
+  function setCompactMode(val) {
+      _isCompactMode = !!val;
+      if (isLoaded && osmd && currentXmlString) {
+          // Sử dụng reload() để OSMD ép tính toán lại layout và Rules từ đầu.
+          reload(currentXmlString);
+      }
+  }
+
+  function getCompactMode() { return _isCompactMode; }
+
+  function _applyCompactMode() {
+      if (!osmd || !osmd.sheet) return;
+      
+      // Nếu không bật Gọn nhẹ thì giữ nguyên gốc (hoặc Mixers đã xử lý)
+      if (!_isCompactMode) {
+          osmd.setOptions({
+              drawComposer: true,
+              drawCredits: true,
+              drawSubtitle: true,
+              drawLyricist: true
+          });
+          return;
+      }
+
+      // KHI ĐANG BẬT GỌN NHẸ -> Chém Khóa Fa
+      osmd.sheet.Instruments.forEach((ins, insIndex) => {
+          if (ins.Staves) {
+              if (ins.Staves.length >= 2) {
+                  for (let i = 1; i < ins.Staves.length; i++) {
+                      ins.Staves[i].Visible = false;
+                  }
+              }
+              if (insIndex > 0) {
+                  ins.Visible = false; 
+                  ins.Staves.forEach(st => st.Visible = false);
+              }
+          }
+      });
+
+      // Ẩn văn bản thừa
+      osmd.setOptions({
+          drawComposer: false,
+          drawCredits: false,
+          drawSubtitle: false,
+          drawLyricist: false
+      });
+  }
+
+  return { init, load, reload, setZoom, getInstance, getIsLoaded, getCurrentXml, getCurrentZoom, onReady, destroy, setCompactMode, getCompactMode };
 })();
 
 window.OSMDRenderer = OSMDRenderer;

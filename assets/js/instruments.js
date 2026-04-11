@@ -113,7 +113,30 @@ const InstrumentMixer = (() => {
     if (btn) btn.disabled = !enabled;
   }
 
-  return { init, toggleMixerBtn };
+  // Quản lý trạng thái Mute dải nhạc cụ (chống reset khi Dịch giọng)
+  let _savedMixerState = null;
+
+  function preserveState() {
+     const osmd = window.OSMDRenderer?.getInstance?.();
+     const insts = osmd?.sheet?.Instruments;
+     if (!insts) return;
+     _savedMixerState = insts.map(i => i.Visible);
+  }
+
+  function restoreState() {
+     if (!_savedMixerState) return;
+     const osmd = window.OSMDRenderer?.getInstance?.();
+     const insts = osmd?.sheet?.Instruments;
+     if (insts && insts.length === _savedMixerState.length) {
+         insts.forEach((ins, idx) => { ins.Visible = _savedMixerState[idx]; });
+     } else {
+         _savedMixerState = null; // Số lượng kớp, xoá state
+     }
+  }
+
+  function clearState() { _savedMixerState = null; }
+
+  return { init, toggleMixerBtn, preserveState, restoreState, clearState };
 })();
 
 window.InstrumentMixer = InstrumentMixer;

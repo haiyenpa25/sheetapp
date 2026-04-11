@@ -28,46 +28,103 @@ const AutoScroller = (() => {
 
   function play() {
     const wrapper = document.querySelector('.sheet-viewer-wrapper');
-    if (!wrapper) return;
+    const osmd = window.OSMDRenderer?.getInstance?.();
+    if (!wrapper || !osmd) return;
 
-    // Ngăn chặn xung đột nếu AudioPlayer đang mở
     if (window.SheetAudioPlayer) window.SheetAudioPlayer.stop();
 
     _isScrolling = true;
     _updateUI();
     
-    let lastTime = 0;
+    // Khởi tạo Cursor Metronome
+    osmd.cursor.show();
+    osmd.cursor.reset();
+    
+    // Tìm BPM mặc định
+    let currentBpm = 80; // mặc định nếu không parse được
+    try {
+        const iter = osmd.cursor.iterator;
+        // Thử tìm BPM trong bản nhạc
+        if (osmd.sheet && osmd.sheet.SourceMeasures[0]) {
+           const meas = osmd.sheet.SourceMeasures[0];
+           if (meas.staffLinkedExpressions && meas.staffLinkedExpressions.length > 0) {
+               const exps = meas.staffLinkedExpressions[0][0]?.TempoExpressions;
+               if (exps && exps.length > 0) currentBpm = exps[0].InstantaneousTempo.TempoInBpm;
+           }
+        }
+    } catch(e) {}
+    
+    const msPerWholeNote = (60000 / currentBpm) * 4;
+    let timeAccumulator = 0;
+    let lastTime = performance.now();
+    let currentDurationReal = _getDuration(osmd.cursor.iterator);
+
     function loop(time) {
       if (!_isScrolling) return;
-      if (!lastTime) lastTime = time;
       
-      // Calculate delta to keep speed steady despite frame drops
       const dt = time - lastTime;
       lastTime = time;
-
-      // 16.6ms is standard 60fps frame time
-      const frameRatio = dt / 16.66;
       
-      const ppf = BASE_SPEED_PPF * _speedMultiplier * frameRatio;
+      const timeToWaitMs = (currentDurationReal * msPerWholeNote) / _speedMultiplier;
       
-      const maxScroll = wrapper.scrollHeight - wrapper.clientHeight;
-      if (wrapper.scrollTop >= maxScroll - 1) {
-        // Tự dừng khi hết bài
-        stop();
-        return;
+      timeAccumulator += dt;
+      
+      if (timeAccumulator >= timeToWaitMs) {
+          timeAccumulator -= timeToWaitMs; // Trừ phần đã chờ
+          
+          osmd.cursor.next();
+          
+          if (osmd.cursor.iterator.EndReached || osmd.cursor.isHidden) {
+              stop();
+              return;
+          }
+          
+          currentDurationReal = _getDuration(osmd.cursor.iterator);
+          
+          // ==== Scroll Smart Camera ====
+          if (osmd.cursor.cursorElement) {
+              const cRect = osmd.cursor.cursorElement.getBoundingClientRect();
+              const viewRect = wrapper.getBoundingClientRect();
+              
+              // Target = 1/3 màn hình từ trên xuống
+              const targetY = viewRect.top + (viewRect.height * 0.35);
+              
+              const diffY = cRect.top - targetY;
+              // Nếu đang bị lệch hơn 30px, cuộn máy quay theo
+              if (Math.abs(diffY) > 30) {
+                  wrapper.scrollBy({ top: diffY, behavior: 'smooth' });
+              }
+          }
       }
-
-      wrapper.scrollTop += ppf;
+      
       _rAF = requestAnimationFrame(loop);
     }
     
     _rAF = requestAnimationFrame(loop);
   }
 
+  function _getDuration(iter) {
+     let minLen = 999;
+     if (iter.CurrentVoiceEntries) {
+         for (const ve of iter.CurrentVoiceEntries) {
+             if (ve.Notes && ve.Notes[0] && ve.Notes[0].Length) {
+                 const l = ve.Notes[0].Length.RealValue;
+                 if (l < minLen) minLen = l;
+             }
+         }
+     }
+     return minLen === 999 ? 0.25 : minLen;
+  }
+
   function stop() {
     _isScrolling = false;
     if (_rAF) cancelAnimationFrame(_rAF);
     _rAF = null;
+    
+    // Ẩn Cursor khi tắt
+    const osmd = window.OSMDRenderer?.getInstance?.();
+    if (osmd && osmd.cursor) osmd.cursor.hide();
+    
     _updateUI();
   }
 

@@ -69,6 +69,14 @@
       </button>
     </div>
 
+    <!-- COMPACT MODE -->
+    <div class="control-group">
+      <button id="btn-compact-mode" class="btn btn-ghost btn-sm" title="Bật/Tắt chế độ Gọn Nhẹ (Ẩn phần Nhạc đệm/Khoá Fa)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M4 14h6v6H4zm10 0h6v6h-6zM4 4h6v6H4zm10 0h6v6h-6z"></path><line x1="14" y1="14" x2="20" y2="20"></line><line x1="20" y1="14" x2="14" y2="20"></line></svg>
+        Gọn
+      </button>
+    </div>
+
     <!-- SESSION NOTE -->
     <div class="control-group">
       <button id="btn-session-panel" class="btn btn-ghost btn-sm" disabled>

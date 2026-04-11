@@ -114,6 +114,7 @@ const App = (() => {
     
     // Xoá trắng Cache Cấu hình cũ để không bị lây nhiễm (State bug fix)
     if (window.ChordCanvas?.resetSet) window.ChordCanvas.resetSet();
+    if (window.InstrumentMixer?.clearState) window.InstrumentMixer.clearState();
     
     ChordCanvas.loadSong(song.id);
     AnnotationCanvas.loadSong(song.id);
@@ -236,6 +237,8 @@ const App = (() => {
         ? TransposeEngine.transposeXML(processedXml, currentTranspose)
         : processedXml;
 
+      if (window.InstrumentMixer?.preserveState) window.InstrumentMixer.preserveState();
+
       await OSMDRenderer.reload(xml);
       SessionTracker.setTranspose(currentTranspose);
       
@@ -322,7 +325,22 @@ const App = (() => {
     document.getElementById('btn-dark-mode')?.addEventListener('click', () => {
       document.body.classList.toggle('dark-mode');
     });
-    
+
+    document.getElementById('btn-compact-mode')?.addEventListener('click', (e) => {
+      const btn = e.currentTarget;
+      const isCompact = OSMDRenderer.getCompactMode();
+      
+      OSMDRenderer.setCompactMode(!isCompact);
+      
+      if (!isCompact) {
+         btn.classList.add('active');
+         btn.style.color = 'var(--accent)';
+      } else {
+         btn.classList.remove('active');
+         btn.style.color = '';
+      }
+    });
+
     document.getElementById('btn-print')?.addEventListener('click', () => { window.print(); });
   }
 
