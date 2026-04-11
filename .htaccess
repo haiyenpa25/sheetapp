@@ -13,14 +13,3 @@ Options -Indexes
     php_value allow_url_fopen On
 </IfModule>
 
-# Rewrite rules (không bắt buộc với SPA thuần PHP)
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteBase /SheetApp/
-
-    # API routes
-    RewriteRule ^api/(.*)$ api/$1 [L]
-
-    # Storage files (sheets)
-    RewriteRule ^storage/(.*)$ storage/$1 [L]
-</IfModule>
