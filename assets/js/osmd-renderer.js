@@ -33,9 +33,9 @@ const OSMDRenderer = (() => {
       engravingRules: {
         // Làm đẹp hợp âm (Chords)
         ChordSymbolFontFamily: "OSMDChordFont, sans-serif", // Marker font để thuật toán bề mặt nhận diện
-        ChordSymbolTextHeight: 2.2,             // Kích thước chữ to hơn
+        ChordSymbolTextHeight: 2.8,             // Kích thước chữ to hơn nữa
         ChordSymbolYOffset: 1.5,                // Đẩy lên cao để không đụng nốt nhạc
-        DefaultColorChordSymbol: '#8b5cf6',     // Đổi sang màu tím nổi bật (Violet 500)
+        DefaultColorChordSymbol: '#dc2626',     // Đổi sang màu đỏ đậm nổi bật
         // Các chỉnh sửa khác để sheet đẹp hơn
         StaffLineWidth: 0.1,
         StemWidth: 0.15,
