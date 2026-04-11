@@ -297,11 +297,14 @@ const SetlistUI = (() => {
         if (!val) { addResults.classList.add('hidden'); return; }
         
         const allSongs = window.LibraryUI?.getSongs?.() || [];
-        const matches = allSongs.filter(s => 
-          normalize(s.title).includes(val) || 
-          normalize(s.id).includes(val) || 
-          (s.httlvnId && String(s.httlvnId).includes(val))
-        ).slice(0, 10);
+        const matches = allSongs.filter(s => {
+          const t = normalize(s.title || '');
+          const i = normalize(s.id || '');
+          const h = String(s.httlvnId || '');
+          const hPad = h.padStart(3, '0'); // Pad 1 -> 001
+          // Pad 01 -> 001
+          return t.includes(val) || i.includes(val) || h.includes(val) || hPad.includes(val) || val.includes(hPad);
+        }).slice(0, 10);
         
         if (matches.length === 0) {
           addResults.innerHTML = '<div class="p-2 text-muted text-xs text-center">Không tìm thấy</div>';
