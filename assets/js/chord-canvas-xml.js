@@ -125,7 +125,7 @@ const ChordCanvasXML = (() => {
     return d;
   }
 
-  function _buildHarmony(doc, text) {
+  function _buildHarmony(doc, text, isCustom = false) {
     // Regex: Root (A-G[#b]), Suffix (anything except /), optional Bass (/X)
     const m = text.match(/^([A-G][#b]?)([^/]*)(\/([A-G][#b]?))?$/i);
     if (!m) return null;
@@ -135,6 +135,8 @@ const ChordCanvasXML = (() => {
     const bass = m[4] ? (m[4].charAt(0).toUpperCase() + m[4].slice(1)) : null;
 
     const h = doc.createElement('harmony');
+    if (isCustom) h.setAttribute('color', '#dc2626');
+    
     
     const r = doc.createElement('root');
     const s = doc.createElement('root-step');
@@ -198,7 +200,7 @@ const ChordCanvasXML = (() => {
          const m = measures[mIdx];
          if (!m) continue;
          
-         const h = _buildHarmony(doc, chordStr);
+         const h = _buildHarmony(doc, chordStr, true);
          if (!h) continue;
 
          let idx = -1;
