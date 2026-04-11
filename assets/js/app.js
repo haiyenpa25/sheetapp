@@ -257,11 +257,13 @@ const App = (() => {
       AppUI.showToast('Lỗi khi dịch giọng', 'error');
     } finally {
       if (disp) disp.style.opacity = '';
-      if (container) {
-          container.style.minHeight = '';
-          container.scrollTop = wrapScroll;
-      }
-      window.scrollTo(0, scrollY);
+      setTimeout(() => {
+        if (container) {
+            container.style.minHeight = '';
+            container.scrollTop = wrapScroll;
+        }
+        window.scrollTo(0, scrollY);
+      }, 50);
     }
   }
 
