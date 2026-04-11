@@ -109,7 +109,21 @@ const AppUI = (() => {
   function updateSongInfo(song, transpose) {
     const titleEl = document.getElementById('song-title');
     const keyEl   = document.getElementById('song-key');
-    if (titleEl) titleEl.textContent = song.title;
+    if (titleEl) {
+       let prefix = '';
+       if (document.querySelector('.toolbar-left')?.classList.contains('in-setlist')) {
+           const setlist = window.SetlistUI?.getCurrentSetlist?.();
+           const idx = window.SetlistUI?.getCurrentIndex?.();
+           if (setlist && setlist.items && idx !== undefined && idx >= 0) {
+               prefix = `[Bài ${idx + 1}/${setlist.items.length}] `;
+               titleEl.style.color = 'var(--accent)';
+           }
+       } else {
+           titleEl.style.color = '';
+       }
+       titleEl.textContent = prefix + song.title;
+    }
+    
     if (keyEl) {
       if (song.defaultKey && transpose !== 0 && window.TransposeEngine) {
         const newKey = TransposeEngine.transposeChord(song.defaultKey, transpose);

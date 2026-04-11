@@ -90,10 +90,21 @@ const Auth = (() => {
     const canEdit = isAdmin();
     document.getElementById('btn-add-chord-mode')?.classList.toggle('hidden', !canEdit);
     document.getElementById('btn-new-chord-set')?.classList.toggle('hidden', !canEdit);
+    document.getElementById('btn-add-annotate-mode')?.classList.toggle('hidden', !canEdit);
     
     // Nút thùng rác được điều khiển trực tiếp bởi ChordCanvas, nhưng cũng có thể ẩn mặc định ở đây
     const delBtn = document.getElementById('btn-delete-chord-set');
     if (delBtn && !canEdit) delBtn.style.display = 'none';
+
+    // Xử lý các UI phụ thuộc Role
+    if (!canEdit) {
+      if (document.getElementById('btn-add-chord-mode')?.classList.contains('active')) {
+          window.ChordCanvas?.setAddMode(false);
+      }
+      if (document.getElementById('btn-add-annotate-mode')?.classList.contains('active')) {
+          window.AnnotationCanvas?.setAddMode(false);
+      }
+    }
 
     // Nút import chỉ admin mới có
     document.getElementById('btn-import-sheet')?.classList.toggle('hidden', !canEdit);

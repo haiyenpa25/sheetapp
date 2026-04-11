@@ -82,7 +82,9 @@ const SetlistUI = (() => {
         if (titleEl) titleEl.textContent = _currentSetlist.title;
         
         const addContainer = document.getElementById('setlist-add-container');
-        if (addContainer) addContainer.style.display = window.Auth && window.Auth.isAdmin() ? 'flex' : 'none';
+        if (addContainer) {
+          addContainer.style.display = window.Auth && window.Auth.isAdmin() ? 'flex' : 'none';
+        }
         
         renderSetlistItems();
       }
@@ -92,7 +94,7 @@ const SetlistUI = (() => {
     window.App?.hideLoading?.();
   }
 
-  function renderSetlistItems() {
+  async function renderSetlistItems() {
     const itemsEl = document.getElementById('setlist-items');
     if (!itemsEl) return;
     itemsEl.innerHTML = '';
@@ -102,18 +104,25 @@ const SetlistUI = (() => {
       return;
     }
 
+    await ensureSongsLoaded(); // Fix race condition cho danh sách đã lưu
+
     _currentSetlist.items.forEach((item, idx) => {
-      const songObj = window.LibraryUI?.getSongObj?.(item.song_id);
+      const songObj = _allSongsCache.find(s => String(s.id) === String(item.song_id)) || window.LibraryUI?.getSongObj?.(item.song_id);
       const title = songObj ? songObj.title : 'Bài hát không tồn tại';
       
       const el = document.createElement('div');
       el.className = 'song-item';
       if (_currentIndex === idx) el.classList.add('active');
       
+      const toneBadge = item.transpose_key && item.transpose_key != 0 ? `<span class="tag tag-purple">Tone: ${item.transpose_key > 0 ? '+' : ''}${item.transpose_key}</span>` : '';
+      const chordBadge = item.chord_profile !== 'default' ? `<span class="tag">🎸 ${item.chord_profile}</span>` : '';
+
       el.innerHTML = `
         <div class="song-item-info">
           <div class="song-item-title">${idx + 1}. ${title}</div>
-          <div class="song-item-meta text-xs">${item.chord_profile !== 'default' ? '🎸 ' + item.chord_profile : ''}</div>
+          <div class="song-item-meta text-xs" style="display:flex;gap:4px;margin-top:4px;">
+            ${toneBadge} ${chordBadge}
+          </div>
         </div>
         ${window.Auth && window.Auth.isAdmin() ? `<button class="icon-btn-xs text-danger btn-del-item" title="Xóa khỏi list">✕</button>` : ''}
       `;
@@ -146,7 +155,7 @@ const SetlistUI = (() => {
     fetchSetlists();
   }
 
-  function playCurrentItem() {
+  async function playCurrentItem() {
     if (!_currentSetlist || !_currentSetlist.items || _currentSetlist.items.length === 0) {
        window.App?.showToast?.('Setlist trống', 'error');
        return;
@@ -161,14 +170,17 @@ const SetlistUI = (() => {
 
     const item = _currentSetlist.items[_currentIndex];
     const songId = item.song_id;
-    const songObj = window.LibraryUI?.getSongObj?.(songId);
+    
+    await ensureSongsLoaded();
+    const songObj = _allSongsCache.find(s => String(s.id) === String(songId)) || window.LibraryUI?.getSongObj?.(songId);
     
     if (!songObj) {
       window.App?.showToast?.(`Lỗi: Không tìm thấy bài hát ID ${songId}`, 'error');
       return;
     }
 
-    window.App?.loadSongWithProfile?.(songObj, item.chord_profile);
+    // Đưa cả profile lẫn transpose_key qua bên App
+    window.App?.loadSongWithProfile?.(songObj, item.chord_profile, item.transpose_key);
     document.querySelector('.toolbar-left')?.classList.add('in-setlist');
     
     // Đánh dấu active trong detail view
@@ -206,11 +218,16 @@ const SetlistUI = (() => {
       window.App?.showToast?.('Chỉ admin mới được thêm bài hát', 'error'); return;
     }
     const songIndex = _currentSetlist && _currentSetlist.items ? _currentSetlist.items.length : 0;
+    
+    let toneStr = prompt("Nhập số cung dịch giọng cho bài này (vd: -2, 0, +1):", "0");
+    if (toneStr === null) return; // Hủy
+    let transpose_key = parseInt(toneStr) || 0;
+
     try {
       const res = await fetch('api/setlists.php?action=add_item', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ setlist_id: setId, song_id: songId, order_index: songIndex, key_override: null })
+        body: JSON.stringify({ setlist_id: setId, song_id: songId, order_index: songIndex, transpose_key: transpose_key })
       });
       const data = await res.json();
       if (data.success) {
@@ -237,7 +254,21 @@ const SetlistUI = (() => {
     }
   }
 
+  let _allSongsCache = [];
+  let _songsPromise = null;
+
+  async function ensureSongsLoaded() {
+    if (_allSongsCache.length > 0) return;
+    if (!_songsPromise) {
+      _songsPromise = fetch('api/songs.php').then(r => r.json()).then(data => {
+        _allSongsCache = Array.isArray(data) ? data : [];
+      }).catch(e => console.error('Failed to load songs for SetlistUI', e));
+    }
+    await _songsPromise;
+  }
+
   function init() {
+    ensureSongsLoaded(); // Pre-load
     // Sụ kiện chuyển Tab
     const tabs = document.querySelectorAll('.sidebar-tab');
     tabs.forEach(t => {
@@ -292,22 +323,25 @@ const SetlistUI = (() => {
 
     const addInput = document.getElementById('setlist-search-song-input');
     const addResults = document.getElementById('setlist-search-results');
-    
     if (addInput && addResults) {
-      addInput.addEventListener('input', (e) => {
-        const normalize = (str) => String(str).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
-        const val = normalize(e.target.value).trim();
-        if (!val) { addResults.classList.add('hidden'); return; }
+      const normalize = (str) => String(str).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+      
+      const renderSearchResults = (val) => {
+        const allSongs = _allSongsCache;
+        let matches = [];
         
-        const allSongs = window.LibraryUI?.getSongs?.() || [];
-        const matches = allSongs.filter(s => {
-          const t = normalize(s.title || '');
-          const i = normalize(s.id || '');
-          const h = String(s.httlvnId || '');
-          const hPad = h.padStart(3, '0'); // Pad 1 -> 001
-          // Pad 01 -> 001
-          return t.includes(val) || i.includes(val) || h.includes(val) || hPad.includes(val) || val.includes(hPad);
-        }).slice(0, 10);
+        if (!val) {
+          matches = allSongs.slice(0, 20); // Hiện 20 bài đầu tiên nếu chưa gõ
+        } else {
+          const num = parseInt(val, 10);
+          matches = allSongs.filter(s => {
+            if (!isNaN(num) && s.httlvnId === num) return true;
+            const t = normalize(s.title || '');
+            const i = normalize(s.id || '');
+            const h = String(s.httlvnId || '');
+            return t.includes(val) || i.includes(val) || h === val;
+          }).slice(0, 20);
+        }
         
         if (matches.length === 0) {
           addResults.innerHTML = '<div class="p-2 text-muted text-xs text-center">Không tìm thấy</div>';
@@ -318,7 +352,7 @@ const SetlistUI = (() => {
             const mId = m.id || '';
             const mHtt = m.httlvnId ? m.httlvnId + ' - ' : '';
             const mTitle = m.title || 'Bài hát';
-            html += '<div class="song-item" style="cursor: pointer; padding: 0.5rem; border-bottom: 1px solid var(--border);" data-id="' + mId + '"><div style="font-size: 0.85rem; font-weight: 500;">' + mHtt + mTitle + '</div></div>';
+            html += '<div class="song-item" style="cursor: pointer; padding: 0.65rem 0.75rem; border-bottom: 1px solid var(--border);" data-id="' + mId + '"><div style="font-size: 0.85rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">' + mHtt + mTitle + '</div></div>';
           });
           addResults.innerHTML = html;
           
@@ -331,6 +365,16 @@ const SetlistUI = (() => {
           });
         }
         addResults.classList.remove('hidden');
+      };
+
+      addInput.addEventListener('input', (e) => {
+        const val = normalize(e.target.value).trim();
+        renderSearchResults(val);
+      });
+      
+      addInput.addEventListener('focus', (e) => {
+        const val = normalize(e.target.value).trim();
+        renderSearchResults(val);
       });
       
       // Đóng kết quả khi click ra ngoài
@@ -353,7 +397,7 @@ const SetlistUI = (() => {
     }, true);
   }
 
-  return { init, fetchSetlists, next, prev, getCurrentSetlist: () => _currentSetlist, promptAddSong };
+  return { init, fetchSetlists, next, prev, getCurrentSetlist: () => _currentSetlist, getCurrentIndex: () => _currentIndex, promptAddSong };
 })();
 
 window.SetlistUI = SetlistUI;

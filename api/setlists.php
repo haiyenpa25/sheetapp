@@ -61,14 +61,15 @@ try {
         $setlist_id = $data['setlist_id'] ?? 0;
         $song_id = $data['song_id'] ?? '';
         $chord_profile = $data['chord_profile'] ?? 'default';
+        $transpose_key = isset($data['transpose_key']) ? intval($data['transpose_key']) : 0;
 
         // Tính order_idx
         $stmtOrder = $pdo->prepare("SELECT IFNULL(MAX(display_order), 0) + 1 FROM setlist_items WHERE setlist_id = ?");
         $stmtOrder->execute([$setlist_id]);
         $order = $stmtOrder->fetchColumn();
 
-        $stmt = $pdo->prepare("INSERT INTO setlist_items (setlist_id, song_id, display_order, chord_profile) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$setlist_id, $song_id, $order, $chord_profile]);
+        $stmt = $pdo->prepare("INSERT INTO setlist_items (setlist_id, song_id, display_order, chord_profile, transpose_key) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$setlist_id, $song_id, $order, $chord_profile, $transpose_key]);
         
         echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
     } elseif ($method === 'DELETE' && $action === 'remove_item') {

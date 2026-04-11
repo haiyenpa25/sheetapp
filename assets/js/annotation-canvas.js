@@ -249,7 +249,17 @@ const AnnotationCanvas = (() => {
     }, 80);
   }
 
-  function _closePopup() { _popup?.remove(); _popup = null; }
+  function _closePopup() { 
+      if (_popup) {
+          // Bỏ focus trước khi xoá DOM để tránh trình duyệt (đặc biệt là Safari/Chrome di động) tự nhảy trang lên top
+          const docActive = document.activeElement;
+          if (docActive && _popup.contains(docActive)) {
+              docActive.blur();
+          }
+          _popup.remove(); 
+          _popup = null; 
+      }
+  }
 
   /* ─── Save / Delete ────────────────────────────────────── */
   async function _saveAnnotation(measureIdx, noteIdx, text) {

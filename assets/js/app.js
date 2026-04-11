@@ -54,7 +54,7 @@ const App = (() => {
     _bindToolbarControls();
     _bindSessionPanel();
 
-    document.getElementById('btn-toggle-sidebar')?.addEventListener('click', () => {
+    const toggleSidebar = () => {
       const sidebar = document.getElementById('sidebar');
       if (!sidebar) return;
       if (window.innerWidth <= 768) {
@@ -81,7 +81,10 @@ const App = (() => {
         // Desktop: dùng collapsed class
         sidebar.classList.toggle('collapsed');
       }
-    });
+    };
+    
+    document.getElementById('btn-toggle-sidebar')?.addEventListener('click', toggleSidebar);
+    document.getElementById('btn-open-sidebar')?.addEventListener('click', toggleSidebar);
 
     // Khởi tạo: ẩn sidebar trên mobile
     if (window.innerWidth <= 768) {
@@ -94,14 +97,14 @@ const App = (() => {
   }
 
   /* ====================== LOAD SONG ====================== */
-  async function loadSongWithProfile(song, targetProfile) {
+  async function loadSongWithProfile(song, targetProfile, targetTranspose = null) {
     if (window.ChordCanvas?.switchSet) {
       window.ChordCanvas.switchSet(targetProfile, false); // false = đừng reload ngay lập tức
     }
-    return loadSong(song);
+    return loadSong(song, targetTranspose);
   }
 
-  async function loadSong(song) {
+  async function loadSong(song, transposeOverride = null) {
     if (!song || !song.xmlPath) {
       AppUI.showToast('Bài hát này chưa có file sheet nhạc', 'error');
       return;
@@ -135,7 +138,9 @@ const App = (() => {
       originalXml = await res.text();
 
       const settings = await SessionTracker.loadSong(song.id);
-      currentTranspose = settings.lastTranspose || 0;
+      
+      // Ưu tiên Transpose Override từ Setlist, nếu không thì lấy Session Tracker, mặc định 0
+      currentTranspose = transposeOverride !== null ? transposeOverride : (settings.lastTranspose || 0);
       currentZoom      = settings.zoomLevel     || 1.0;
 
       AppUI.setLoadingText('Đang xử lý dữ liệu hồ sơ...');
