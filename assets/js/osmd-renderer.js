@@ -44,6 +44,14 @@ const OSMDRenderer = (() => {
       ...options
     });
 
+    // Force specific rules onto the rules object as some versions ignore constructor config
+    if (osmd.rules) {
+        osmd.rules.DefaultColorChordSymbol = '#dc2626';     // Đỏ đậm nổi bật
+        osmd.rules.ChordSymbolTextHeight = 3.0;             // Tăng kích thước (Gốc: 2.2)
+        osmd.rules.ChordSymbolYOffset = 1.5;
+        osmd.rules.ChordSymbolFontFamily = "OSMDChordFont, sans-serif";
+    }
+
     // Resize observer để auto-reflow khi container thay đổi kích thước
     const resizeObserver = new ResizeObserver(_debounce(async () => {
       if (isLoaded) {
@@ -55,6 +63,17 @@ const OSMDRenderer = (() => {
     resizeObserver.observe(container);
 
     return osmd;
+  }
+
+  /**
+   * Cập nhật lại Engraving Rules trước khi render
+   */
+  function refreshRules() {
+    if (osmd && osmd.rules) {
+        osmd.rules.DefaultColorChordSymbol = '#dc2626';
+        osmd.rules.ChordSymbolTextHeight = 3.0;
+        osmd.rules.ChordSymbolYOffset = 1.5;
+    }
   }
 
   /**
@@ -70,6 +89,7 @@ const OSMDRenderer = (() => {
       await osmd.load(xmlString);
       osmd.zoom = currentZoom;
       _applyCompactMode();
+      refreshRules();
       await osmd.render();
       isLoaded = true;
       if (onReadyCallback) onReadyCallback(osmd);
@@ -92,6 +112,7 @@ const OSMDRenderer = (() => {
       osmd.zoom = currentZoom;
       if (window.InstrumentMixer?.restoreState) window.InstrumentMixer.restoreState();
       _applyCompactMode();
+      refreshRules();
       await osmd.render();
       if (onReadyCallback) onReadyCallback(osmd);  // Gọi lại để ChordCanvas rebuild
       return osmd;
