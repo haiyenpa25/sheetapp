@@ -33,6 +33,13 @@ const LibraryUI = (() => {
       songs.sort((a, b) => (a.httlvnId || 0) - (b.httlvnId || 0));
       render(songs);
       _updateCount(songs.length);
+
+      // Auto-load song from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlSongId = urlParams.get('song');
+      if (urlSongId) {
+          selectSong(urlSongId, false); // false để không pushState trùng lặp
+      }
     } catch (err) {
       console.error('[Library] Lỗi tải danh sách:', err);
       songs = [];

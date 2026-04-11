@@ -147,7 +147,11 @@ const ChordCanvas = (() => {
       nativeChords.forEach(c => c.removeAttribute('fill'));
     } else {
       // Tô đỏ native chords thay vì ẩn đi! (Native rendering cho Custom Set)
-      nativeChords.forEach(c => c.setAttribute('fill', '#dc2626'));
+      nativeChords.forEach(c => {
+          c.setAttribute('fill', '#dc2626');
+          c.style.fill = '#dc2626';
+          c.querySelectorAll('tspan').forEach(t => t.style.fill = '#dc2626');
+      });
     }
 
     const rawChordMap = _currentSet === 'default'
