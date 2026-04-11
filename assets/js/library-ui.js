@@ -108,9 +108,16 @@ const LibraryUI = (() => {
     window.App?.showToast('Đã thêm bài hát vào Setlist', 'success');
   }
 
-  function selectSong(songId) {
+  function selectSong(songId, updateUrl = true) {
     activeSongId = songId;
     _highlightActive(songId);
+    
+    if (updateUrl) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('song', songId);
+      window.history.pushState({}, '', url);
+    }
+    
     const song = songs.find(s => String(s.id) === String(songId));
     if (song && onSelectCb) onSelectCb(song);
   }

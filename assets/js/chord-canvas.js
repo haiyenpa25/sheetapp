@@ -142,16 +142,24 @@ const ChordCanvas = (() => {
     _noteEls = notes;
     
     // Quản lý hiển thị Hợp âm gốc của OSMD
-    const nativeChords = svg.querySelectorAll('text[font-family*="OSMDChordFont"]');
+    let styleBlock = document.getElementById('cc-custom-style');
+    if (!styleBlock) {
+        styleBlock = document.createElement('style');
+        styleBlock.id = 'cc-custom-style';
+        document.head.appendChild(styleBlock);
+    }
+
     if (_currentSet === 'default') {
-      nativeChords.forEach(c => c.removeAttribute('fill'));
+        styleBlock.textContent = '';
     } else {
-      // Tô đỏ native chords thay vì ẩn đi! (Native rendering cho Custom Set)
-      nativeChords.forEach(c => {
-          c.setAttribute('fill', '#dc2626');
-          c.style.fill = '#dc2626';
-          c.querySelectorAll('tspan').forEach(t => t.style.fill = '#dc2626');
-      });
+        // Áp đặt CSS siêu ưu tiên (!important) bắt buộc OSMD SVG phải chịu phép
+        styleBlock.textContent = `
+            #osmd-container svg text[font-family*="OSMDChordFont"],
+            #osmd-container svg text[font-family*="OSMDChordFont"] tspan {
+                fill: #dc2626 !important;
+                font-weight: 800 !important;
+            }
+        `;
     }
 
     const rawChordMap = _currentSet === 'default'
