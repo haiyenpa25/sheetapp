@@ -236,7 +236,7 @@ const ChordCanvas = (() => {
          span.textContent = chord; // Vẽ chữ đè lên
          ChordCanvasUI.applyAbsolute(span, cx, cy, [
            'white-space:nowrap', 'user-select:none', 
-           'opacity:1', 'color:var(--text, #111827)', 'font-weight:700',
+           'opacity:1', 'color:var(--danger, #dc2626)', 'font-weight:700',
            'font-size:' + Math.round(15 * scale) + 'px',
            'font-family: Arial, sans-serif',
            'pointer-events:auto', 'cursor:pointer',
@@ -244,7 +244,7 @@ const ChordCanvas = (() => {
          ]);
          // Hover effect cho custom
          span.addEventListener('mouseover', () => { if (_editEnabled) span.style.color = 'var(--accent)'; });
-         span.addEventListener('mouseout', () => span.style.color = 'var(--text, #111827)');
+         span.addEventListener('mouseout', () => span.style.color = 'var(--danger, #dc2626)');
       }
       
       span.addEventListener('click', e => { 
@@ -438,14 +438,23 @@ const ChordCanvas = (() => {
     } catch(e) {}
 
     selector.innerHTML = sets.map(s => `<option value="${s}" ${s === _currentSet ? 'selected' : ''}>${s === 'default' ? 'Hợp âm mặc định' : s}</option>`).join('');
-    if (deleteBtn) deleteBtn.style.display = _currentSet !== 'default' ? 'inline-flex' : 'none';
+    
+    const isAdmin = window.Auth?.isAdmin?.();
+    if (deleteBtn) deleteBtn.style.display = (_currentSet !== 'default' && isAdmin) ? 'inline-flex' : 'none';
+    const newBtn = document.getElementById('btn-new-chord-set');
+    if (newBtn) newBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+    
+    // Disable selector if user is not admin and wants to switch to add mode wait, actually guests can switch sets to VIEW them.
   }
 
   function _updateSetUI() {
     const selector = document.getElementById('chord-set-selector');
     if (selector) selector.value = _currentSet;
+    const isAdmin = window.Auth?.isAdmin?.();
     const deleteBtn = document.getElementById('btn-delete-chord-set');
-    if (deleteBtn) deleteBtn.style.display = _currentSet !== 'default' ? 'inline-flex' : 'none';
+    if (deleteBtn) deleteBtn.style.display = (_currentSet !== 'default' && isAdmin) ? 'inline-flex' : 'none';
+    const newBtn = document.getElementById('btn-new-chord-set');
+    if (newBtn) newBtn.style.display = isAdmin ? 'inline-flex' : 'none';
     const clearBtn = document.getElementById('btn-clear-all-chords');
     if (clearBtn) clearBtn.classList.toggle('hidden', _currentSet === 'default');
   }
