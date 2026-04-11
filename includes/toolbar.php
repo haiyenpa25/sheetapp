@@ -17,30 +17,7 @@
   </div>
 
   <div class="toolbar-controls" id="toolbar-controls">
-    <!-- TRANSPOSE -->
-    <div class="control-group">
-      <label class="control-label">Transpose</label>
-      <div class="transpose-controls">
-        <button id="btn-transpose-down" class="icon-btn transpose-btn" title="Hạ 1 cung" disabled>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <span id="transpose-display" class="transpose-display">0</span>
-        <button id="btn-transpose-up" class="icon-btn transpose-btn" title="Tăng 1 cung" disabled>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
-        </button>
-      </div>
-      <button id="btn-transpose-reset" class="btn btn-ghost btn-xs" disabled>Reset</button>
-    </div>
 
-    <!-- ZOOM -->
-    <div class="control-group">
-      <label class="control-label">Zoom <span id="zoom-value-label">100%</span></label>
-      <div class="zoom-slider-wrap">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="zoom-icon-sm"><circle cx="11" cy="11" r="8"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-        <input id="zoom-slider" type="range" min="50" max="250" value="100" step="5" disabled>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="zoom-icon-sm"><circle cx="11" cy="11" r="8"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-      </div>
-    </div>
 
     <!-- PLAY AUDIO -->
     <div class="control-group">

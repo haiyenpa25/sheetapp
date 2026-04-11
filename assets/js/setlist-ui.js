@@ -202,12 +202,15 @@ const SetlistUI = (() => {
   }
 
   async function addSongToSetlist(setId, songId) {
-    const profile = window.ChordCanvas?.getCurrentSet?.() || 'default';
+    if (!window.Auth || !window.Auth.isAdmin()) {
+      window.App?.showToast?.('Chỉ admin mới được thêm bài hát', 'error'); return;
+    }
+    const songIndex = _currentSetlist && _currentSetlist.items ? _currentSetlist.items.length : 0;
     try {
       const res = await fetch('api/setlists.php?action=add_item', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ setlist_id: setId, song_id: songId, chord_profile: profile })
+        body: JSON.stringify({ setlist_id: setId, song_id: songId, order_index: songIndex, key_override: null })
       });
       const data = await res.json();
       if (data.success) {
@@ -309,13 +312,15 @@ const SetlistUI = (() => {
         if (matches.length === 0) {
           addResults.innerHTML = '<div class="p-2 text-muted text-xs text-center">Không tìm thấy</div>';
         } else {
-          addResults.innerHTML = matches.map(m => `
-            <div class="song-item" style="cursor: pointer; padding: 0.4rem;" data-id="${m.id}">
-              <div class="song-item-info">
-                <div class="song-item-title" style="font-size: 0.8rem;">${m.httlvnId ? m.httlvnId + ' - ' : ''}${m.title}</div>
-              </div>
-            </div>
-          `).join('');
+          let html = '';
+          matches.forEach(m => {
+            if (!m) return;
+            const mId = m.id || '';
+            const mHtt = m.httlvnId ? m.httlvnId + ' - ' : '';
+            const mTitle = m.title || 'Bài hát';
+            html += '<div class="song-item" style="cursor: pointer; padding: 0.5rem; border-bottom: 1px solid var(--border);" data-id="' + mId + '"><div style="font-size: 0.85rem; font-weight: 500;">' + mHtt + mTitle + '</div></div>';
+          });
+          addResults.innerHTML = html;
           
           addResults.querySelectorAll('.song-item').forEach(el => {
             el.addEventListener('click', async () => {

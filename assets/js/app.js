@@ -55,8 +55,38 @@ const App = (() => {
     _bindSessionPanel();
 
     document.getElementById('btn-toggle-sidebar')?.addEventListener('click', () => {
-      document.getElementById('sidebar')?.classList.toggle('collapsed');
+      const sidebar = document.getElementById('sidebar');
+      if (!sidebar) return;
+      if (window.innerWidth <= 768) {
+        // Mobile: dùng mobile-hidden class
+        sidebar.classList.toggle('mobile-hidden');
+        // Hiện/ẩn overlay backdrop
+        let overlay = document.getElementById('sidebar-overlay');
+        if (sidebar.classList.contains('mobile-hidden')) {
+          if (overlay) overlay.style.display = 'none';
+        } else {
+          if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'sidebar-overlay';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:299;backdrop-filter:blur(2px);';
+            overlay.addEventListener('click', () => {
+              sidebar.classList.add('mobile-hidden');
+              overlay.style.display = 'none';
+            });
+            document.body.appendChild(overlay);
+          }
+          overlay.style.display = 'block';
+        }
+      } else {
+        // Desktop: dùng collapsed class
+        sidebar.classList.toggle('collapsed');
+      }
     });
+
+    // Khởi tạo: ẩn sidebar trên mobile
+    if (window.innerWidth <= 768) {
+      document.getElementById('sidebar')?.classList.add('mobile-hidden');
+    }
 
     document.getElementById('btn-fullscreen')?.addEventListener('click', AppUI.toggleFullscreen);
 
@@ -90,6 +120,8 @@ const App = (() => {
     // Auto close sidebar on mobile
     if (window.innerWidth <= 768) {
       document.getElementById('sidebar')?.classList.add('mobile-hidden');
+      const overlay = document.getElementById('sidebar-overlay');
+      if (overlay) overlay.style.display = 'none';
     }
 
     try {

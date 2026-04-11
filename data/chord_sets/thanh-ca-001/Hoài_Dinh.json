@@ -1,12 +1,7 @@
 [
     {
         "measureIdx": 0,
-        "noteIdx": 1,
-        "chord": "Dm"
-    },
-    {
-        "measureIdx": 3,
-        "noteIdx": 1,
-        "chord": "G7"
+        "noteIdx": 2,
+        "chord": "G"
     }
 ]

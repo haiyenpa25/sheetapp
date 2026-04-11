@@ -140,6 +140,15 @@ const ChordCanvas = (() => {
     if (!notes.length) return;
 
     _noteEls = notes;
+    
+    // Quản lý hiển thị Hợp âm gốc của OSMD
+    const nativeChords = svg.querySelectorAll('text[font-family*="OSMDChordFont"]');
+    if (_currentSet === 'default') {
+      nativeChords.forEach(c => c.style.display = '');
+    } else {
+      nativeChords.forEach(c => c.style.display = 'none');
+    }
+
     const rawChordMap = _currentSet === 'default'
       ? ChordCanvasXML.readXmlChords()
       : _applyTranspose(_customChords);
@@ -209,19 +218,41 @@ const ChordCanvas = (() => {
 
     const scale = ChordCanvasUI.getScale();
     if (chord) {
-      if (!_editEnabled) return; // HTML Hitbox chỉ hiển thị khi Edit = true
+      if (!_editEnabled && _currentSet === 'default') return; // HTML Hitbox chỉ hiển thị khi Edit = true (default)
+      // Custom set thì lúc nào cũng phải hiển thị (vì textContent > 0)
       
       const span = document.createElement('span');
       span.className = DOT_CLASS + ' cc-chord-text';
-      span.textContent = ''; // Lõi OSMD đã lo vẽ hợp âm gốc, ta chỉ cần tạo Hitbox tàng hình!
       
-      ChordCanvasUI.applyAbsolute(span, cx, cy, [
-        'white-space:nowrap', 'user-select:none', 
-        'opacity:0', 'width:30px', 'height:20px',
-        'pointer-events:auto', 'cursor:pointer'
-      ]);
+      if (_currentSet === 'default') {
+         span.textContent = ''; // Lõi OSMD đã vẽ, chỉ cần Hitbox tàng hình
+         ChordCanvasUI.applyAbsolute(span, cx, cy, [
+           'white-space:nowrap', 'user-select:none', 
+           'opacity:0', 'width:30px', 'height:20px',
+           'pointer-events:auto', 'cursor:pointer',
+           'display:' + (_editEnabled ? 'block' : 'none')
+         ]);
+      } else {
+         span.textContent = chord; // Vẽ chữ đè lên
+         ChordCanvasUI.applyAbsolute(span, cx, cy, [
+           'white-space:nowrap', 'user-select:none', 
+           'opacity:1', 'color:var(--text, #111827)', 'font-weight:700',
+           'font-size:' + Math.round(15 * scale) + 'px',
+           'font-family: Arial, sans-serif',
+           'pointer-events:auto', 'cursor:pointer',
+           'transform: translate(-50%, -100%)' // Căn giữa
+         ]);
+         // Hover effect cho custom
+         span.addEventListener('mouseover', () => { if (_editEnabled) span.style.color = 'var(--accent)'; });
+         span.addEventListener('mouseout', () => span.style.color = 'var(--text, #111827)');
+      }
       
-      span.addEventListener('click', e => { e.stopPropagation(); _showPopup(span, measureIdx, noteIdx, chord); });
+      span.addEventListener('click', e => { 
+        if (!_editEnabled) return;
+        e.stopPropagation(); 
+        _showPopup(span, measureIdx, noteIdx, chord); 
+      });
+      
       container.appendChild(span);
     } else {
       const dotSize = ChordCanvasUI.getDotSize(scale);

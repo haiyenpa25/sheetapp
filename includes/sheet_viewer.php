@@ -61,8 +61,33 @@
       <button id="btn-page-next" class="icon-btn" title="Trang tiếp (PageDown)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
+
+      <!-- TRANSPOSE -->
+      <div class="control-group" style="margin-left: 1rem; flex-direction: row; align-items: center;">
+        <label class="control-label" style="display: none;">Transpose</label>
+        <div class="transpose-controls" style="background: var(--bg-overlay); border-radius: var(--radius-sm); border: 1px solid var(--border);">
+          <button id="btn-transpose-down" class="icon-btn transpose-btn" title="Hạ 1 cung" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <span id="transpose-display" class="transpose-display">0</span>
+          <button id="btn-transpose-up" class="icon-btn transpose-btn" title="Tăng 1 cung" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+          </button>
+        </div>
+        <button id="btn-transpose-reset" class="btn btn-ghost btn-xs" disabled style="padding: 0.2rem 0.4rem;">Reset</button>
+      </div>
+
     </div>
     <div class="page-bar-right">
+      <!-- ZOOM -->
+      <div class="control-group" style="flex-direction: row; align-items: center; margin-right: 1rem;">
+        <label class="control-label" style="margin-bottom: 0; margin-right: 0.5rem; display: none;">Zoom <span id="zoom-value-label">100%</span></label>
+        <div class="zoom-slider-wrap" style="background: var(--bg-overlay); padding: 0.2rem 0.5rem; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="zoom-icon-sm"><circle cx="11" cy="11" r="8"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          <input id="zoom-slider" type="range" min="50" max="250" value="100" step="5" disabled style="width: 80px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="zoom-icon-sm"><circle cx="11" cy="11" r="8"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+        </div>
+      </div>
 
       <!-- ── Chord Set Selector ── -->
       <div class="chord-set-bar" id="chord-set-bar">
