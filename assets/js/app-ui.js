@@ -46,6 +46,10 @@ const AppUI = (() => {
     }
   }
 
+  function hideLoading() {
+    document.getElementById('loading-screen')?.classList.add('hidden');
+  }
+
   function setLoadingText(text) {
     const el = document.getElementById('loading-text');
     if (el) el.textContent = text;
@@ -162,5 +166,5 @@ const AppUI = (() => {
     }).join('');
   }
 
-  return { showToast, showWelcome, showLoading, setLoadingText, showOSMD, enableControls, updateTransposeDisplay, updateSongInfo, toggleFullscreen, updateSessionPanel };
+  return { showToast, showWelcome, showLoading, hideLoading, setLoadingText, showOSMD, enableControls, updateTransposeDisplay, updateSongInfo, toggleFullscreen, updateSessionPanel };
 })();

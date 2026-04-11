@@ -108,6 +108,14 @@
       </button>
     </div>
 
+    <!-- AUTH / LOGIN -->
+    <div class="control-group">
+      <button id="btn-auth" class="btn btn-ghost btn-sm" title="Đăng nhập / Phân quyền">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        <span id="auth-username" style="margin-left: 4px; font-weight: 600;">Khách</span>
+      </button>
+    </div>
+
     <!-- FULLSCREEN -->
     <div class="control-group">
       <button id="btn-fullscreen" class="icon-btn" title="Toàn màn hình (F)" disabled>

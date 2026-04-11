@@ -36,12 +36,11 @@ const SheetAudioPlayer = (() => {
     if (!_osmd) return;
     
     try {
-      // Khởi tạo player ngay khi user click Play (User gesture) để thỏa điều kiện AudioContext
       if (!_player) {
          await window.Tone?.start?.();
          _player = new OsmdAudioPlayer();
       }
-      window.App?.showLoading?.('Đang nạp dữ liệu âm thanh...');
+      window.App?.showToast?.('🎵 Đang nạp hệ thống âm thanh, vui lòng chờ...', 'info');
       
       // Load current score
       await _player.loadScore(_osmd);
@@ -49,13 +48,11 @@ const SheetAudioPlayer = (() => {
       // Auto-scroll logic
       _player.on("iteration", notes => {
         if (!notes || notes.length === 0) return;
-        // Lấy toạ độ con trỏ (cursor) trên màn hình (OSMD quản lý cursor.cursorElement)
         if (_osmd.cursor && _osmd.cursor.cursorElement) {
           const cRect = _osmd.cursor.cursorElement.getBoundingClientRect();
           const viewRect = document.querySelector('.sheet-viewer-wrapper').getBoundingClientRect();
           const wrapper = document.querySelector('.sheet-viewer-wrapper');
           
-          // Nếu con trỏ sắp chạy ra khỏi khung nhìn, cuộn xuống
           if (cRect.bottom > viewRect.bottom - 50) {
             wrapper.scrollBy({ top: cRect.height * 2, behavior: 'smooth' });
           } else if (cRect.top < viewRect.top) {
@@ -69,12 +66,10 @@ const SheetAudioPlayer = (() => {
       
       document.getElementById('btn-play-audio')?.classList.add('hidden');
       document.getElementById('btn-stop-audio')?.classList.remove('hidden');
-      window.App?.hideLoading?.();
       window.App?.showToast?.('Đang phát nhạc...', 'success');
       
     } catch(err) {
-      window.App?.hideLoading?.();
-      window.App?.showToast?.('Trình duyệt chặn phát âm thanh tự động hoặc lỗi tải thư viện Tone.js', 'error');
+      window.App?.showToast?.('Trình duyệt chặn khởi tạo Audio hoặc bản nhạc này quá phức tạp', 'error');
       console.error(err);
       stop();
     }

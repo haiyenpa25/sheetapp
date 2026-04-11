@@ -71,27 +71,29 @@ function _generateFilename(string $title, string $ext): string {
     return $filename;
 }
 
-function _saveSong(string $title, string $xmlPath, string $key, string $source): array {
-    $songs = file_exists(SONGS_FILE) ? json_decode(file_get_contents(SONGS_FILE), true) : [];
-    if (!is_array($songs)) $songs = [];
-
+function _saveSong($pdo, string $title, string $xmlPath, string $key, string $source): array {
     $id = _slugify($title) ?: 'song-' . time();
     $baseId  = $id;
     $counter = 1;
-    $existingIds = array_column($songs, 'id');
-    while (in_array($id, $existingIds)) { $id = $baseId . '-' . $counter++; }
+    while (true) {
+        $check = $pdo->prepare("SELECT COUNT(*) FROM songs WHERE id = ?");
+        $check->execute([$id]);
+        if ($check->fetchColumn() == 0) break;
+        $id = $baseId . '-' . $counter++;
+    }
 
-    $song = [
+    $httlvnId = null; // import thì mặc định ko có unless logic nâng cao
+    $stmt = $pdo->prepare("INSERT INTO songs (id, title, httlvnId, xmlPath, defaultKey) VALUES (?, ?, ?, ?, ?)");
+    $stmt->execute([$id, $title, $httlvnId, $xmlPath, $key]);
+
+    return [
         'id'         => $id,
         'title'      => $title,
         'xmlPath'    => $xmlPath,
         'defaultKey' => $key,
         'source'     => $source,
-        'dateAdded'  => date('Y-m-d'),
+        'dateAdded'  => date('Y-m-d')
     ];
-    array_unshift($songs, $song);
-    file_put_contents(SONGS_FILE, json_encode($songs, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-    return $song;
 }
 
 function _slugify(string $text): string {

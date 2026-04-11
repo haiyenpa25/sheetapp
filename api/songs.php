@@ -1,12 +1,13 @@
 <?php
 /**
  * api/songs.php
- * CRUD API cho thư viện bài hát.
+ * CRUD API cho thư viện bài hát (Chạy bằng SQLite `songs`)
  * GET    → List all songs
  * POST   → Add new song
  * PUT    → Update song
  * DELETE → Delete song
  */
+session_start();
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
@@ -14,116 +15,128 @@ header('Access-Control-Allow-Headers: Content-Type');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
-define('SONGS_FILE',    __DIR__ . '/../storage/data/songs.json');
+require_once __DIR__ . '/db.php';
+
 define('SESSIONS_DIR',  __DIR__ . '/../storage/data/sessions/');
 define('SHEETS_DIR',    __DIR__ . '/../storage/Thanh ca/');
-
-// Ensure dirs exist
-foreach ([dirname(SONGS_FILE), SESSIONS_DIR, SHEETS_DIR] as $dir) {
+foreach ([SESSIONS_DIR, SHEETS_DIR] as $dir) {
     if (!is_dir($dir)) mkdir($dir, 0775, true);
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
+$isAdmin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 
-switch ($method) {
-    case 'GET':
-        echo json_encode(_readSongs(), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        break;
+try {
+    switch ($method) {
+        case 'GET':
+            $stmt = $pdo->query("SELECT id, title, httlvnId, xmlPath, defaultKey FROM songs ORDER BY httlvnId ASC, title ASC");
+            $songs = $stmt->fetchAll();
+            echo json_encode($songs, JSON_UNESCAPED_UNICODE);
+            break;
 
-    case 'POST':
-        $body = json_decode(file_get_contents('php://input'), true) ?? [];
-        $song = _addSong($body);
-        echo json_encode($song, JSON_UNESCAPED_UNICODE);
-        break;
+        case 'POST':
+            if (!$isAdmin) { http_response_code(403); echo json_encode(['error' => 'Chỉ Admin mới có quyền thêm bài hát']); exit; }
+            $body = json_decode(file_get_contents('php://input'), true) ?? [];
+            echo json_encode(_addSong($pdo, $body), JSON_UNESCAPED_UNICODE);
+            break;
 
-    case 'PUT':
-        $id   = $_GET['id'] ?? null;
-        $body = json_decode(file_get_contents('php://input'), true) ?? [];
-        $song = _updateSong($id, $body);
-        echo json_encode($song, JSON_UNESCAPED_UNICODE);
-        break;
+        case 'PUT':
+            if (!$isAdmin) { http_response_code(403); echo json_encode(['error' => 'Chỉ Admin mới có quyền sửa']); exit; }
+            $id = $_GET['id'] ?? null;
+            $body = json_decode(file_get_contents('php://input'), true) ?? [];
+            echo json_encode(_updateSong($pdo, $id, $body), JSON_UNESCAPED_UNICODE);
+            break;
 
-    case 'DELETE':
-        $id = $_GET['id'] ?? null;
-        echo json_encode(_deleteSong($id), JSON_UNESCAPED_UNICODE);
-        break;
+        case 'DELETE':
+            if (!$isAdmin) { http_response_code(403); echo json_encode(['error' => 'Chỉ Admin mới có quyền xóa']); exit; }
+            $id = $_GET['id'] ?? null;
+            echo json_encode(_deleteSong($pdo, $id), JSON_UNESCAPED_UNICODE);
+            break;
 
-    default:
-        http_response_code(405);
-        echo json_encode(['error' => 'Method not allowed']);
+        default:
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+    }
+} catch (PDOException $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Lỗi Database: ' . $e->getMessage()]);
 }
 
 // ---- FUNCTIONS ----
 
-function _readSongs(): array {
-    if (!file_exists(SONGS_FILE)) return [];
-    $data = json_decode(file_get_contents(SONGS_FILE), true);
-    return is_array($data) ? $data : [];
-}
-
-function _writeSongs(array $songs): void {
-    file_put_contents(SONGS_FILE, json_encode(array_values($songs), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-}
-
-function _addSong(array $data): array {
-    $songs = _readSongs();
-
-    // Generate ID từ title
+function _addSong(PDO $pdo, array $data): array {
     $id = _slugify($data['title'] ?? 'bai-hat-' . time());
-    // Đảm bảo ID unique
+    
+    // Check trùng ID
     $baseId = $id;
     $counter = 1;
-    $existingIds = array_column($songs, 'id');
-    while (in_array($id, $existingIds)) {
+    while (true) {
+        $check = $pdo->prepare("SELECT COUNT(*) FROM songs WHERE id = ?");
+        $check->execute([$id]);
+        if ($check->fetchColumn() == 0) break;
         $id = $baseId . '-' . $counter++;
     }
 
-    $song = [
-        'id'         => $id,
-        'title'      => $data['title']      ?? 'Bài hát mới',
-        'xmlPath'    => $data['xmlPath']     ?? '',
-        'defaultKey' => $data['defaultKey'] ?? '',
-        'source'     => $data['source']     ?? '',
-        'dateAdded'  => date('Y-m-d'),
+    $title = $data['title'] ?? 'Bài hát mới';
+    $xmlPath = $data['xmlPath'] ?? '';
+    $defaultKey = $data['defaultKey'] ?? '';
+    $httlvnId = isset($data['httlvnId']) && $data['httlvnId'] !== '' ? intval($data['httlvnId']) : null;
+
+    $stmt = $pdo->prepare("INSERT INTO songs (id, title, httlvnId, xmlPath, defaultKey) VALUES (?, ?, ?, ?, ?)");
+    $stmt->execute([$id, $title, $httlvnId, $xmlPath, $defaultKey]);
+
+    return [
+        'id' => $id,
+        'title' => $title,
+        'xmlPath' => $xmlPath,
+        'defaultKey' => $defaultKey,
+        'httlvnId' => $httlvnId
     ];
-
-    array_unshift($songs, $song); // Thêm vào đầu danh sách
-    _writeSongs($songs);
-    return $song;
 }
 
-function _updateSong(?string $id, array $data): array {
+function _updateSong(PDO $pdo, ?string $id, array $data): array {
     if (!$id) { http_response_code(400); return ['error' => 'Missing id']; }
 
-    $songs = _readSongs();
-    foreach ($songs as &$song) {
-        if ($song['id'] === $id) {
-            $song = array_merge($song, array_intersect_key($data, array_flip(['title','defaultKey','xmlPath'])));
-            _writeSongs($songs);
-            return $song;
-        }
+    $fields = [];
+    $params = [];
+    if (isset($data['title'])) { $fields[] = 'title = ?'; $params[] = $data['title']; }
+    if (isset($data['defaultKey'])) { $fields[] = 'defaultKey = ?'; $params[] = $data['defaultKey']; }
+    if (isset($data['xmlPath'])) { $fields[] = 'xmlPath = ?'; $params[] = $data['xmlPath']; }
+
+    if (empty($fields)) {
+        return ['error' => 'No data to update'];
     }
-    http_response_code(404);
-    return ['error' => 'Song not found'];
+
+    $params[] = $id;
+    $sql = "UPDATE songs SET " . implode(', ', $fields) . " WHERE id = ?";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    if ($stmt->rowCount() === 0) {
+        http_response_code(404); return ['error' => 'Song not found'];
+    }
+
+    $get = $pdo->prepare("SELECT * FROM songs WHERE id = ?");
+    $get->execute([$id]);
+    return $get->fetch() ?: [];
 }
 
-function _deleteSong(?string $id): array {
+function _deleteSong(PDO $pdo, ?string $id): array {
     if (!$id) { http_response_code(400); return ['error' => 'Missing id']; }
 
-    $songs = _readSongs();
-    $found = null;
-    $songs = array_filter($songs, function($s) use ($id, &$found) {
-        if ($s['id'] === $id) { $found = $s; return false; }
-        return true;
-    });
+    $get = $pdo->prepare("SELECT xmlPath FROM songs WHERE id = ?");
+    $get->execute([$id]);
+    $song = $get->fetch();
 
-    if (!$found) { http_response_code(404); return ['error' => 'Song not found']; }
+    if (!$song) { http_response_code(404); return ['error' => 'Song not found']; }
 
-    _writeSongs($songs);
+    // Xóa khỏi Database (Bảng setlist_items cũng sẽ bị xóa nếu có FOREIGN KEY CASCADE)
+    $stmt = $pdo->prepare("DELETE FROM songs WHERE id = ?");
+    $stmt->execute([$id]);
 
-    // Xoá file XML nếu trong storage của ta
-    if (!empty($found['xmlPath'])) {
-        $xmlFile = __DIR__ . '/../' . $found['xmlPath'];
+    // Xoá file XML vật lý
+    if (!empty($song['xmlPath'])) {
+        $xmlFile = __DIR__ . '/../' . $song['xmlPath'];
         if (file_exists($xmlFile)) @unlink($xmlFile);
     }
 

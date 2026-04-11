@@ -58,7 +58,7 @@ const LibraryUI = (() => {
 
     el.querySelectorAll('.song-item').forEach(item => {
       item.addEventListener('click', e => {
-        if (e.target.closest('.song-delete-btn')) return;
+        if (e.target.closest('.song-delete-btn') || e.target.closest('.song-add-setlist-btn')) return;
         selectSong(item.dataset.id);
       });
       item.querySelector('.song-delete-btn')?.addEventListener('click', e => {
@@ -67,21 +67,50 @@ const LibraryUI = (() => {
         const name = songs.find(s => s.id === id)?.title || 'bài này';
         if (confirm(`Xoá "${name}" khỏi thư viện?`)) deleteSong(id);
       });
+      item.querySelector('.song-add-setlist-btn')?.addEventListener('click', e => {
+        e.stopPropagation();
+        const id = item.dataset.id;
+        _promptAddToSetlist(id);
+      });
     });
 
     if (activeSongId) _highlightActive(activeSongId);
+    
+    // Toggle admin buttons
+    if (window.Auth && window.Auth.isAdmin()) {
+      el.querySelectorAll('.song-add-setlist-btn').forEach(b => b.classList.remove('hidden'));
+    }
+  }
+
+  async function _promptAddToSetlist(songId) {
+    const res = await fetch('api/setlists.php');
+    const data = await res.json();
+    if (!data.success || data.data.length === 0) {
+      window.App?.showToast('Chưa có Setlist nào được tạo', 'error');
+      return;
+    }
+    const sls = data.data.map(sl => `${sl.id}: ${sl.title}`).join('\\n');
+    const setId = prompt(`Nhập ID của Setlist muốn thêm vào:\\n${sls}`);
+    if (!setId) return;
+    
+    await fetch('api/setlists.php?action=add_item', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ setlist_id: parseInt(setId), song_id: songId, chord_profile: 'default' })
+    });
+    window.App?.showToast('Đã thêm bài hát vào Setlist', 'success');
   }
 
   function selectSong(songId) {
     activeSongId = songId;
     _highlightActive(songId);
-    const song = songs.find(s => s.id === songId);
+    const song = songs.find(s => String(s.id) === String(songId));
     if (song && onSelectCb) onSelectCb(song);
   }
 
   function addSong(song) {
     // Tránh trùng
-    if (!songs.find(s => s.id === song.id)) {
+    if (!songs.find(s => String(s.id) === String(song.id))) {
       songs.push(song);
       songs.sort((a, b) => (a.httlvnId || 0) - (b.httlvnId || 0));
     }
@@ -149,6 +178,7 @@ const LibraryUI = (() => {
           <div class="song-item-meta">${keyBadge}</div>
         </div>
         <div class="song-item-actions">
+          <button class="icon-btn-xs song-add-setlist-btn hidden" title="Thêm vào Setlist">✚</button>
           <button class="icon-btn-xs song-delete-btn" title="Xoá bài hát">🗑</button>
         </div>
       </div>`;
@@ -234,5 +264,5 @@ const LibraryUI = (() => {
               .replace(/đ/g, 'd').replace(/Đ/g, 'D');
   }
 
-  return { init, loadSongs, render, selectSong, addSong, deleteSong, onSelect, onDelete, getSongs, getActiveSong };
+  return { init, loadSongs, render, selectSong, addSong, deleteSong, onSelect, onDelete, getSongs, getActiveSong, getSongObj: (id) => songs.find(s => String(s.id) === String(id)) };
 })();

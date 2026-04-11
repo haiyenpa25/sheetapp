@@ -46,7 +46,11 @@ const Importer = (() => {
       const f = e.dataTransfer.files[0];
       if (f) _setSelectedFile(f);
     });
-    dropZone?.addEventListener('click', () => fileInput?.click());
+    dropZone?.addEventListener('click', e => {
+      if (e.target.tagName !== 'LABEL' && e.target.tagName !== 'INPUT') {
+        fileInput?.click();
+      }
+    });
     fileInput?.addEventListener('change', () => {
       if (fileInput.files[0]) _setSelectedFile(fileInput.files[0]);
     });

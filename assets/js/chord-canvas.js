@@ -415,6 +415,8 @@ const ChordCanvas = (() => {
     if (selector) selector.value = _currentSet;
     const deleteBtn = document.getElementById('btn-delete-chord-set');
     if (deleteBtn) deleteBtn.style.display = _currentSet !== 'default' ? 'inline-flex' : 'none';
+    const clearBtn = document.getElementById('btn-clear-all-chords');
+    if (clearBtn) clearBtn.classList.toggle('hidden', _currentSet === 'default');
   }
 
   function _applyTranspose(chordMap) {
@@ -442,7 +444,18 @@ const ChordCanvas = (() => {
     },
     refreshSetDropdown: _refreshSetDropdown,
     openNextPopup,
-    saveChordWithoutReload: (m, n, c) => _saveChord(m, n, c, false)
+    saveChordWithoutReload: (m, n, c) => _saveChord(m, n, c, false),
+    clearAllChords: async () => {
+      if (_currentSet === 'default') {
+        window.App?.showToast?.('Không thể xoá toàn bộ ở cấu hình Mặc định!', 'error');
+        return;
+      }
+      _customChords = {};
+      await _saveCustomSet();
+      if (window.App?.reloadCurrentXML) await window.App.reloadCurrentXML();
+      window.App?.showToast?.('Đã xoá toàn bộ hợp âm!', 'success');
+    },
+    getCurrentSet: () => _currentSet
   };
 })();
 

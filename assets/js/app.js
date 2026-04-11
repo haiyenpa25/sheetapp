@@ -29,7 +29,9 @@ const App = (() => {
     SheetAudioPlayer.init();
     AutoScroller.init();
     PageNav.init();
+    if (window.Auth) Auth.init();
     LibraryUI.init();
+    if (window.SetlistUI) SetlistUI.init();
     Importer.init();
 
     LibraryUI.onSelect(song => loadSong(song));
@@ -62,6 +64,13 @@ const App = (() => {
   }
 
   /* ====================== LOAD SONG ====================== */
+  async function loadSongWithProfile(song, targetProfile) {
+    if (window.ChordCanvas?.switchSet) {
+      window.ChordCanvas.switchSet(targetProfile, false); // false = đừng reload ngay lập tức
+    }
+    return loadSong(song);
+  }
+
   async function loadSong(song) {
     if (!song || !song.xmlPath) {
       AppUI.showToast('Bài hát này chưa có file sheet nhạc', 'error');
@@ -316,13 +325,15 @@ const App = (() => {
   document.addEventListener('DOMContentLoaded', init);
 
   return { 
-    loadSong, transposeBy, resetTranspose, setZoom, navigateNext, navigatePrev,
+    loadSong, loadSongWithProfile, transposeBy, resetTranspose, setZoom, navigateNext, navigatePrev,
     getCurrentTranspose: () => currentTranspose,
     getCurrentSongId:    () => currentSong?.id ?? null,
     getCurrentZoom:      () => currentZoom,
     saveModifiedXML,
     getOriginalXml: () => originalXml,
     showToast: (m,t) => AppUI.showToast(m,t), // alias cho các module khác
+    showLoading: (t) => AppUI.showLoading(t),
+    hideLoading: () => AppUI.hideLoading(),
     reloadCurrentXML: () => _commitTranspose()
   };
 })();

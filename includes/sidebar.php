@@ -11,6 +11,12 @@
     </button>
   </div>
 
+  <!-- SIDEBAR TABS -->
+  <div class="sidebar-tabs" id="sidebar-tabs" style="display:flex; border-bottom:1px solid var(--border);">
+    <button class="sidebar-tab active" data-tab="library" style="flex:1; padding:.5rem; border:none; background:none; font-weight:600; cursor:pointer; color:var(--accent);">Kho Nhạc</button>
+    <button class="sidebar-tab" data-tab="setlist" style="flex:1; padding:.5rem; border:none; background:none; font-weight:600; cursor:pointer; color:var(--text-secondary);">Setlists</button>
+  </div>
+
   <div class="sidebar-search">
     <div class="search-box">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -19,9 +25,13 @@
   </div>
 
   <div class="sidebar-actions">
-    <button id="btn-import" class="btn btn-primary btn-sm w-full">
+    <button id="btn-import-sheet" class="btn btn-primary btn-sm w-full">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       Thêm Bài Hát
+    </button>
+    <button id="btn-create-setlist" class="btn btn-primary btn-sm w-full hidden">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Tạo Setlist Mới
     </button>
   </div>
 
@@ -34,12 +44,44 @@
   </div>
 
   <div class="song-list-container">
-    <div id="song-list" class="song-list">
-      <!-- Rendered by library-ui.js -->
-      <div class="empty-state">
-        <span class="empty-icon">🎶</span>
-        <p>Chưa có bài hát nào</p>
-        <small>Nhấn "Thêm Bài Hát" để import</small>
+    <!-- TAB CONTENT: LIBRARY -->
+    <div id="tab-content-library" class="sidebar-tab-content">
+      <div id="song-list" class="song-list">
+        <!-- Rendered by library-ui.js -->
+        <div class="empty-state">
+          <span class="empty-icon">🎶</span>
+          <p>Chưa có bài hát nào</p>
+          <small>Nhấn "Thêm Bài Hát" để import</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB CONTENT: SETLIST -->
+    <div id="tab-content-setlist" class="sidebar-tab-content hidden">
+      <div id="setlist-list" class="song-list">
+        <!-- Rendered by setlist-ui.js -->
+        <div class="empty-state">
+          <span class="empty-icon">📋</span>
+          <p>Chưa có Setlist nào</p>
+          <small>Chỉ Quản trị mới có thể tạo</small>
+        </div>
+      </div>
+      
+      <!-- SETLIST DETAIL VIEW -->
+      <div id="setlist-detail" class="song-list hidden" style="display: flex; flex-direction: column; gap: 0.5rem; padding: 0.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+          <button id="btn-back-setlists" class="icon-btn" title="Quay lại">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+          <h3 id="setlist-detail-title" style="margin: 0; font-size: 1rem; flex: 1;">Setlist</h3>
+          <button id="btn-play-setlist" class="btn btn-sm btn-primary">Phát</button>
+        </div>
+        <div id="setlist-items" style="display: flex; flex-direction: column; gap: 0.25rem;"></div>
+        
+        <div id="setlist-add-container" style="margin-top: 0.5rem; display: none; flex-direction: column; gap: 0.25rem;">
+          <input type="text" id="setlist-search-song-input" class="form-input w-full" placeholder="Gõ tìm bài hát để thêm..." autocomplete="off" style="font-size: 0.85rem; padding: 0.4rem 0.5rem; border-color: var(--accent);">
+          <div id="setlist-search-results" class="song-list hidden" style="width: 100%; max-height: 250px; overflow-y: auto; background: var(--surface-1); border: 1px solid var(--border); border-radius: 4px; padding: 0;"></div>
+        </div>
       </div>
     </div>
   </div>

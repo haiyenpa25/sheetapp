@@ -1,0 +1,5 @@
+storage/data/app.sqlite
+storage/data/songs.json.bak
+storage/data/sessions/
+data/chord_sets/
+test*.php

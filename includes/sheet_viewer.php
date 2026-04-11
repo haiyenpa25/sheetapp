@@ -103,7 +103,8 @@
         Thêm Hợp Âm
       </button>
       <span id="add-chord-hint" class="add-chord-hint hidden">
-        Click vào ô trống phía trên nốt để nhập hợp âm •
+        Click vào ô trên nốt để nhập hợp âm •
+        <button id="btn-clear-all-chords" class="link-btn text-danger hidden" style="margin-right:0.5rem;" onclick="if(confirm('Bạn chắc muốn xoá TOÀN BỘ hợp âm trong hồ sơ này?')) window.ChordCanvas.clearAllChords()">Xoá Toàn Bộ</button>
         <button id="btn-cancel-add-chord" class="link-btn">Hủy</button>
       </span>
     </div>

@@ -52,7 +52,9 @@ function jsTag(string $file): string {
 echo jsTag('osmd-renderer.js');
 echo jsTag('transpose-engine.js');
 echo jsTag('session-tracker.js');
+echo jsTag('auth.js');
 echo jsTag('library-ui.js');
+echo jsTag('setlist-ui.js');
 echo jsTag('importer.js');
 echo jsTag('chord-canvas-xml.js');
 echo jsTag('chord-canvas-ui.js');

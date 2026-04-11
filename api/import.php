@@ -17,8 +17,18 @@ foreach ([SHEETS_DIR, dirname(SONGS_FILE)] as $dir) {
     if (!is_dir($dir)) mkdir($dir, 0775, true);
 }
 
+session_start();
+
+require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/import_helpers.php';
 require_once __DIR__ . '/import_scrapers.php';
+
+$isAdmin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
+if (!$isAdmin) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Chỉ Admin mới có quyền thêm nhạc']);
+    exit;
+}
 
 // Detect mode
 $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
@@ -60,7 +70,7 @@ function _handleUpload(): void {
     move_uploaded_file($file['tmp_name'], $path);
 
     $key  = _detectKey($content);
-    $song = _saveSong($title, 'storage/sheets/' . $filename, $key, '');
+    $song = _saveSong($GLOBALS['pdo'], $title, 'storage/sheets/' . $filename, $key, '');
 
     echo json_encode(['success' => true, 'title' => $title, 'song' => $song], JSON_UNESCAPED_UNICODE);
 }
@@ -104,7 +114,7 @@ function _handleScrape(array $body): void {
     file_put_contents(SHEETS_DIR . $filename, $xmlContent);
 
     $key  = _detectKey($xmlContent);
-    $song = _saveSong($title, 'storage/sheets/' . $filename, $key, $pageUrl);
+    $song = _saveSong($GLOBALS['pdo'], $title, 'storage/sheets/' . $filename, $key, $pageUrl);
 
     echo json_encode(['success' => true, 'title' => $title, 'xmlUrl' => $xmlUrl, 'key' => $key, 'song' => $song], JSON_UNESCAPED_UNICODE);
 }
@@ -130,7 +140,7 @@ function _handleDirectUrl(array $body): void {
     file_put_contents(SHEETS_DIR . $filename, $content);
 
     $key  = _detectKey($content);
-    $song = _saveSong($title, 'storage/sheets/' . $filename, $key, $xmlUrl);
+    $song = _saveSong($GLOBALS['pdo'], $title, 'storage/sheets/' . $filename, $key, $xmlUrl);
 
     echo json_encode(['success' => true, 'title' => $title, 'song' => $song], JSON_UNESCAPED_UNICODE);
 }
