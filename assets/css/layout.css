@@ -116,6 +116,10 @@
 body.fullscreen-mode .toolbar { height: 52px; padding: 0 1rem; }
 body.fullscreen-mode .osmd-container { max-width: 100%; padding: 1rem 3rem; }
 
+/* Dropdown Details Reset */
+.dropdown-details summary::marker,
+.dropdown-details summary::-webkit-details-marker { display: none; }
+
 /* =============================================
    RESPONSIVE — Tablet & Mobile
    ============================================= */

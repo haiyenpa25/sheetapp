@@ -45,58 +45,55 @@
       </select>
     </div>
 
-    <!-- AUTO SCROLL -->
-    <div class="control-group">
-      <button id="btn-auto-scroll" class="btn btn-ghost btn-sm" disabled title="Tự động cuộn bản nhạc">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
-        Cuộn
-      </button>
-      <select id="scroll-speed" class="form-input" style="padding: 0.2rem 0.4rem; height: 26px; font-size: 0.75rem; border-color: transparent;" disabled title="Tốc độ cuộn">
-        <option value="1">Rùa</option>
-        <option value="2" selected>Chậm</option>
-        <option value="3">Vừa</option>
-        <option value="4">Nhanh</option>
-      </select>
-    </div>
+    <!-- MORE OPTIONS DROPDOWN -->
+    <details class="control-group dropdown-details" id="more-options-dropdown" style="position: relative;">
+      <summary class="btn btn-ghost btn-sm" title="Tuỳ chọn thêm" style="list-style: none; cursor: pointer;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+        <span class="btn-text">Tuỳ Chọn</span>
+      </summary>
+      <div class="dropdown-menu" style="position: absolute; top: calc(100% + 5px); right: 0; background: var(--bg-surface); border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: var(--radius-sm); padding: 0.25rem; display: flex; flex-direction: column; gap: 0.15rem; z-index: 200; min-width: 140px;">
+        
+        <button id="btn-mixer" class="btn btn-ghost btn-sm" disabled title="Bật/Tắt nhạc cụ" style="justify-content: flex-start; padding: 0.4rem 0.5rem;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-right:8px;"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+          Mixer
+        </button>
 
-    <!-- MIXER -->
-    <div class="control-group">
-      <button id="btn-mixer" class="btn btn-ghost btn-sm" disabled title="Bật/Tắt nhạc cụ">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
-        Mixer
-      </button>
-    </div>
+        <button id="btn-dark-mode" class="btn btn-ghost btn-sm" title="Bật giao diện Sân Khấu (Kéo màn hình đen)" style="justify-content: flex-start; padding: 0.4rem 0.5rem;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-right:8px;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          Sân Khấu
+        </button>
 
-    <!-- STAGE DARK MODE -->
-    <div class="control-group">
-      <button id="btn-dark-mode" class="btn btn-ghost btn-sm" title="Bật giao diện Sân Khấu (Kéo màn hình đen)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-      </button>
-    </div>
+        <button id="btn-compact-mode" class="btn btn-ghost btn-sm" title="Bật/Tắt chế độ Gọn Nhẹ" style="justify-content: flex-start; padding: 0.4rem 0.5rem;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-right:8px;"><path d="M4 14h6v6H4zm10 0h6v6h-6zM4 4h6v6H4zm10 0h6v6h-6z"></path><line x1="14" y1="14" x2="20" y2="20"></line><line x1="20" y1="14" x2="14" y2="20"></line></svg>
+          Gọn Nhẹ
+        </button>
 
-    <!-- COMPACT MODE -->
-    <div class="control-group">
-      <button id="btn-compact-mode" class="btn btn-ghost btn-sm" title="Bật/Tắt chế độ Gọn Nhẹ (Ẩn phần Nhạc đệm/Khoá Fa)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M4 14h6v6H4zm10 0h6v6h-6zM4 4h6v6H4zm10 0h6v6h-6z"></path><line x1="14" y1="14" x2="20" y2="20"></line><line x1="20" y1="14" x2="14" y2="20"></line></svg>
-        Gọn
-      </button>
-    </div>
+        <button id="btn-session-panel" class="btn btn-ghost btn-sm" disabled style="justify-content: flex-start; padding: 0.4rem 0.5rem;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-right:8px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Nhật Ký
+        </button>
 
-    <!-- SESSION NOTE -->
-    <div class="control-group">
-      <button id="btn-session-panel" class="btn btn-ghost btn-sm" disabled>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        Nhật Ký
-      </button>
-    </div>
+        <button id="btn-print" class="btn btn-ghost btn-sm" disabled title="In sheet nhạc" style="justify-content: flex-start; padding: 0.4rem 0.5rem;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-right:8px;"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          In Bản Nhạc
+        </button>
 
-    <!-- PRINT -->
-    <div class="control-group">
-      <button id="btn-print" class="btn btn-ghost btn-sm" disabled title="In sheet nhạc">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-        In
-      </button>
-    </div>
+      </div>
+    </details>
+    
+    <script>
+      // Đóng dropdown khi click ra ngoài
+      document.addEventListener('click', function(e) {
+        const details = document.getElementById('more-options-dropdown');
+        if (details && !details.contains(e.target)) {
+          details.removeAttribute('open');
+        }
+      });
+      // Đóng dropdown khi bấm vào một nút bên trong
+      document.querySelectorAll('#more-options-dropdown .dropdown-menu .btn').forEach(btn => {
+        btn.addEventListener('click', () => document.getElementById('more-options-dropdown').removeAttribute('open'));
+      });
+    </script>
 
     <!-- AUTH / LOGIN -->
     <div class="control-group">
