@@ -10,6 +10,7 @@ $action = $_GET['action'] ?? '';
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 $isAdmin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
+$userId = $_SESSION['user_id'] ?? null;
 
 try {
     if ($method === 'GET' && empty($action)) {
@@ -37,25 +38,21 @@ try {
             echo json_encode(['success' => true, 'data' => $setlists]);
         }
     } elseif ($method === 'POST' && empty($action)) {
-        if (!$isAdmin) { http_response_code(403); echo json_encode(['error' => 'Chỉ Admin mới có quyền tạo Setlist']); exit; }
-        
         $data = json_decode(file_get_contents('php://input'), true);
         $title = $data['title'] ?? 'Setlist Mới';
         $date = $data['scheduled_date'] ?? date('Y-m-d');
 
         $stmt = $pdo->prepare("INSERT INTO setlists (title, scheduled_date, created_by) VALUES (?, ?, ?)");
-        $stmt->execute([$title, $date, $_SESSION['user_id']]);
+        $stmt->execute([$title, $date, $userId]);
         
         echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
     } elseif ($method === 'DELETE' && empty($action)) {
-        if (!$isAdmin) { http_response_code(403); echo json_encode(['error' => 'Chỉ Admin mới có quyền xóa']); exit; }
         if ($id > 0) {
             $stmt = $pdo->prepare("DELETE FROM setlists WHERE id = ?");
             $stmt->execute([$id]);
             echo json_encode(['success' => true]);
         }
     } elseif ($method === 'POST' && $action === 'add_item') {
-        if (!$isAdmin) { http_response_code(403); echo json_encode(['error' => 'Chỉ Admin mới có quyền thêm']); exit; }
         $data = json_decode(file_get_contents('php://input'), true);
         
         $setlist_id = $data['setlist_id'] ?? 0;
@@ -71,13 +68,11 @@ try {
         $stmt = $pdo->prepare("INSERT INTO setlist_items (setlist_id, song_id, display_order, chord_profile, transpose_key) VALUES (?, ?, ?, ?, ?)");
         $stmt->execute([$setlist_id, $song_id, $order, $chord_profile, $transpose_key]);
         
-        echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
+        echo json_encode(['success' => true]);
     } elseif ($method === 'DELETE' && $action === 'remove_item') {
-        if (!$isAdmin) { http_response_code(403); echo json_encode(['error' => 'Chỉ Admin mới có quyền xóa']); exit; }
-        $item_id = $id; // truyền qua `id`
-        if ($item_id > 0) {
+        if ($id > 0) {
             $stmt = $pdo->prepare("DELETE FROM setlist_items WHERE id = ?");
-            $stmt->execute([$item_id]);
+            $stmt->execute([$id]);
             echo json_encode(['success' => true]);
         }
     }

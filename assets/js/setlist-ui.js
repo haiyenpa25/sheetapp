@@ -83,7 +83,7 @@ const SetlistUI = (() => {
         
         const addContainer = document.getElementById('setlist-add-container');
         if (addContainer) {
-          addContainer.style.display = window.Auth && window.Auth.isAdmin() ? 'flex' : 'none';
+          addContainer.style.display = 'flex';
         }
         
         renderSetlistItems();
@@ -124,7 +124,7 @@ const SetlistUI = (() => {
             ${toneBadge} ${chordBadge}
           </div>
         </div>
-        ${window.Auth && window.Auth.isAdmin() ? `<button class="icon-btn-xs text-danger btn-del-item" title="Xóa khỏi list">✕</button>` : ''}
+        <button class="icon-btn-xs text-danger btn-del-item" title="Xóa khỏi list">✕</button>
       `;
       
       el.addEventListener('click', (e) => {
@@ -214,9 +214,6 @@ const SetlistUI = (() => {
   }
 
   async function addSongToSetlist(setId, songId) {
-    if (!window.Auth || !window.Auth.isAdmin()) {
-      window.App?.showToast?.('Chỉ admin mới được thêm bài hát', 'error'); return;
-    }
     const songIndex = _currentSetlist && _currentSetlist.items ? _currentSetlist.items.length : 0;
     
     let toneStr = prompt("Nhập số cung dịch giọng cho bài này (vd: -2, 0, +1):", "0");
@@ -294,9 +291,7 @@ const SetlistUI = (() => {
         } else {
           document.getElementById('tab-content-setlist').classList.remove('hidden');
           document.getElementById('btn-import-sheet')?.classList.add('hidden');
-          if (window.Auth && window.Auth.isAdmin()) {
-            document.getElementById('btn-create-setlist')?.classList.remove('hidden');
-          }
+          document.getElementById('btn-create-setlist')?.classList.remove('hidden');
           
           document.querySelector('.sidebar-search')?.classList.add('hidden');
           document.querySelector('.quick-jump')?.classList.add('hidden');
