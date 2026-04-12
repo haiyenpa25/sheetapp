@@ -153,12 +153,8 @@ const App = (() => {
         processedXml = window.ChordCanvasXML?.cloneAndInjectChords?.(processedXml, customChordsMap) || processedXml;
       }
 
-      const xmlToLoad = currentTranspose !== 0
-        ? TransposeEngine.transposeXML(processedXml, currentTranspose)
-        : processedXml;
-
       AppUI.setLoadingText('Đang vẽ bản nhạc...');
-      await OSMDRenderer.load(xmlToLoad);
+      await OSMDRenderer.load(processedXml, currentTranspose);
 
       await OSMDRenderer.setZoom(currentZoom);
       document.getElementById('zoom-slider').value = Math.round(currentZoom * 100);
@@ -177,9 +173,10 @@ const App = (() => {
               if (obj) chordList = Object.values(obj);
           }
           if (chordList.length === 0) {
-              chordList = TransposeEngine.extractChordsFromXML(xmlToLoad);
+              chordList = TransposeEngine.extractChordsFromXML(processedXml);
           }
-          AppUI.updateCapoBadge(TransposeEngine.suggestBestCapo(chordList));
+          const transposedChords = chordList.map(c => TransposeEngine.transposeChord(c, currentTranspose));
+          AppUI.updateCapoBadge(TransposeEngine.suggestBestCapo(transposedChords));
       }
 
       AppUI.showOSMD();
@@ -238,13 +235,10 @@ const App = (() => {
         processedXml = window.ChordCanvasXML?.cloneAndInjectChords?.(processedXml, customChordsMap) || processedXml;
       }
 
-      const xml = currentTranspose !== 0
-        ? TransposeEngine.transposeXML(processedXml, currentTranspose)
-        : processedXml;
-
       if (window.InstrumentMixer?.preserveState) window.InstrumentMixer.preserveState();
 
-      await OSMDRenderer.reload(xml);
+      // Sử dụng OSMD Native Transpose thay vì can thiệp thủ công vào XML
+      await OSMDRenderer.reload(processedXml, currentTranspose);
       SessionTracker.setTranspose(currentTranspose);
       
       if (window.TransposeEngine) {
@@ -254,9 +248,12 @@ const App = (() => {
               if (obj) chordList = Object.values(obj);
           }
           if (chordList.length === 0) {
-              chordList = TransposeEngine.extractChordsFromXML(xml);
+              chordList = TransposeEngine.extractChordsFromXML(processedXml);
           }
-          AppUI.updateCapoBadge(TransposeEngine.suggestBestCapo(chordList));
+          
+          // Dịch các hợp âm ra mảng string để tính toán Capo cho đúng key mới
+          const transposedChords = chordList.map(c => TransposeEngine.transposeChord(c, currentTranspose));
+          AppUI.updateCapoBadge(TransposeEngine.suggestBestCapo(transposedChords));
       }
 
       if (window.ChordCanvas) window.ChordCanvas.onOSMDRendered();

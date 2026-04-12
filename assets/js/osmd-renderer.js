@@ -77,10 +77,12 @@ const OSMDRenderer = (() => {
   }
 
   /**
+  /**
    * Nạp XML string vào OSMD và render.
    * @param {string} xmlString - Nội dung MusicXML
+   * @param {number} transposeValue - Số nửa cung để dịch (Mặc định: 0)
    */
-  async function load(xmlString) {
+  async function load(xmlString, transposeValue = 0) {
     if (!osmd) throw new Error('OSMD chưa được khởi tạo. Gọi init() trước.');
     currentXmlString = xmlString;
     isLoaded = false;
@@ -89,6 +91,13 @@ const OSMDRenderer = (() => {
       await osmd.load(xmlString);
       osmd.zoom = currentZoom;
       _applyCompactMode();
+      
+      if (osmd.Sheet && opensheetmusicdisplay.TransposeCalculator) {
+          osmd.TransposeCalculator = new opensheetmusicdisplay.TransposeCalculator();
+          osmd.Sheet.Transpose = transposeValue;
+          osmd.updateGraphic();
+      }
+
       refreshRules();
       await osmd.render();
       isLoaded = true;
@@ -103,8 +112,9 @@ const OSMDRenderer = (() => {
   /**
    * Reload lại OSMD với XML đã sửa (transpose, chord override, v.v.)
    * @param {string} xmlString - Nội dung XML đã được xử lý
+   * @param {number} transposeValue - Số nửa cung để dịch
    */
-  async function reload(xmlString) {
+  async function reload(xmlString, transposeValue = 0) {
     if (!osmd) throw new Error('OSMD chưa init');
     currentXmlString = xmlString;
     try {
@@ -112,6 +122,13 @@ const OSMDRenderer = (() => {
       osmd.zoom = currentZoom;
       if (window.InstrumentMixer?.restoreState) window.InstrumentMixer.restoreState();
       _applyCompactMode();
+
+      if (osmd.Sheet && opensheetmusicdisplay.TransposeCalculator) {
+          osmd.TransposeCalculator = new opensheetmusicdisplay.TransposeCalculator();
+          osmd.Sheet.Transpose = transposeValue;
+          osmd.updateGraphic();
+      }
+
       refreshRules();
       await osmd.render();
       if (onReadyCallback) onReadyCallback(osmd);  // Gọi lại để ChordCanvas rebuild
