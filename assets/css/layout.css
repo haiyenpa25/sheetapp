@@ -75,9 +75,9 @@
 /* ---- TOOLBAR ---- */
 .toolbar { height: var(--toolbar-h); background: var(--bg-surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; gap: 1rem; flex-shrink: 0; backdrop-filter: blur(10px); position: relative; z-index: 50; }
 .toolbar-left { flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.5rem; }
-.song-info { display: flex; align-items: center; gap: .65rem; min-width: 0; flex-shrink: 0; }
-.song-title { font-size: 1rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary); }
-.song-key-badge { background: var(--accent); color: #fff; font-size: .7rem; font-weight: 600; padding: .2em .6em; border-radius: 99px; white-space: nowrap; letter-spacing: .5px; }
+.song-info { display: flex; align-items: center; gap: .65rem; min-width: 0; flex-shrink: 1; }
+.song-title { font-size: 1rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary); max-width: 400px; }
+.song-key-badge { background: var(--accent); color: #fff; font-size: .7rem; font-weight: 600; padding: .2em .6em; border-radius: 99px; white-space: nowrap; letter-spacing: .5px; flex-shrink: 0; }
 .toolbar-controls { display: flex; align-items: center; gap: 1.25rem; flex-shrink: 0; }
 .control-group { display: flex; align-items: center; gap: .5rem; }
 .control-label { font-size: .7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .6px; font-weight: 500; white-space: nowrap; }
@@ -172,6 +172,14 @@ body.fullscreen-mode .osmd-container { max-width: 100%; padding: 1rem 3rem; }
   .sidebar.mobile-hidden {
     transform: translateX(-100%);
     box-shadow: none;
+  }
+  .sidebar-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); z-index: 290;
+    transition: opacity var(--transition);
+  }
+  .sidebar-overlay.hidden {
+    opacity: 0; pointer-events: none;
   }
   .main-content { margin-left: 0; }
 

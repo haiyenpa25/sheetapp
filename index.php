@@ -31,6 +31,7 @@ echo cssTag('components.css');
 <body>
 
 <?php require_once __DIR__ . '/includes/sidebar.php'; ?>
+<div id="sidebar-overlay" class="sidebar-overlay hidden"></div>
 
 <!-- ===== MAIN CONTENT ===== -->
 <main id="main" class="main-content">

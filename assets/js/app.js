@@ -60,22 +60,17 @@ const App = (() => {
       if (window.innerWidth <= 768) {
         // Mobile: dùng mobile-hidden class
         sidebar.classList.toggle('mobile-hidden');
-        // Hiện/ẩn overlay backdrop
-        let overlay = document.getElementById('sidebar-overlay');
+        const overlay = document.getElementById('sidebar-overlay');
         if (sidebar.classList.contains('mobile-hidden')) {
-          if (overlay) overlay.style.display = 'none';
+          if (overlay) overlay.classList.add('hidden');
         } else {
-          if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.id = 'sidebar-overlay';
-            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:299;backdrop-filter:blur(2px);';
-            overlay.addEventListener('click', () => {
+          if (overlay) {
+            overlay.classList.remove('hidden');
+            overlay.onclick = () => {
               sidebar.classList.add('mobile-hidden');
-              overlay.style.display = 'none';
-            });
-            document.body.appendChild(overlay);
+              overlay.classList.add('hidden');
+            };
           }
-          overlay.style.display = 'block';
         }
       } else {
         // Desktop: dùng collapsed class
@@ -129,7 +124,7 @@ const App = (() => {
     if (window.innerWidth <= 768) {
       document.getElementById('sidebar')?.classList.add('mobile-hidden');
       const overlay = document.getElementById('sidebar-overlay');
-      if (overlay) overlay.style.display = 'none';
+      if (overlay) overlay.classList.add('hidden');
     }
 
     try {
