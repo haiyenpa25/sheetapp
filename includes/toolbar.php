@@ -45,6 +45,20 @@
       </select>
     </div>
 
+    <!-- AUTO SCROLL -->
+    <div class="control-group">
+      <button id="btn-auto-scroll" class="btn btn-ghost btn-sm" disabled title="Tự động cuộn bản nhạc">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+        Cuộn
+      </button>
+      <select id="scroll-speed" class="form-input" style="padding: 0.2rem 0.4rem; height: 26px; font-size: 0.75rem; border-color: transparent;" disabled title="Tốc độ cuộn">
+        <option value="1">Rùa</option>
+        <option value="2" selected>Chậm</option>
+        <option value="3">Vừa</option>
+        <option value="4">Nhanh</option>
+      </select>
+    </div>
+
     <!-- MORE OPTIONS DROPDOWN -->
     <details class="control-group dropdown-details" id="more-options-dropdown" style="position: relative;">
       <summary class="btn btn-ghost btn-sm" title="Tuỳ chọn thêm" style="list-style: none; cursor: pointer;">

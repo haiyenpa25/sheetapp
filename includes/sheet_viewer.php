@@ -81,20 +81,6 @@
 
     </div>
     <div class="page-bar-right">
-      <!-- AUTO SCROLL -->
-      <div class="control-group" style="margin-right: 0.5rem; background: var(--bg-overlay); padding: 0.2rem 0.5rem; border-radius: var(--radius-sm); border: 1px solid var(--border);">
-        <button id="btn-auto-scroll" class="btn btn-ghost btn-xs" disabled title="Tự động cuộn bản nhạc">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-right:4px;"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
-          Cuộn
-        </button>
-        <select id="scroll-speed" class="form-input" style="padding: 0.1rem 0.3rem; height: 22px; font-size: 0.7rem; border-color: transparent; background: transparent;" disabled title="Tốc độ cuộn">
-          <option value="1">Rùa</option>
-          <option value="2" selected>Chậm</option>
-          <option value="3">Vừa</option>
-          <option value="4">Nhanh</option>
-        </select>
-      </div>
-
       <!-- ZOOM -->
       <div class="control-group" style="flex-direction: row; align-items: center; margin-right: 1rem;">
         <label class="control-label" style="margin-bottom: 0; margin-right: 0.5rem; display: none;">Zoom <span id="zoom-value-label">100%</span></label>

@@ -65,7 +65,7 @@ const ChordCanvasUI = (() => {
       </div>
       <input id="cc-pop-inp" type="text" maxlength="10" list="cc-chord-suggestions"
              placeholder="VD: Am, D7, G…" value="${existing}" autocomplete="off"
-             style="width:100%;box-sizing:border-box;border:1px solid #ddd;border-radius:5px;
+             style="width:100%;box-sizing:border-box;border:1px solid #ddd;border-radius:5px;text-transform:capitalize;
                     padding:.3rem .55rem;font-size:.92rem;font-weight:700;font-family:monospace;
                     color:#c00;outline:none;background:#fff;margin-bottom:.4rem;">
       <datalist id="cc-chord-suggestions"></datalist>
@@ -80,27 +80,27 @@ const ChordCanvasUI = (() => {
     const inp = pop.querySelector('#cc-pop-inp');
     const dl = pop.querySelector('#cc-chord-suggestions');
 
+    // Hàm chuẩn hóa Hợp âm (Viết hoa nốt gốc, b/# chuẩn)
+    const formatChord = (val) => {
+        if (!val) return val;
+        let res = val.charAt(0).toUpperCase() + val.substring(1);
+        if (res.length >= 2) {
+            let second = res.charAt(1).toLowerCase();
+            if (second === 'b' || second === '#') {
+               res = res.substring(0, 1) + second + res.substring(2);
+            }
+        }
+        return res;
+    };
+
     inp.addEventListener('input', (e) => {
         let val = e.target.value;
         if (!val) { dl.innerHTML = ''; return; }
         
-        // Auto capitalize root note
-        val = val.charAt(0).toUpperCase() + val.substring(1);
-        
-        // Standardize flat/sharp
-        if (val.length >= 2) {
-            let second = val.charAt(1).toLowerCase();
-            if (second === 'b' || second === '#') {
-               val = val.substring(0, 1) + second + val.substring(2);
-            }
-        }
-        
-        e.target.value = val;
-
         // Auto suggestions
-        const rootMatch = val.match(/^[A-G][b#]?/);
+        const rootMatch = val.match(/^[A-Ga-g][b#B]?/);
         if (rootMatch) {
-            const root = rootMatch[0];
+            const root = formatChord(rootMatch[0]);
             const suffixes = ['', 'm', '7', 'm7', 'maj7', '+', 'dim', 'sus4', 'sus2', 'm7b5', 'add9'];
             dl.innerHTML = suffixes.map(s => `<option value="${root}${s}">`).join('');
         }
@@ -109,7 +109,8 @@ const ChordCanvasUI = (() => {
     setTimeout(() => { inp?.focus(); inp?.select(); }, 20);
 
     const doSave = () => {
-      const val = inp.value.trim();
+      let val = inp.value.trim();
+      val = formatChord(val);
       callbacks.onClose();
       if (val) callbacks.onSave(val);
       else if (existing) callbacks.onDelete();
@@ -121,7 +122,8 @@ const ChordCanvasUI = (() => {
     });
     pop.querySelector('#cc-pop-cancel')?.addEventListener('click', callbacks.onClose);
     const doSaveNext = async () => {
-      const val = inp.value.trim();
+      let val = inp.value.trim();
+      val = formatChord(val);
       callbacks.onClose();
       // Gọi lên Canvas để lưu âm thầm, không vẽ lại (fast entry)
       if (val) {
