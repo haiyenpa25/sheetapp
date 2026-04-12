@@ -152,8 +152,10 @@ const ChordCanvasXML = (() => {
     const k = doc.createElement('kind');
     const km = {
       m:'minor', min:'minor', 'm7':'minor-seventh', '7':'dominant',
-      maj7:'major-seventh', M7:'major-seventh', dim:'diminished', aug:'augmented',
-      sus4:'suspended-fourth', sus2:'suspended-second', add9:'major', m7b5:'half-diminished'
+      maj7:'major-seventh', M7:'major-seventh', M:'major',
+      dim:'diminished', 'dim7':'diminished-seventh', aug:'augmented', '+': 'augmented',
+      sus4:'suspended-fourth', sus2:'suspended-second', add9:'major', m7b5:'half-diminished',
+      'm9':'minor-ninth', '9':'dominant-ninth', 'maj9':'major-ninth', '11':'dominant-11th', '13':'dominant-13th'
     };
     k.textContent = km[suf] || 'major';
     if (suf) k.setAttribute('text', suf);
