@@ -48,6 +48,7 @@ try {
             song_id TEXT NOT NULL,
             display_order INTEGER NOT NULL,
             chord_profile TEXT,
+            transpose_key INTEGER DEFAULT 0,
             FOREIGN KEY (setlist_id) REFERENCES setlists(id) ON DELETE CASCADE
         )
     ");
