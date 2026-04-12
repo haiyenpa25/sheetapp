@@ -23,7 +23,7 @@
 .sidebar.collapsed .sidebar-search,
 .sidebar.collapsed .sidebar-actions,
 .sidebar.collapsed .quick-jump,
-.sidebar.collapsed .song-list-container { display: none; }
+.sidebar.collapsed .song-list-container { display: none !important; }
 
 .sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1rem; border-bottom: 1px solid var(--border); min-height: 60px; }
 .sidebar.collapsed .sidebar-header { justify-content: center; padding: 1rem 0; }
