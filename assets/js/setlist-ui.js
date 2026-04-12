@@ -288,12 +288,18 @@ const SetlistUI = (() => {
           document.getElementById('tab-content-library').classList.remove('hidden');
           document.getElementById('btn-import-sheet')?.classList.remove('hidden');
           document.getElementById('btn-create-setlist')?.classList.add('hidden');
+          
+          document.querySelector('.sidebar-search')?.classList.remove('hidden');
+          document.querySelector('.quick-jump')?.classList.remove('hidden');
         } else {
           document.getElementById('tab-content-setlist').classList.remove('hidden');
           document.getElementById('btn-import-sheet')?.classList.add('hidden');
           if (window.Auth && window.Auth.isAdmin()) {
             document.getElementById('btn-create-setlist')?.classList.remove('hidden');
           }
+          
+          document.querySelector('.sidebar-search')?.classList.add('hidden');
+          document.querySelector('.quick-jump')?.classList.add('hidden');
           fetchSetlists();
         }
       });
