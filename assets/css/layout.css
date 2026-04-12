@@ -18,12 +18,15 @@
   overflow: hidden;
 }
 .sidebar.collapsed { width: 60px; }
-.sidebar.collapsed .logo-text,
+.sidebar.collapsed .logo,
+.sidebar.collapsed .sidebar-tabs,
 .sidebar.collapsed .sidebar-search,
 .sidebar.collapsed .sidebar-actions,
+.sidebar.collapsed .quick-jump,
 .sidebar.collapsed .song-list-container { display: none; }
 
 .sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1rem; border-bottom: 1px solid var(--border); min-height: 60px; }
+.sidebar.collapsed .sidebar-header { justify-content: center; padding: 1rem 0; }
 .logo { display: flex; align-items: center; gap: .6rem; }
 .logo-icon { font-size: 1.5rem; }
 .logo-text { font-size: 1.1rem; font-weight: 700; background: linear-gradient(135deg, var(--accent), #7c3aed); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -.3px; }
