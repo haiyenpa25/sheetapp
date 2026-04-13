@@ -222,3 +222,29 @@
     </div>
   </div>
 </div>
+
+<!-- ===== EDIT SONG MODAL ===== -->
+<div id="edit-song-modal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width: 400px;">
+    <div class="modal-header">
+      <h3>✏️ Sửa Thông Tin Bài Hát</h3>
+      <button id="btn-close-edit-song" class="icon-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-song-id">
+      <div class="form-row">
+        <label class="form-label">Tên bài hát</label>
+        <input id="edit-song-title" type="text" class="form-input">
+      </div>
+      <div class="form-row mt-1">
+        <label class="form-label">Danh mục (Category)</label>
+        <select id="edit-song-category" class="form-input">
+          <!-- Rendered via JS -->
+        </select>
+      </div>
+      <button id="btn-save-edit-song" class="btn btn-primary w-full mt-1">💾 Lưu Thay Đổi</button>
+    </div>
+  </div>
+</div>

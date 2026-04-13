@@ -18,11 +18,12 @@
   </div>
 
   <div class="sidebar-search">
-    <div style="margin-bottom:0.4rem;">
+    <div style="margin-bottom:0.4rem; display:flex; gap:0.2rem;">
       <select id="category-filter" class="form-input w-full" style="padding:.3rem .5rem; font-size:.8rem; border-color:transparent; background:var(--bg-overlay);">
         <option value="">Tất cả danh mục</option>
         <!-- Rendered via JS -->
       </select>
+      <button id="btn-add-category" class="btn btn-primary" style="padding:0.2rem 0.5rem; font-size:1rem; font-weight:bold; aspect-ratio:1/1;" title="Thêm Danh Mục">+</button>
     </div>
     <div class="search-box">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
