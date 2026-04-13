@@ -112,17 +112,16 @@ const Importer = (() => {
     document.querySelectorAll('#import-tabs .tab-btn').forEach(b =>
       b.classList.toggle('active', b.dataset.tab === tabName)
     );
-    document.querySelectorAll('.tab-content').forEach(c =>
-      c.classList.toggle('active', c.id === `tab-${tabName}`)
-    );
-    ['hidden','flex'].forEach((cls,i) => {
-      document.querySelectorAll('.tab-content').forEach(c => {
-        if (c.id === `tab-${tabName}`) {
-          c.style.display = 'flex';
-        } else {
-          c.style.display = 'none';
-        }
-      });
+    document.querySelectorAll('.tab-content').forEach(c => {
+      const isActive = (c.id === `tab-${tabName}`);
+      c.classList.toggle('active', isActive);
+      if (isActive) {
+        c.classList.remove('hidden');
+        c.style.display = 'flex';
+      } else {
+        c.classList.add('hidden');
+        c.style.display = 'none';
+      }
     });
     _resetUI(false);
     
