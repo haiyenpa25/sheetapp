@@ -40,6 +40,7 @@
         <button class="tab-btn active" data-tab="url">🌐 URL Thánh Ca</button>
         <button class="tab-btn" data-tab="upload">📁 Upload File</button>
         <button class="tab-btn" data-tab="direct">🔗 URL Direct XML</button>
+        <button class="tab-btn" data-tab="omr">🤖 OMR Station</button>
       </div>
 
       <!-- TAB: URL Thánh Ca -->
@@ -95,6 +96,48 @@
         <div class="form-row mt-1">
           <label class="form-label">Tên hiển thị</label>
           <input id="import-direct-title" type="text" class="form-input" placeholder="Nhập tên bài hát">
+        </div>
+      </div>
+
+      <!-- TAB: OMR Station -->
+      <div id="tab-omr" class="tab-content hidden">
+        <p class="help-text">Tải file <strong>PDF / Hình ảnh</strong> để nhận diện tự động thành MusicXML (Audiveris).</p>
+        <div id="omr-drop-zone" class="drop-zone">
+          <div class="drop-icon">📷</div>
+          <p>Kéo thả file hình/PDF vào đây</p>
+          <label class="btn btn-ghost btn-sm mt-1">
+            Chọn File
+            <input id="omr-file-input" type="file" accept=".pdf,image/*" style="display:none">
+          </label>
+        </div>
+        
+        <div class="omr-queue mt-1 hidden" id="omr-queue-container" style="background:var(--bg-overlay); border:1px solid var(--border); border-radius:var(--radius-sm); padding:.5rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: .25rem;">
+            <p class="help-text" style="margin:0; font-weight:bold;">Hàng chờ xử lý</p>
+            <button id="btn-omr-refresh" class="icon-btn-xs" title="Làm mới">🔄</button>
+          </div>
+          <div id="omr-queue-list" style="max-height: 150px; overflow-y: auto; font-size:.8rem;">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+
+        <div id="omr-review-container" class="mt-1 hidden" style="border: 1px dashed var(--accent); padding: .5rem; border-radius: var(--radius-sm); background: var(--bg-surface);">
+          <p class="help-text" style="color:var(--accent); font-weight:bold;">Duyệt bài hát</p>
+          <input type="hidden" id="omr-review-id">
+          <div class="form-row">
+            <label class="form-label">Tên hiển thị</label>
+            <input id="omr-review-title" type="text" class="form-input" placeholder="Tên bài hát sau khi nhận diện">
+          </div>
+          <div class="form-row mt-half">
+            <label class="form-label">Danh mục (Category)</label>
+            <select id="omr-review-category" class="form-input">
+                <!-- Rendered via JS -->
+            </select>
+          </div>
+          <div style="display:flex; gap:.5rem; margin-top:.5rem;">
+            <button id="btn-omr-publish" class="btn btn-primary flex-1">Đưa Vào Kho</button>
+            <button id="btn-omr-preview" class="btn btn-ghost flex-1">Xem Thử (Preview)</button>
+          </div>
         </div>
       </div>
 

@@ -29,7 +29,12 @@ $isAdmin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 try {
     switch ($method) {
         case 'GET':
-            $stmt = $pdo->query("SELECT id, title, httlvnId, xmlPath, defaultKey FROM songs ORDER BY httlvnId ASC, title ASC");
+            $stmt = $pdo->query("
+                SELECT s.id, s.title, s.httlvnId, s.xmlPath, s.defaultKey, s.category_id, c.name as category_name 
+                FROM songs s 
+                LEFT JOIN categories c ON s.category_id = c.id 
+                ORDER BY s.httlvnId ASC, s.title ASC
+            ");
             $songs = $stmt->fetchAll();
             echo json_encode($songs, JSON_UNESCAPED_UNICODE);
             break;
@@ -81,16 +86,18 @@ function _addSong(PDO $pdo, array $data): array {
     $xmlPath = $data['xmlPath'] ?? '';
     $defaultKey = $data['defaultKey'] ?? '';
     $httlvnId = isset($data['httlvnId']) && $data['httlvnId'] !== '' ? intval($data['httlvnId']) : null;
+    $categoryId = isset($data['categoryId']) ? intval($data['categoryId']) : 1; // Default to 1 (Thánh ca)
 
-    $stmt = $pdo->prepare("INSERT INTO songs (id, title, httlvnId, xmlPath, defaultKey) VALUES (?, ?, ?, ?, ?)");
-    $stmt->execute([$id, $title, $httlvnId, $xmlPath, $defaultKey]);
+    $stmt = $pdo->prepare("INSERT INTO songs (id, title, httlvnId, xmlPath, defaultKey, category_id) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmt->execute([$id, $title, $httlvnId, $xmlPath, $defaultKey, $categoryId]);
 
     return [
         'id' => $id,
         'title' => $title,
         'xmlPath' => $xmlPath,
         'defaultKey' => $defaultKey,
-        'httlvnId' => $httlvnId
+        'httlvnId' => $httlvnId,
+        'category_id' => $categoryId
     ];
 }
 
@@ -102,6 +109,7 @@ function _updateSong(PDO $pdo, ?string $id, array $data): array {
     if (isset($data['title'])) { $fields[] = 'title = ?'; $params[] = $data['title']; }
     if (isset($data['defaultKey'])) { $fields[] = 'defaultKey = ?'; $params[] = $data['defaultKey']; }
     if (isset($data['xmlPath'])) { $fields[] = 'xmlPath = ?'; $params[] = $data['xmlPath']; }
+    if (isset($data['categoryId'])) { $fields[] = 'category_id = ?'; $params[] = intval($data['categoryId']); }
 
     if (empty($fields)) {
         return ['error' => 'No data to update'];

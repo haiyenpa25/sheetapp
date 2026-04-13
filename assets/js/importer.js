@@ -71,6 +71,31 @@ const Importer = (() => {
         if (e.key === 'Enter') e.target.nextElementSibling?.click();
       });
     });
+
+    // OMR Station events
+    const omrDropZone = document.getElementById('omr-drop-zone');
+    const omrFileInput = document.getElementById('omr-file-input');
+    
+    omrDropZone?.addEventListener('dragover', e => { e.preventDefault(); omrDropZone.classList.add('drag-over'); });
+    omrDropZone?.addEventListener('dragleave', () => omrDropZone.classList.remove('drag-over'));
+    omrDropZone?.addEventListener('drop', e => {
+      e.preventDefault();
+      omrDropZone.classList.remove('drag-over');
+      const f = e.dataTransfer.files[0];
+      if (f) _uploadOmrFile(f);
+    });
+    omrDropZone?.addEventListener('click', e => {
+      if (e.target.tagName !== 'LABEL' && e.target.tagName !== 'INPUT') {
+        omrFileInput?.click();
+      }
+    });
+    omrFileInput?.addEventListener('change', () => {
+      if (omrFileInput.files[0]) _uploadOmrFile(omrFileInput.files[0]);
+    });
+
+    document.getElementById('btn-omr-refresh')?.addEventListener('click', _fetchOmrQueue);
+    document.getElementById('btn-omr-publish')?.addEventListener('click', _publishOmrResult);
+    document.getElementById('btn-omr-preview')?.addEventListener('click', _previewOmrResult);
   }
 
   function openModal() {
@@ -100,6 +125,11 @@ const Importer = (() => {
       });
     });
     _resetUI(false);
+    
+    if (tabName === 'omr') {
+      _fetchOmrQueue();
+      _loadCategoriesForOmr();
+    }
   }
 
   function onSuccess(cb) { onSuccessCb = cb; }
@@ -196,6 +226,128 @@ const Importer = (() => {
     } catch (err) {
       _showResult(`❌ ${err.message}`, 'error');
     }
+  }
+
+  // ---- OMR METHODS ----
+
+  async function _fetchOmrQueue() {
+    try {
+      const res = await fetch('api/omr.php');
+      const data = await res.json();
+      const container = document.getElementById('omr-queue-container');
+      const list = document.getElementById('omr-queue-list');
+      if (data && data.length > 0) {
+        container.classList.remove('hidden');
+        list.innerHTML = data.map(job => 
+          `<div class="job-item flex justify-between align-center p-half border-b" style="cursor:pointer;" onclick="Importer.selectOmrJob('${job.id}', '${job.status}', '${_esc(job.original_filename)}', '${job.musicxml_path}')">
+            <div>
+              <strong>${_esc(job.original_filename)}</strong><br>
+              <span class="text-xs text-muted">${job.created_at}</span>
+            </div>
+            <div>
+              <span class="tag ${job.status === 'completed' ? 'tag-purple' : 'tag-muted'}">${job.status}</span>
+              <button class="icon-btn-xs text-danger ml-half" onclick="event.stopPropagation(); Importer.deleteOmrJob('${job.id}')">✕</button>
+            </div>
+          </div>`
+        ).join('');
+      } else {
+        container.classList.add('hidden');
+        list.innerHTML = '';
+      }
+    } catch(err) {
+      console.error(err);
+    }
+  }
+
+  async function _uploadOmrFile(file) {
+    if (!file) return;
+    document.getElementById('import-progress')?.classList.remove('hidden');
+    document.getElementById('import-progress-text').textContent = 'Đang tải file lên Trạm xử lý...';
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('api/omr.php', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      _fetchOmrQueue();
+      document.getElementById('import-progress')?.classList.add('hidden');
+      App?.showToast('Tải lên thành công! File đang chờ xử lý.', 'success');
+    } catch(err) {
+      document.getElementById('import-progress')?.classList.add('hidden');
+      App?.showToast('Upload lỗi: ' + err.message, 'error');
+    }
+  }
+
+  window.Importer = window.Importer || {};
+  window.Importer.selectOmrJob = function(id, status, filename, xmlPath) {
+    if (status !== 'completed') {
+      App?.showToast('File đang xử lý, vui lòng chờ!', 'info');
+      return;
+    }
+    const title = filename.replace(/\.(pdf|png|jpg|jpeg)$/i, '');
+    document.getElementById('omr-review-container').classList.remove('hidden');
+    document.getElementById('omr-review-id').value = id;
+    document.getElementById('omr-review-title').value = title;
+  };
+  
+  window.Importer.deleteOmrJob = async function(id) {
+    if(!confirm('Xoá bản nhận diện này?')) return;
+    await fetch('api/omr.php?id='+id, { method: 'DELETE' });
+    _fetchOmrQueue();
+  };
+
+  async function _loadCategoriesForOmr() {
+    try {
+      const res = await fetch('api/categories.php');
+      const cats = await res.json();
+      const sel = document.getElementById('omr-review-category');
+      if (sel && Array.isArray(cats)) {
+        sel.innerHTML = cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      }
+    } catch(err){}
+  }
+
+  async function _publishOmrResult() {
+    const id = document.getElementById('omr-review-id').value;
+    const title = document.getElementById('omr-review-title').value;
+    const catId = document.getElementById('omr-review-category')?.value || 1;
+    
+    _showProgress('Đang lấy MusicXML từ hệ thống OMR...');
+    try {
+      // Vì file XML đang nằm thư mục storage/omr_workspace, ta trick dùng "Direct URL" load vào library
+      // URL có thể là file tĩnh hoặc API
+      const xmlUrl = window.location.origin + window.location.pathname.replace(/\/index\.php$/, '') + '/storage/omr_workspace/' + id + '.mxl';
+      
+      const res  = await fetch('api/import.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'url', url: xmlUrl, title: title })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || 'Lưu kho thất bại');
+      
+      // Update Category manually vì API url mặc định cat 1.
+      await fetch(`api/songs.php?id=${data.song.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categoryId: catId })
+      });
+      data.song.category_id = catId; // force local update
+
+      _showResult(`✅ Đã đưa vào kho: <strong>${_esc(data.title)}</strong>`, 'success');
+      // Delete OMR Queue job
+      await fetch('api/omr.php?id='+id, { method: 'DELETE' });
+      
+      _triggerSuccess(data.song);
+    } catch (err) {
+      _showResult(`❌ ${err.message}`, 'error');
+    }
+  }
+
+  function _previewOmrResult() {
+    const id = document.getElementById('omr-review-id').value;
+    const xmlUrl = window.location.origin + window.location.pathname.replace(/\/index\.php$/, '') + '/storage/omr_workspace/' + id + '.mxl';
+    window.open(xmlUrl, '_blank');
   }
 
   // ---- INTERNAL HELPERS ----

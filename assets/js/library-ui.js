@@ -5,6 +5,7 @@
 const LibraryUI = (() => {
 
   let songs         = [];
+  let categories    = [];
   let activeSongId  = null;
   let onSelectCb    = null;
   let onDeleteCb    = null;
@@ -13,15 +14,29 @@ const LibraryUI = (() => {
   const searchEl = () => document.getElementById('search-input');
   const countEl  = () => document.getElementById('library-count');
 
-  /* ---- PUBLIC ---- */
-
   function init() {
     searchEl()?.addEventListener('input', _onSearch);
+    loadCategories();
     loadSongs();
 
     // Prev/Next buttons in toolbar
     document.getElementById('btn-prev-song')?.addEventListener('click', () => App?.navigatePrev?.());
     document.getElementById('btn-next-song')?.addEventListener('click', () => App?.navigateNext?.());
+  }
+
+  async function loadCategories() {
+    try {
+      const res = await fetch('api/categories.php');
+      categories = await res.json();
+      const select = document.getElementById('category-filter');
+      if (select && Array.isArray(categories)) {
+        select.innerHTML = '<option value="">Tất cả danh mục</option>' + 
+          categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        select.addEventListener('change', _onSearch);
+      }
+    } catch(err) {
+      console.error('[Library] Lỗi tải categories:', err);
+    }
   }
 
   async function loadSongs() {
@@ -155,20 +170,23 @@ const LibraryUI = (() => {
   /* ---- SEARCH ---- */
 
   function _onSearch(e) {
-    const q = e.target.value.trim();
-    if (!q) { render(songs); return; }
+    const q = (searchEl()?.value || '').trim();
+    const catId = document.getElementById('category-filter')?.value || '';
+    
+    if (!q && !catId) { render(songs); return; }
 
     const normalized = _removeAccents(q.toLowerCase());
     const num        = parseInt(q, 10);
 
     const filtered = songs.filter(s => {
-      // Tìm theo số bài
+      // Tách riêng điều kiện category
+      if (catId && String(s.category_id) !== String(catId)) return false;
+      
+      // Nếu có input tìm kiếm, kiểm tra thêm
+      if (!q) return true;
       if (!isNaN(num) && s.httlvnId === num) return true;
-      // Tìm theo tên có dấu
       if (s.title.toLowerCase().includes(q.toLowerCase())) return true;
-      // Tìm theo tên không dấu
       if (_removeAccents(s.title.toLowerCase()).includes(normalized)) return true;
-      // Tìm theo key
       if (s.defaultKey && s.defaultKey.toLowerCase().includes(q.toLowerCase())) return true;
       return false;
     });

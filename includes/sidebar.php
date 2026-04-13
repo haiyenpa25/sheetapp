@@ -18,6 +18,12 @@
   </div>
 
   <div class="sidebar-search">
+    <div style="margin-bottom:0.4rem;">
+      <select id="category-filter" class="form-input w-full" style="padding:.3rem .5rem; font-size:.8rem; border-color:transparent; background:var(--bg-overlay);">
+        <option value="">Tất cả danh mục</option>
+        <!-- Rendered via JS -->
+      </select>
+    </div>
     <div class="search-box">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <input id="search-input" type="text" placeholder="Tìm bài hát..." autocomplete="off">
