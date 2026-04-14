@@ -396,7 +396,7 @@ body.fullscreen-mode .osmd-container { max-width: 100%; padding: 1rem; margin-to
   .toolbar-controls::-webkit-scrollbar { display: none; }
 
   /* Ẩn bớt một số tính năng ko cần trên mobile */
-  #btn-session-panel, #btn-print, #btn-fullscreen { display: none !important; }
+  #btn-session-panel, #btn-print { display: none !important; }
 
   /* Các nút trong toolbar: thu nhỏ, icon only */
   .btn-sm { padding: .3rem .4rem; font-size: .75rem; gap: 0; }

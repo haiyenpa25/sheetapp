@@ -6,17 +6,8 @@
   </button>
 
   <div class="toolbar-left">
-    <!-- PREV/NEXT NAV -->
-    <div class="nav-arrows" id="nav-arrows">
-      <button id="btn-prev-song" class="icon-btn" title="Bài trước (↑)" disabled>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-      <button id="btn-next-song" class="icon-btn" title="Bài tiếp theo (↓)" disabled>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-    </div>
-    <!-- SONG INFO: tên bài hát -->
-    <div class="song-info" id="song-info">
+    <!-- SONG INFO: ẩn khỏi toolbar, JS vẫn đọc được -->
+    <div class="song-info" id="song-info" style="display:none;">
       <span id="song-title" class="song-title">Chọn bài hát để bắt đầu</span>
       <!-- song-key badge ẩn khỏi toolbar, chỉ dùng bởi JS để lấy text cho lyric view -->
       <span id="song-key" class="song-key-badge" style="display:none;"></span>
@@ -178,6 +169,17 @@
       </button>
     </div>
 
+    <div style="width: 1px; height: 20px; background: var(--border); margin: 0 0.2rem;"></div>
+
+    <!-- PREV/NEXT NAV (Di chuyển về cuối dòng) -->
+    <div class="nav-arrows" id="nav-arrows">
+      <button id="btn-prev-song" class="icon-btn" title="Bài trước (↑)" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <button id="btn-next-song" class="icon-btn" title="Bài tiếp theo (↓)" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
     <!-- FULLSCREEN -->
     <div class="control-group">
       <button id="btn-fullscreen" class="icon-btn" title="Toàn màn hình (F)" disabled>

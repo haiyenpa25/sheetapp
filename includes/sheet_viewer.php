@@ -54,16 +54,8 @@
   <!-- OSMD PAGE BAR -->
   <div id="page-bar" class="page-bar hidden">
     <div class="page-bar-left">
-      <button id="btn-page-prev" class="icon-btn" title="Trang trước (PageUp)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-      <span id="page-indicator" class="page-indicator">Trang 1 / 1</span>
-      <button id="btn-page-next" class="icon-btn" title="Trang tiếp (PageDown)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-
       <!-- TRANSPOSE -->
-      <div class="control-group" style="margin-left: 1rem; flex-direction: row; align-items: center;">
+      <div class="control-group" style="flex-direction: row; align-items: center;">
         <label class="control-label" style="display: none;">Transpose</label>
         <div class="transpose-controls" style="background: var(--bg-overlay); border-radius: var(--radius-sm); border: 1px solid var(--border);">
           <button id="btn-transpose-down" class="icon-btn transpose-btn" title="Hạ 1 cung" disabled>
@@ -134,6 +126,18 @@
         <button id="btn-clear-all-chords" class="link-btn text-danger hidden" style="margin-right:0.5rem;" onclick="if(confirm('Bạn chắc muốn xoá TOÀN BỘ hợp âm trong hồ sơ này?')) window.ChordCanvas.clearAllChords()">Xoá Toàn Bộ</button>
         <button id="btn-cancel-add-chord" class="link-btn">Hủy</button>
       </span>
+
+      <!-- Nút Trang (Đã chuyển sang phải) -->
+      <div class="sheet-nav-right" style="display:flex; align-items:center; gap:0.25rem; margin-left: 0.5rem; padding-left: 0.5rem; border-left: 1px solid var(--border);">
+        <button id="btn-page-prev" class="icon-btn" title="Trang trước (PageUp)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span id="page-indicator" class="page-indicator">Trang 1 / 1</span>
+        <button id="btn-page-next" class="icon-btn" title="Trang tiếp (PageDown)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+
     </div>
   </div>
 
