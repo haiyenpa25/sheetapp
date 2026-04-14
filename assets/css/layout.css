@@ -113,8 +113,37 @@
 
 /* Fullscreen */
 .sidebar.fs-hidden { transform: translateX(-100%); width: 0 !important; overflow: hidden; border: none; }
-body.fullscreen-mode .toolbar { height: 52px; padding: 0 1rem; }
-body.fullscreen-mode .osmd-container { max-width: 100%; padding: 1rem 3rem; }
+
+/* Khi bật fullscreen: Thả nổi nút Fullscreen ở góc, ẩn toàn bộ Toolbar và PageBar */
+body.fullscreen-mode .toolbar { 
+  position: absolute; 
+  top: 10px; 
+  right: 15px; 
+  width: auto; 
+  height: auto; 
+  background: transparent; 
+  border: none; 
+  backdrop-filter: none; 
+  padding: 0; 
+  z-index: 9999; 
+}
+body.fullscreen-mode .toolbar-left,
+body.fullscreen-mode .control-group:not(:last-child),
+body.fullscreen-mode .page-bar {
+  display: none !important;
+}
+body.fullscreen-mode #btn-fullscreen {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+}
+body.fullscreen-mode #btn-fullscreen svg {
+  width: 20px; height: 20px;
+}
+body.fullscreen-mode .osmd-container { max-width: 100%; padding: 1rem; margin-top: 0; }
 
 /* Dropdown Details Reset */
 .dropdown-details summary::marker,
@@ -155,8 +184,6 @@ body.fullscreen-mode .osmd-container { max-width: 100%; padding: 1rem 3rem; }
     gap: .75rem;
     flex-shrink: 0;
     flex-wrap: nowrap;
-    mask-image: linear-gradient(to right, black 85%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
   }
   .toolbar-controls::-webkit-scrollbar { display: none; }
 
