@@ -46,10 +46,20 @@
 .link-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: .78rem; font-weight: 600; text-decoration: underline; padding: 0; white-space: nowrap; }
 #btn-add-chord-mode.active { background: rgba(109,40,217,.1); border-color: rgba(109,40,217,.4); color: var(--accent); }
 
+@media (max-width: 900px) {
+  /* iPad/Tablet — osmd-container phải full width để tránh overflow khi compact mode */
+  .osmd-container {
+    max-width: 100%;
+    margin: 1rem 0;
+    padding: 1.5rem 1rem;
+    border-radius: 8px;
+  }
+}
+
 @media (max-width: 768px) {
   .page-bar { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
   .page-bar::-webkit-scrollbar { display: none; }
-  .osmd-container { padding: 1.25rem 0.75rem; }
+  .osmd-container { padding: 1rem 0.5rem; margin: 0.5rem 0; }
   .welcome-screen { padding: 1.5rem 1rem; }
 }
 
@@ -493,4 +503,24 @@ body.dark-mode .lv-title     { color: #e2e8f0; }
   .lv-chorus::before { display: none; }
 }
 
+/* =============================================
+   OSMD TITLE — làm đẹp tên bài trong sheet nhạc
+   ============================================= */
 
+/* Title text được class bởi _compactTitleSVG */
+#osmd-container svg text.osmd-title-text {
+  font-weight: 600 !important;
+  letter-spacing: 0.03em !important;
+  fill: #1a1a2e !important;
+}
+
+/* Ẩn mọi rect background xấu trong vùng title (nếu có) */
+#osmd-container svg > rect:first-of-type {
+  display: none;
+}
+
+/* Paper (page) SVG — nền trắng sạch */
+#osmd-container svg .vf-page,
+#osmd-container svg [class*="page"] {
+  background: white;
+}

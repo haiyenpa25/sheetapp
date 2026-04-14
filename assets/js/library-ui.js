@@ -1,6 +1,7 @@
 /**
  * library-ui.js  v2
  * Sidebar: danh sách 903 bài, số thứ tự, tổng count, search gọn nhẹ.
+ * v3: + Lyric Search, + Favorites, + Recently Viewed
  */
 const LibraryUI = (() => {
 
@@ -9,6 +10,8 @@ const LibraryUI = (() => {
   let activeSongId  = null;
   let onSelectCb    = null;
   let onDeleteCb    = null;
+  let _lyricDebounce = null;
+  let _searchMode   = 'title'; // 'title' | 'lyric'
 
   const listEl   = () => document.getElementById('song-list');
   const searchEl = () => document.getElementById('search-input');
@@ -23,8 +26,22 @@ const LibraryUI = (() => {
     document.getElementById('btn-prev-song')?.addEventListener('click', () => App?.navigatePrev?.());
     document.getElementById('btn-next-song')?.addEventListener('click', () => App?.navigateNext?.());
 
+    // Lyric search toggle button
+    document.getElementById('btn-search-lyrics')?.addEventListener('click', _toggleSearchMode);
 
+    // History tab updates
+    if (window.HistoryManager) {
+      HistoryManager.init(_renderHistory);
+      _renderHistory();
+    }
 
+    // Favorites tab
+    document.getElementById('sidebar-tab-favs')?.addEventListener('click', () => _showFavorites());
+    document.getElementById('sidebar-tab-lib')?.addEventListener('click', () => {
+      _searchMode = 'title';
+      render(songs);
+      _renderHistory();
+    });
   }
 
   async function loadCategories() {
@@ -68,7 +85,7 @@ const LibraryUI = (() => {
     }
   }
 
-  function render(list) {
+  function render(list, opts = {}) {
     const el = listEl();
     if (!el) return;
 
@@ -76,8 +93,8 @@ const LibraryUI = (() => {
       el.innerHTML = `
         <div class="empty-state">
           <span class="empty-icon">🎶</span>
-          <p>Không tìm thấy bài hát</p>
-          <small>Thử từ khóa khác</small>
+          <p>${opts.emptyMsg || 'Không tìm thấy bài hát'}</p>
+          <small>${opts.emptyHint || 'Thử từ khóa khác'}</small>
         </div>`;
       return;
     }
@@ -86,7 +103,7 @@ const LibraryUI = (() => {
 
     el.querySelectorAll('.song-item').forEach(item => {
       item.addEventListener('click', e => {
-        if (e.target.closest('.song-delete-btn') || e.target.closest('.song-add-setlist-btn') || e.target.closest('.song-edit-btn')) return;
+        if (e.target.closest('.song-delete-btn') || e.target.closest('.song-add-setlist-btn') || e.target.closest('.song-fav-btn')) return;
         selectSong(item.dataset.id);
       });
       item.querySelector('.song-delete-btn')?.addEventListener('click', e => {
@@ -100,7 +117,19 @@ const LibraryUI = (() => {
         const id = item.dataset.id;
         _promptAddToSetlist(id);
       });
-
+      item.querySelector('.song-fav-btn')?.addEventListener('click', e => {
+        e.stopPropagation();
+        const id    = item.dataset.id;
+        const song  = songs.find(s => s.id === id) || list.find(s => s.id === id);
+        if (song && window.HistoryManager) {
+          const added = HistoryManager.toggleFavorite(song);
+          const btn   = e.currentTarget;
+          btn.textContent = added ? '★' : '☆';
+          btn.title = added ? 'Bỏ yêu thích' : 'Thêm yêu thích';
+          btn.classList.toggle('fav-active', added);
+          App?.showToast(added ? '★ Đã thêm vào Yêu Thích' : 'Đã bỏ Yêu Thích', 'success');
+        }
+      });
     });
 
     if (activeSongId) _highlightActive(activeSongId);
@@ -176,20 +205,35 @@ const LibraryUI = (() => {
 
   /* ---- SEARCH ---- */
 
-  function _onSearch(e) {
-    const q = (searchEl()?.value || '').trim();
+  function _toggleSearchMode() {
+    _searchMode = _searchMode === 'title' ? 'lyric' : 'title';
+    const btn = document.getElementById('btn-search-lyrics');
+    if (btn) {
+      btn.classList.toggle('active', _searchMode === 'lyric');
+      btn.title = _searchMode === 'lyric' ? 'Đang tìm theo Lời (click để tìm theo Tên)' : 'Tìm theo Lời bài hát';
+    }
+    const q = searchEl()?.value?.trim() || '';
+    if (q) _onSearch();
+  }
+
+  function _onSearch() {
+    const q     = (searchEl()?.value || '').trim();
     const catId = document.getElementById('category-filter')?.value || '';
-    
-    if (!q && !catId) { render(songs); return; }
+
+    // Lyric search mode
+    if (_searchMode === 'lyric' && q.length >= 2) {
+      clearTimeout(_lyricDebounce);
+      _lyricDebounce = setTimeout(() => _searchByLyric(q), 350);
+      return;
+    }
+
+    if (!q && !catId) { render(songs); _renderHistory(); return; }
 
     const normalized = _removeAccents(q.toLowerCase());
     const num        = parseInt(q, 10);
 
     const filtered = songs.filter(s => {
-      // Tách riêng điều kiện category
       if (catId && String(s.category_id) !== String(catId)) return false;
-      
-      // Nếu có input tìm kiếm, kiểm tra thêm
       if (!q) return true;
       if (!isNaN(num) && s.httlvnId === num) return true;
       if (s.title.toLowerCase().includes(q.toLowerCase())) return true;
@@ -198,15 +242,40 @@ const LibraryUI = (() => {
       return false;
     });
 
+    _renderHistory();
     render(filtered);
+  }
+
+  async function _searchByLyric(q) {
+    const listE = listEl();
+    if (!listE) return;
+    listE.innerHTML = '<div class="empty-state"><span class="empty-icon">🔍</span><p>Đang tìm theo lời...</p></div>';
+    try {
+      const res  = await fetch('api/songs.php?lyric_search=' + encodeURIComponent(q));
+      const data = await res.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        render([], { emptyMsg: 'Không tìm thấy bài nào', emptyHint: 'Thử từ khác hoặc chuyển sang tìm tên' });
+        return;
+      }
+      // Render với lyric snippet
+      listE.innerHTML = data.map(song => _songItemHTML(song, song.lyric_snippet)).join('');
+      listE.querySelectorAll('.song-item').forEach(item => {
+        item.addEventListener('click', () => selectSong(item.dataset.id));
+      });
+      if (activeSongId) _highlightActive(activeSongId);
+    } catch(err) {
+      render([], { emptyMsg: 'Lỗi tìm kiếm lời', emptyHint: err.message });
+    }
   }
 
   /* ---- INTERNAL ---- */
 
-  function _songItemHTML(song) {
-    const num    = song.httlvnId ? String(song.httlvnId).padStart(3, '0') : '';
-    const keyBadge = song.defaultKey
-      ? `<span class="tag tag-purple">${song.defaultKey}</span>`
+  function _songItemHTML(song, lyricSnippet) {
+    const num      = song.httlvnId ? String(song.httlvnId).padStart(3, '0') : '';
+    const keyBadge = song.defaultKey ? `<span class="tag tag-purple">${song.defaultKey}</span>` : '';
+    const isFav    = window.HistoryManager ? HistoryManager.isFavorite(song.id) : false;
+    const snippetHtml = lyricSnippet
+      ? `<div class="song-item-snippet">${_esc(lyricSnippet)}</div>`
       : '';
 
     return `
@@ -214,13 +283,59 @@ const LibraryUI = (() => {
         <div class="song-item-num">${num}</div>
         <div class="song-item-info">
           <div class="song-item-title">${_esc(song.title)}</div>
-          <div class="song-item-meta">${keyBadge}</div>
+          <div class="song-item-meta">${keyBadge}${snippetHtml}</div>
         </div>
         <div class="song-item-actions">
+          <button class="icon-btn-xs song-fav-btn ${isFav ? 'fav-active' : ''}" title="${isFav ? 'Bỏ yêu thích' : 'Yêu thích'}">${isFav ? '★' : '☆'}</button>
           <button class="icon-btn-xs song-add-setlist-btn hidden" title="Thêm vào Setlist">✚</button>
           <button class="icon-btn-xs song-delete-btn" title="Xoá bài hát">🗑</button>
         </div>
       </div>`;
+  }
+
+  /* ---- RECENTLY VIEWED ---- */
+
+  function _renderHistory() {
+    if (!window.HistoryManager) return;
+    const container = document.getElementById('recently-viewed-section');
+    if (!container) return;
+    const history = HistoryManager.getHistory();
+    if (!history || history.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+    const top5 = history.slice(0, 5);
+    container.style.display = '';
+    container.innerHTML = `
+      <div class="recent-header">
+        <span>🕒 Gần Đây</span>
+        <button id="btn-clear-history" class="icon-btn-xs" title="Xóa lịch sử" style="font-size:.7rem; opacity:.6;">✕</button>
+      </div>
+      <div class="recent-list">
+        ${top5.map(s => `
+          <div class="recent-item" data-id="${_esc(s.id)}" title="${_esc(s.title)}">
+            <span class="recent-num">${s.httlvnId ? String(s.httlvnId).padStart(3,'0') : ''}</span>
+            <span class="recent-title">${_esc(s.title)}</span>
+            ${s.defaultKey ? `<span class="tag tag-purple" style="font-size:.65rem;padding:.1rem .35rem;">${s.defaultKey}</span>` : ''}
+          </div>`).join('')}
+      </div>`;
+    container.querySelectorAll('.recent-item').forEach(item => {
+      item.addEventListener('click', () => selectSong(item.dataset.id));
+    });
+    container.querySelector('#btn-clear-history')?.addEventListener('click', e => {
+      e.stopPropagation();
+      HistoryManager.clearHistory();
+    });
+  }
+
+  function _showFavorites() {
+    if (!window.HistoryManager) return;
+    const favs = HistoryManager.getFavorites();
+    if (favs.length === 0) {
+      render([], { emptyMsg: '⭐ Chưa có bài yêu thích', emptyHint: 'Bấm ☆ bên cạnh mỗi bài để thêm' });
+    } else {
+      render(favs.slice().reverse()); // Mới nhất trước
+    }
   }
 
   function _updateCount(n) {

@@ -114,8 +114,8 @@
         </button>
       </div>
 
-      <!-- ── Annotate Mode Button ── -->
-      <button id="btn-add-annotate-mode" class="btn btn-sm btn-ghost" title="Bật chế độ ghi chú tự do">
+      <!-- Annotate Mode — nút ẩn, được FAB trigger -->
+      <button id="btn-add-annotate-mode" class="btn btn-sm btn-ghost" title="Bật chế độ ghi chú tự do" style="display:none;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         Nốt Ghi Chú
       </button>
@@ -124,8 +124,8 @@
         <button id="btn-cancel-add-annotate" class="link-btn" style="color:#059669;">Hủy</button>
       </span>
 
-      <!-- ── Edit Mode Button ── -->
-      <button id="btn-add-chord-mode" class="btn btn-sm btn-ghost" title="Bật chế độ chỉnh hợp âm (phím C)">
+      <!-- Edit Mode — nút ẩn, được FAB trigger -->
+      <button id="btn-add-chord-mode" class="btn btn-sm btn-ghost" title="Bật chế độ chỉnh hợp âm (phím C)" style="display:none;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
         Thêm Hợp Âm
       </button>

@@ -1,6 +1,6 @@
 <!-- TOP TOOLBAR -->
 <header class="toolbar" id="toolbar">
-  <!-- MOBILE HAMBURGER MENU -->
+  <!-- MOBILE HAMBURGER (chỉ mobile, sidebar mở) -->
   <button id="btn-open-sidebar" class="icon-btn mobile-only" title="Mở danh sách bài hát">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
   </button>
@@ -89,13 +89,12 @@
       </div>
     </div>
 
-    <!-- LYRIC VIEW TOGGLE -->
-    <div class="control-group">
-      <button id="btn-lyric-view" class="btn btn-ghost btn-sm" title="Tuỳ chọn hiển thị Hợp Âm Lời Nhạc">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        <span class="btn-text">Lời Nhạc</span>
-      </button>
-    </div>
+
+    <!-- LYRIC VIEW TOGGLE — di chuyển vào FAB, giữ lại button ẩn để JS vẫn trigger được -->
+    <button id="btn-lyric-view" class="btn btn-ghost btn-sm" title="Tuỳ chọn hiển thị Hợp Âm Lời Nhạc" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <span class="btn-text">Lời Nhạc</span>
+    </button>
 
     <!-- MORE OPTIONS DROPDOWN -->
     <div class="control-group" id="more-options-group" style="position: relative;">
@@ -169,11 +168,13 @@
       });
     </script>
 
-    <!-- AUTH / LOGIN -->
+
+    <!-- AUTH BUTTON đã chuyển lên toolbar-left-group phía trên -->
+
+    <!-- HELP BUTTON -->
     <div class="control-group">
-      <button id="btn-auth" class="btn btn-ghost btn-sm" title="Đăng nhập / Phân quyền">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <span id="auth-username" class="auth-username">Khách</span>
+      <button id="btn-help" class="icon-btn" title="Hướng dẫn sử dụng (?)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       </button>
     </div>
 
@@ -186,3 +187,4 @@
 
   </div>
 </header>
+

@@ -29,6 +29,36 @@ $isAdmin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 try {
     switch ($method) {
         case 'GET':
+            $lyricSearch = trim($_GET['lyric_search'] ?? '');
+            if ($lyricSearch !== '') {
+                // Tìm theo lời bài hát
+                $keyword = '%' . $lyricSearch . '%';
+                $stmt = $pdo->prepare("
+                    SELECT s.id, s.title, s.httlvnId, s.xmlPath, s.defaultKey, s.category_id,
+                           c.name as category_name,
+                           s.lyrics_text
+                    FROM songs s
+                    LEFT JOIN categories c ON s.category_id = c.id
+                    WHERE s.lyrics_text LIKE ?
+                    ORDER BY s.httlvnId ASC, s.title ASC
+                    LIMIT 50
+                ");
+                $stmt->execute([$keyword]);
+                $songs = $stmt->fetchAll();
+                // Trích đoạn snippet gần keyword
+                foreach ($songs as &$song) {
+                    $pos = mb_stripos($song['lyrics_text'] ?? '', $lyricSearch);
+                    if ($pos !== false) {
+                        $start = max(0, $pos - 25);
+                        $snippet = mb_substr($song['lyrics_text'], $start, 80);
+                        $song['lyric_snippet'] = '...' . trim($snippet) . '...';
+                    }
+                    unset($song['lyrics_text']); // Không cần trả về toàn bộ lời
+                }
+                unset($song);
+                echo json_encode($songs, JSON_UNESCAPED_UNICODE);
+                break;
+            }
             $stmt = $pdo->query("
                 SELECT s.id, s.title, s.httlvnId, s.xmlPath, s.defaultKey, s.category_id, c.name as category_name 
                 FROM songs s 
@@ -38,6 +68,7 @@ try {
             $songs = $stmt->fetchAll();
             echo json_encode($songs, JSON_UNESCAPED_UNICODE);
             break;
+
 
         case 'POST':
             if (!$isAdmin) { http_response_code(403); echo json_encode(['error' => 'Chỉ Admin mới có quyền thêm bài hát']); exit; }

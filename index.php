@@ -21,6 +21,8 @@ echo cssTag('base.css');
 echo cssTag('layout.css');
 echo cssTag('sheet.css');
 echo cssTag('components.css');
+echo cssTag('fab.css');
+
 ?>
   <!-- OSMD & TONE.JS (Audio Player) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
@@ -58,8 +60,10 @@ echo jsTag('lyric-extractor.js');
 echo jsTag('transpose-engine.js');
 echo jsTag('session-tracker.js');
 echo jsTag('auth.js');
+echo jsTag('history-manager.js');
 echo jsTag('library-ui.js');
 echo jsTag('setlist-ui.js');
+
 echo jsTag('importer.js');
 echo jsTag('admin-ui.js');
 echo jsTag('display-settings.js');
@@ -73,6 +77,8 @@ echo jsTag('auto-scroller.js');
 echo jsTag('page-nav.js');
 echo jsTag('app-ui.js');
 echo jsTag('app.js');
+echo jsTag('fab.js');
+
 ?>
 
 </body>

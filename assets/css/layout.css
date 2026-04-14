@@ -133,10 +133,46 @@
 .control-label { font-size: .7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .6px; font-weight: 500; white-space: nowrap; }
 .toolbar-left.in-setlist { background: rgba(167, 139, 250, 0.1); border-radius: 6px; padding: 0.2rem 0.5rem; border: 1px dashed var(--accent); }
 
+/* Auth + hamburger cùng nhóm bên trái toolbar */
+.toolbar-left-group {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  flex-shrink: 0;
+}
+.toolbar-auth {
+  gap: .3rem;
+  font-size: .78rem;
+  padding: .3rem .6rem;
+  border-radius: var(--radius);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+}
+.toolbar-auth:hover {
+  background: var(--bg-raised);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.toolbar-auth svg { width: 15px; height: 15px; flex-shrink: 0; }
+.toolbar-auth .auth-username { max-width: 70px; overflow: hidden; text-overflow: ellipsis; }
+
+/* Mobile: thu nhỏ auth label */
+@media (max-width: 500px) {
+  .toolbar-auth .auth-username { display: none; }
+  .toolbar-auth { padding: .3rem; border-radius: 50%; width: 32px; height: 32px; }
+}
+
 .nav-arrows { display: flex; gap: .15rem; margin-right: .5rem; flex-shrink: 0; }
 .nav-arrows .icon-btn { width: 28px; height: 28px; background: var(--bg-overlay); border: 1px solid var(--border); border-radius: var(--radius-xs); }
 .nav-arrows .icon-btn:hover:not(:disabled) { background: var(--bg-raised); border-color: var(--border-active); }
 .nav-arrows .icon-btn:disabled { opacity: .3; }
+
 
 .transpose-controls { display: flex; align-items: center; background: var(--bg-overlay); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
 .transpose-btn { width: 30px; height: 30px; border-radius: 0 !important; flex-shrink: 0; }
@@ -463,4 +499,73 @@ body.fullscreen-mode .osmd-container { max-width: 100%; padding: 1rem; margin-to
     margin: 0 !important;
     padding: 0 !important;
   }
+
+  /* Chord symbols giữ nguyên màu đỏ khi in */
+  .chord-dot, .chord-dot-hitbox { display: none !important; }
 }
+
+/* =============================================
+   RECENTLY VIEWED
+   ============================================= */
+.recent-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .2rem .75rem .15rem;
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.recent-list { display: flex; flex-direction: column; }
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .3rem .75rem;
+  cursor: pointer;
+  transition: background var(--transition);
+  font-size: .8rem;
+}
+.recent-item:hover { background: var(--bg-overlay); }
+.recent-num { flex-shrink: 0; color: var(--text-muted); font-size: .72rem; width: 24px; }
+.recent-title { flex: 1; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* =============================================
+   FAVORITES — song-fav-btn
+   ============================================= */
+.song-fav-btn {
+  font-size: .85rem;
+  opacity: .4;
+  color: var(--text-muted);
+  transition: opacity .15s, color .15s, transform .1s;
+  padding: .1rem .2rem;
+}
+.song-fav-btn:hover { opacity: 1; transform: scale(1.2); }
+.song-fav-btn.fav-active { opacity: 1; color: #f59e0b; }
+
+/* Search lyric mode indicator */
+#btn-search-lyrics.active {
+  opacity: 1 !important;
+  background: var(--accent) !important;
+  color: #fff !important;
+  border-color: var(--accent) !important;
+}
+
+/* =============================================
+   LYRIC SNIPPET in search results
+   ============================================= */
+.song-item-snippet {
+  font-size: .72rem;
+  color: var(--text-muted);
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+  margin-top: .1rem;
+}
+

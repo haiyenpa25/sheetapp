@@ -9,10 +9,11 @@ const DisplaySettings = (() => {
 
     // Giá trị chuẩn ban đầu
     let chordPrefs = {
-        size: 3.0,
-        yOffset: 1.5,
+        size: 2.2,
+        yOffset: 0.8,
         color: '#dc2626'
     };
+
 
     let compactPrefs = {
         hideBass: true,
@@ -172,12 +173,21 @@ const DisplaySettings = (() => {
                         _renderLyricView();
                     } catch(e) { console.error('Lỗi render LyricView', e); }
                 } else {
-                    // Mở lại bản nhạc
+                    // Quay lại bản nhạc — reload OSMD để tránh drift và đảm bảo chord dots đúng vị trí
+                    const scrollY = window.scrollY;
                     lyricContainer.classList.add('hidden');
                     const osmd = document.getElementById('osmd-container');
                     if(osmd) osmd.style.display = 'block';
                     btnLyricView.classList.remove('active');
                     if (btnText) btnText.textContent = 'Lời Nhạc';
+                    // Re-render OSMD nhẹ để chord canvas rebuild đúng
+                    if (window.App?.reloadCurrentXML) {
+                        window.App.reloadCurrentXML().then(() => {
+                            window.scrollTo(0, scrollY);
+                        }).catch(() => {});
+                    } else if (window.ChordCanvas) {
+                        window.ChordCanvas.reposition();
+                    }
                 }
             });
         }

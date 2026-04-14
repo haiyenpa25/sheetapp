@@ -138,7 +138,7 @@
       </attributes>
       <sound tempo="104"/>
       
-      <note default-x="112">
+      <harmony><root><root-step>G</root-step></root><kind>major</kind></harmony><note default-x="112">
         <pitch>
           <step>G</step>
           <octave>4</octave>

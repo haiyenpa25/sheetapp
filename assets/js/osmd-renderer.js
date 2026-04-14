@@ -12,6 +12,7 @@ const OSMDRenderer = (() => {
   let isLoaded = false;
   let onReadyCallback = null;
   let _isCompactMode = false;
+  let _titleCompacted = false; // flag tránh compact title nhiều lần
 
   /**
    * Khởi tạo OSMD vào một container DOM.
@@ -31,15 +32,20 @@ const OSMDRenderer = (() => {
       coloringEnabled: true,
       pageFormat: 'Endless',  // Scroll vertically, no page breaks
       engravingRules: {
-        // Làm đẹp hợp âm (Chords)
-        ChordSymbolFontFamily: "OSMDChordFont, sans-serif", // Marker font để thuật toán bề mặt nhận diện
-        ChordSymbolTextHeight: 2.8,             // Kích thước chữ to hơn nữa
-        ChordSymbolYOffset: 1.5,                // Đẩy lên cao để không đụng nốt nhạc
-        DefaultColorChordSymbol: '#dc2626',     // Đổi sang màu đỏ đậm nổi bật
-        // Các chỉnh sửa khác để sheet đẹp hơn
+        // Chord symbols
+        ChordSymbolFontFamily: "OSMDChordFont, sans-serif",
+        ChordSymbolTextHeight: 2.2,
+        ChordSymbolYOffset: 0.8,
+        DefaultColorChordSymbol: '#dc2626',
+        // Sheet layout
         StaffLineWidth: 0.1,
         StemWidth: 0.15,
-        TupletNumberTextHeight: 1.5
+        TupletNumberTextHeight: 1.5,
+        // Title tự điều chỉnh đẹp hơn
+        TitleTopDistance: 1.5,        // Giảm khoảng trống phía trên
+        SheetTitleHeight: 2.0,        // Cỡ chữ title vừa phải (OSMD default ~4.0)
+        SheetComposerHeight: 1.5,     // Nhạc sĩ nhỏ gọn hơn
+        SheetAuthorHeight: 1.5,
       },
       ...options
     });
@@ -54,10 +60,12 @@ const OSMDRenderer = (() => {
     const resizeObserver = new ResizeObserver(_debounce(async () => {
       if (isLoaded) {
           await osmd.render();
+          _titleCompacted = false; // reset để compact lại sau resize
+          _compactTitleSVG();
           if (window.ChordCanvas) window.ChordCanvas.reposition();
           if (window.ChordOverlay) window.ChordOverlay.onOSMDRendered();
       }
-    }, 200));
+    }, 400));
     resizeObserver.observe(container);
 
     return osmd;
@@ -68,12 +76,18 @@ const OSMDRenderer = (() => {
    */
   function refreshRules() {
     if (osmd && osmd.rules) {
-        let prefs = { size: 3.0, yOffset: 1.5, color: '#dc2626' };
+        let prefs = { size: 2.2, yOffset: 0.8, color: '#dc2626' };
         if (window.DisplaySettings) prefs = DisplaySettings.getChordPrefs();
 
         osmd.rules.DefaultColorChordSymbol = prefs.color;
-        osmd.rules.ChordSymbolTextHeight = prefs.size;
-        osmd.rules.ChordSymbolYOffset = prefs.yOffset;
+        osmd.rules.ChordSymbolTextHeight   = prefs.size;
+        osmd.rules.ChordSymbolYOffset      = prefs.yOffset;
+
+        // Title sizing — đặt lại mỗi lần refresh
+        if (osmd.rules.SheetTitleHeight !== undefined)   osmd.rules.SheetTitleHeight   = 2.0;
+        if (osmd.rules.SheetComposerHeight !== undefined) osmd.rules.SheetComposerHeight = 1.5;
+        if (osmd.rules.SheetAuthorHeight !== undefined)   osmd.rules.SheetAuthorHeight   = 1.5;
+        if (osmd.rules.TitleTopDistance !== undefined)    osmd.rules.TitleTopDistance    = 1.5;
     }
   }
 
@@ -96,6 +110,13 @@ const OSMDRenderer = (() => {
                       v.parentNode.remove();
                   }
               });
+
+              // FIX: Sau khi xoa notes voice>1, cac slur/tie elements con lai
+              // co the mat "pair" (start khong co stop). OSMD ve arc khong lo.
+              // Giai phap: xoa toan bo slur + tie trong compact mode
+              doc.querySelectorAll("notations slur").forEach(el => el.remove());
+              doc.querySelectorAll("notations tied").forEach(el => el.remove());
+              doc.querySelectorAll("note > tie").forEach(el => el.remove());
           }
 
           if (prefs.hideChordNotes) {
@@ -185,6 +206,7 @@ const OSMDRenderer = (() => {
 
       refreshRules();
       await osmd.render();
+      _titleCompacted = false;
       _compactTitleSVG();
       isLoaded = true;
       if (onReadyCallback) onReadyCallback(osmd);
@@ -218,6 +240,7 @@ const OSMDRenderer = (() => {
 
       refreshRules();
       await osmd.render();
+      _titleCompacted = false;
       _compactTitleSVG();
       if (onReadyCallback) onReadyCallback(osmd);  // Gọi lại để ChordCanvas rebuild
       return osmd;
@@ -235,11 +258,18 @@ const OSMDRenderer = (() => {
     if (osmd && isLoaded) {
       osmd.zoom = currentZoom;
       await osmd.render();
-      _compactTitleSVG();
+      // Không compact title lại sau zoom — title vị trí không đổi
       // Gọi onReadyCallback để ChordCanvas rebuild sau zoom
       if (onReadyCallback) onReadyCallback(osmd);
     }
   }
+
+  /** Set zoom level mà không trigger render (dùng trước load()) */
+  function setZoomSilent(level) {
+    currentZoom = Math.max(0.5, Math.min(2.5, level));
+    if (osmd) osmd.zoom = currentZoom;
+  }
+
 
   function getCurrentZoom() { return currentZoom; }
 
@@ -272,48 +302,76 @@ const OSMDRenderer = (() => {
   }
 
   /**
-   * Thu nhỏ title text trong OSMD SVG sau khi render.
-   * OSMD thường render title với font-size lớn nhất (~18-24px tuỳ zoom).
-   * Hàm này cap xuống tối đa MAX_TITLE_PX để tiết kiệm không gian dọc.
+   * Tinh chỉnh title SVG sau render — ẩn title bị duplicate, style đẹp hơn.
+   * XML Finale xuất ra: <movement-title> + <credit-words> cùng nội dung → OSMD vẽ chồng.
    */
   function _compactTitleSVG() {
-    const MAX_TITLE_PX = 13; // px — giới hạn font-size title, tuỳ chỉnh ở đây
+    if (_titleCompacted) return;
     const container = document.getElementById(containerId);
     if (!container) return;
     const svg = container.querySelector('svg');
     if (!svg) return;
 
-    const texts = Array.from(svg.querySelectorAll('text'));
-    if (!texts.length) return;
+    // Lấy tất cả text elements, bỏ chord symbols
+    const texts = Array.from(svg.querySelectorAll('text')).filter(t => {
+      const ff = t.getAttribute('font-family') || '';
+      return !ff.includes('OSMDChordFont');
+    });
+    if (!texts.length) { _titleCompacted = true; return; }
 
-    // Tìm font-size lớn nhất trong SVG (là title)
+    // --- Tìm title text (lớn nhất) ---
     let maxSize = 0;
+    let titleEl = null;
     texts.forEach(t => {
-      // OSMD set bằng attribute, không qua CSS
-      const fsAttr = t.getAttribute('font-size');
-      if (fsAttr) {
-        const fs = parseFloat(fsAttr);
-        if (fs > maxSize) maxSize = fs;
+      const fs = parseFloat(t.getAttribute('font-size') || '0');
+      if (fs > maxSize) { maxSize = fs; titleEl = t; }
+    });
+
+    if (titleEl) {
+      // 1. Style title đẹp hơn
+      titleEl.setAttribute('class', (titleEl.getAttribute('class') || '') + ' osmd-title-text');
+
+      // 2. Convert ALL CAPS → Title Case cho dễ đọc
+      const tspan = titleEl.querySelector('tspan');
+      if (tspan) {
+        const raw = tspan.textContent.trim();
+        if (raw === raw.toUpperCase() && raw.length > 2 && !/^\d+$/.test(raw)) {
+          tspan.textContent = raw.split(' ').map(w =>
+            w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+          ).join(' ');
+        }
+      }
+
+      // 3. Tìm và ẩn các text TRÙNG NỘI DUNG với title (duplicate từ movement-title + credit)
+      const titleContent = (titleEl.querySelector('tspan') || titleEl).textContent.trim().toLowerCase();
+      texts.forEach(t => {
+        if (t === titleEl) return;
+        const content = t.textContent.trim().toLowerCase();
+        const fs = parseFloat(t.getAttribute('font-size') || '0');
+        // Ẩn nếu trùng nội dung & nhỏ hơn title
+        if (content === titleContent && fs < maxSize) {
+          t.style.display = 'none';
+        }
+      });
+    }
+
+    // 4. Ẩn các rect nhỏ trong header (nếu OSMD vẽ enclosure/box xung quanh credit)
+    const svgY = parseFloat(svg.getAttribute('viewBox')?.split(' ')[1] || '0');
+    svg.querySelectorAll('rect').forEach(rect => {
+      const height = parseFloat(rect.getAttribute('height') || '999');
+      const fill   = rect.getAttribute('fill') || '';
+      const stroke = rect.getAttribute('stroke') || '';
+      // Rect nhỏ (< 40px) có stroke = enclosure box xấu → ẩn
+      if (height < 40 && stroke && stroke !== 'none' && fill === 'none') {
+        rect.style.display = 'none';
       }
     });
 
-    if (!maxSize || maxSize <= MAX_TITLE_PX) return; // Không cần thu nhỏ
-
-    // Tìm và thu nhỏ các text có font-size >= 75% maxSize (title + subtitle)
-    const threshold = maxSize * 0.75;
-    texts.forEach(t => {
-      const fsAttr = t.getAttribute('font-size');
-      if (!fsAttr) return;
-      const fs = parseFloat(fsAttr);
-      if (fs >= threshold) {
-        // Scale proportionally, không để dưới MIN (8px)
-        const newSize = Math.max(8, Math.round(fs * (MAX_TITLE_PX / maxSize)));
-        t.setAttribute('font-size', String(newSize));
-      }
-    });
+    _titleCompacted = true;
   }
 
   function setCompactMode(val) {
+
       _isCompactMode = !!val;
       if (isLoaded && osmd && currentXmlString) {
           // Sử dụng reload() để OSMD ép tính toán lại layout và Rules từ đầu.
@@ -392,7 +450,7 @@ const OSMDRenderer = (() => {
       }
   }
 
-  return { init, load, reload, setZoom, getInstance, getIsLoaded, getCurrentXml, getCurrentZoom, onReady, destroy, setCompactMode, getCompactMode };
+  return { init, load, reload, setZoom, setZoomSilent, getInstance, getIsLoaded, getCurrentXml, getCurrentZoom, onReady, destroy, setCompactMode, getCompactMode };
 })();
 
 window.OSMDRenderer = OSMDRenderer;

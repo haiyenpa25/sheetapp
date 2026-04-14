@@ -45,11 +45,12 @@ const ChordCanvas = (() => {
 
   function onOSMDRendered() { 
     _alignOSMDChords();
-    setTimeout(_build, 200); 
+    // Dùng rAF + timeout để đảm bảo SVG đã layout xong trước khi build dots
+    setTimeout(() => requestAnimationFrame(_build), 350); 
   }
   function reposition() { 
     _alignOSMDChords();
-    setTimeout(_build, 100); 
+    setTimeout(() => requestAnimationFrame(_build), 200); 
   }
 
   function _alignOSMDChords() {
@@ -231,29 +232,18 @@ const ChordCanvas = (() => {
 
     const scale = ChordCanvasUI.getScale();
     if (chord) {
-      if (!_editEnabled && _currentSet === 'default') return; // HTML Hitbox chỉ hiển thị khi Edit = true (default)
-      // Custom set thì lúc nào cũng phải hiển thị (vì textContent > 0)
+      if (!_editEnabled && _currentSet === 'default') return; // Chỉ default + không edit mới skip
       
       const span = document.createElement('span');
       span.className = DOT_CLASS + ' cc-chord-text';
-      
-      if (_currentSet === 'default') {
-         span.textContent = ''; // Lõi OSMD đã vẽ, chỉ cần Hitbox tàng hình
-         ChordCanvasUI.applyAbsolute(span, cx, cy, [
-           'white-space:nowrap', 'user-select:none', 
-           'opacity:0', 'width:30px', 'height:20px',
-           'pointer-events:auto', 'cursor:pointer',
-           'display:' + (_editEnabled ? 'block' : 'none')
-         ]);
-      } else {
-         span.textContent = ''; // Xóa sạch Text đè DOM, chỉ giữ lưới tàng hình để click edit! Native OSMD đã lo vẽ chữ.
-         ChordCanvasUI.applyAbsolute(span, cx, cy, [
-           'white-space:nowrap', 'user-select:none', 
-           'opacity:0', 'width:30px', 'height:20px',
-           'pointer-events:auto', 'cursor:pointer',
-           'display:' + (_editEnabled ? 'block' : 'none')
-         ]);
-      }
+      span.title = chord; // Tooltip để thấy chord khi hover
+      ChordCanvasUI.applyAbsolute(span, cx, cy, [
+        'white-space:nowrap', 'user-select:none',
+        'opacity:0', 'width:60px', 'height:26px',
+        'pointer-events:' + (_editEnabled ? 'auto' : 'none'),
+        'cursor:pointer',
+        'display:block'
+      ]);
       
       span.addEventListener('click', e => { 
         if (!_editEnabled) return;

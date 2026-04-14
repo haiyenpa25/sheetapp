@@ -150,9 +150,11 @@ const App = (() => {
       }
 
       AppUI.setLoadingText('Đang vẽ bản nhạc...');
+      // Set zoom level TRƯỚC khi load để tránh render 2 lần (load render + setZoom render)
+      OSMDRenderer.setZoomSilent(currentZoom);
       await OSMDRenderer.load(processedXml, currentTranspose);
 
-      await OSMDRenderer.setZoom(currentZoom);
+      // Chỉ update UI zoom, không render lại
       document.getElementById('zoom-slider').value = Math.round(currentZoom * 100);
       document.getElementById('zoom-value-label').textContent = Math.round(currentZoom * 100) + '%';
 
@@ -184,12 +186,20 @@ const App = (() => {
       AppUI.updateSessionPanel(currentTranspose, SessionTracker.getHistory());
       AppUI.showToast(`Đã mở: ${song.title}`, 'info');
 
+      // Track recently viewed
+      if (window.HistoryManager) window.HistoryManager.trackView(song);
+
+      // Enable print button
+      const printBtn = document.getElementById('btn-print');
+      if (printBtn) printBtn.disabled = false;
+
     } catch (err) {
       console.error('[App] Lỗi load song:', err);
       AppUI.showToast(`Lỗi: ${err.message}`, 'error');
       AppUI.showWelcome();
     }
   }
+
 
   /* ====================== TRANSPOSE ====================== */
   let _transposeTimer = null;
