@@ -49,12 +49,33 @@
 @media (max-width: 768px) {
   .page-bar { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
   .page-bar::-webkit-scrollbar { display: none; }
-  .osmd-container { padding: 1.5rem 1rem; }
+  .osmd-container { padding: 1.25rem 0.75rem; }
+  .welcome-screen { padding: 1.5rem 1rem; }
 }
 
 /* ---- OSMD CONTAINER ---- */
 .osmd-container { position: relative; padding: 2.5rem 2rem; max-width: 860px; margin: 2rem auto; background: #ffffff; border-radius: var(--radius); box-shadow: 0 2px 20px rgba(109,40,217,.10), 0 1px 4px rgba(0,0,0,.06); min-height: 400px; }
 .osmd-container svg { width: 100%; height: auto; display: block; }
+
+/* ---- THU NHỎ TIÊU ĐỀ BÀI HÁT TRONG OSMD ----
+   OSMD render title rất to. CSS target tất cả text SVG có font-size > 18px.
+   Cách tiếp cận: dùng CSS font-size !important trên text trong #osmd-container
+   nhưng chỉ các text có class/position là title (thường là text đầu tiên, to nhất).
+   Dùng .osmd-title-compact class (toggle bởi JS) để kiểm soát. */
+#osmd-container svg text[font-size="12"],
+#osmd-container svg text[font-size="13"],
+#osmd-container svg text[font-size="14"] {
+  /* Subtitle / composer / lyricist — để nguyên */
+}
+/* Class để compact title — toggle thông qua .osmd-container.compact-title */
+#osmd-container.compact-title svg text:first-of-type {
+  font-size: 11px !important;
+}
+/* Compact title thông qua CSS var — cách an toàn hơn */
+#osmd-container {
+  --osmd-title-scale: 1;
+}
+
 
 /* ---- CHORD SET BAR ---- */
 .chord-set-bar {

@@ -58,8 +58,8 @@ const App = (() => {
     const toggleSidebar = () => {
       const sidebar = document.getElementById('sidebar');
       if (!sidebar) return;
-      if (window.innerWidth <= 768) {
-        // Mobile: dùng mobile-hidden class
+      if (window.innerWidth <= 900) {
+        // Mobile/Tablet: dùng mobile-hidden class
         sidebar.classList.toggle('mobile-hidden');
         const overlay = document.getElementById('sidebar-overlay');
         if (sidebar.classList.contains('mobile-hidden')) {
@@ -82,8 +82,8 @@ const App = (() => {
     document.getElementById('btn-toggle-sidebar')?.addEventListener('click', toggleSidebar);
     document.getElementById('btn-open-sidebar')?.addEventListener('click', toggleSidebar);
 
-    // Khởi tạo: ẩn sidebar trên mobile
-    if (window.innerWidth <= 768) {
+    // Khởi tạo: ẩn sidebar trên mobile/tablet
+    if (window.innerWidth <= 900) {
       document.getElementById('sidebar')?.classList.add('mobile-hidden');
     }
 
@@ -121,8 +121,8 @@ const App = (() => {
     AppUI.showLoading(`Đang tải "${song.title}"...`);
     AppUI.enableControls(false);
 
-    // Auto close sidebar on mobile
-    if (window.innerWidth <= 768) {
+    // Auto close sidebar on mobile/tablet
+    if (window.innerWidth <= 900) {
       document.getElementById('sidebar')?.classList.add('mobile-hidden');
       const overlay = document.getElementById('sidebar-overlay');
       if (overlay) overlay.classList.add('hidden');
@@ -217,6 +217,10 @@ const App = (() => {
     const disp = document.getElementById('transpose-display');
     if (disp) disp.style.opacity = '0.5';
 
+    // Kiểm tra Lyric View có đang active không
+    const lyricContainer = document.getElementById('lyric-view-container');
+    const isLyricActive = lyricContainer && !lyricContainer.classList.contains('hidden');
+
     // Scroll Lock Mechanism
     const container = document.querySelector('.sheet-viewer-wrapper');
     const scrollY = window.scrollY;
@@ -233,7 +237,7 @@ const App = (() => {
 
       if (window.InstrumentMixer?.preserveState) window.InstrumentMixer.preserveState();
 
-      // Sử dụng OSMD Native Transpose thay vì can thiệp thủ công vào XML
+      // Luôn reload OSMD (dù đang ẩn) để state nhất quán
       await OSMDRenderer.reload(processedXml, currentTranspose);
       SessionTracker.setTranspose(currentTranspose);
       
@@ -246,18 +250,20 @@ const App = (() => {
           if (chordList.length === 0) {
               chordList = TransposeEngine.extractChordsFromXML(processedXml);
           }
-          
-          // Dịch các hợp âm ra mảng string để tính toán Capo cho đúng key mới
           const transposedChords = chordList.map(c => TransposeEngine.transposeChord(c, currentTranspose));
           AppUI.updateCapoBadge(TransposeEngine.suggestBestCapo(transposedChords));
       }
 
       if (window.ChordCanvas) window.ChordCanvas.onOSMDRendered();
       if (window.AnnotationCanvas) window.AnnotationCanvas.onOSMDRendered();
-      if (window.LyricExtractor) window.LyricExtractor.reloadIfActive();
     } catch (err) {
-      AppUI.showToast('Lỗi khi dịch giọng', 'error');
+      console.warn('[App] OSMD reload lỗi (có thể do container ẩn):', err.message);
     } finally {
+      // LUÔN re-render Lyric View nếu đang active, bất kể OSMD có thành công hay không
+      if (isLyricActive && window.DisplaySettings?.renderLyricViewIfActive) {
+        window.DisplaySettings.renderLyricViewIfActive();
+      }
+      
       if (disp) disp.style.opacity = '';
       setTimeout(() => {
         if (container) {

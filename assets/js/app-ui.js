@@ -29,9 +29,15 @@ const AppUI = (() => {
     document.getElementById('page-bar')?.classList.add('hidden');
     enableControls(false);
     const titleEl = document.getElementById('song-title');
-    if (titleEl) titleEl.textContent = 'Chọn bài hát để bắt đầu';
+    if (titleEl) {
+      titleEl.textContent = 'Chọn bài hát để bắt đầu';
+      titleEl.style.color = '';
+    }
     const keyEl = document.getElementById('song-key');
-    if (keyEl) keyEl.textContent = '';
+    if (keyEl) {
+      keyEl.textContent = '';
+      keyEl.style.display = 'none';
+    }
   }
 
   function showLoading(text) {
@@ -125,14 +131,17 @@ const AppUI = (() => {
     }
     
     if (keyEl) {
+      // Luôn ẩn badge trên toolbar — thông tin giọng đã hiển thị ở Lyric View header và Page Bar
+      // Vẫn cập nhật textContent để lyric-extractor.js đọc được
       if (song.defaultKey && transpose !== 0 && window.TransposeEngine) {
         const newKey = TransposeEngine.transposeChord(song.defaultKey, transpose);
-        keyEl.textContent = `${song.defaultKey} → ${newKey}`;
+        keyEl.textContent = newKey || song.defaultKey; // Lyric view dùng textContent này
       } else if (song.defaultKey) {
         keyEl.textContent = song.defaultKey;
       } else {
         keyEl.textContent = '';
       }
+      keyEl.style.display = 'none'; // Luôn ẩn trên toolbar
     }
   }
 

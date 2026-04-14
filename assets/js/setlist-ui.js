@@ -83,7 +83,7 @@ const SetlistUI = (() => {
         
         const addContainer = document.getElementById('setlist-add-container');
         if (addContainer) {
-          addContainer.style.display = 'flex';
+          addContainer.classList.remove('hidden');
         }
         
         renderSetlistItems();
@@ -272,10 +272,8 @@ const SetlistUI = (() => {
       t.addEventListener('click', () => {
         tabs.forEach(tt => {
           tt.classList.remove('active');
-          tt.style.color = 'var(--text-secondary)';
         });
         t.classList.add('active');
-        t.style.color = 'var(--accent)';
         
         document.getElementById('tab-content-library').classList.add('hidden');
         document.getElementById('tab-content-setlist').classList.add('hidden');

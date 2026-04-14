@@ -1,12 +1,41 @@
 /**
- * lyric-extractor.js — v3.0
+ * lyric-extractor.js — v3.1
  * Word-wrap flow: tất cả syllables chảy tự do trong 1 flex container.
- * Khi font nhỏ → nhiều từ/dòng. Khi zoom → tự xuống dòng như real text.
  */
 const LyricExtractor = (() => {
   'use strict';
 
+  /* ─── Transpose chord text bằng Tonal.Note.transpose ─── */
+  function _transposeChordText(chordStr, semitones) {
+    if (!chordStr || semitones === 0) return chordStr;
+    // Dùng TransposeEngine nếu có
+    if (window.TransposeEngine?.transposeChord) {
+      const result = window.TransposeEngine.transposeChord(chordStr, semitones);
+      if (result && result !== chordStr || semitones === 0) return result || chordStr;
+    }
+    // Fallback: dùng Tonal.Note trực tiếp
+    if (!window.Tonal) return chordStr;
+    try {
+      // Tách root note (VD: "Eb", "F#", "A") và suffix ("m", "7", "maj7", v.v.)
+      const match = chordStr.match(/^([A-G][#b]?)(.*)/);
+      if (!match) return chordStr;
+      const root   = match[1];
+      const suffix = match[2] || '';
+      // Transpose root note
+      const INTERVALS = ['1P','2m','2M','3m','3M','4P','4A','5P','6m','6M','7m','7M'];
+      const dir = semitones < 0 ? '-' : '';
+      const abs = Math.abs(semitones) % 12;
+      const interval = dir + INTERVALS[abs];
+      const newRoot = window.Tonal.Note.transpose(root, interval);
+      if (!newRoot) return chordStr;
+      return newRoot + suffix;
+    } catch(e) {
+      return chordStr;
+    }
+  }
+
   /* ─── Parse <harmony> → chord text ─────────────────── */
+
   function parseHarmonyToText(h) {
     const step  = h.querySelector('root-step')?.textContent?.trim() || '';
     const alter = h.querySelector('root-alter')?.textContent?.trim();
@@ -48,8 +77,8 @@ const LyricExtractor = (() => {
         if (c.tagName === 'harmony') {
           let str = parseHarmonyToText(c);
           const custom = c.hasAttribute('color');
-          if (!custom && transposeOffset !== 0 && window.TransposeEngine) {
-            str = window.TransposeEngine.transposeChord(str, transposeOffset);
+          if (!custom && transposeOffset !== 0) {
+            str = _transposeChordText(str, transposeOffset);
           }
           currentChord = str;
 
@@ -213,14 +242,17 @@ const LyricExtractor = (() => {
   function reloadIfActive() {
     const el = document.getElementById('lyric-view-container');
     if (!el || el.classList.contains('hidden')) return;
+
+    // Delegate sang DisplaySettings để dùng đúng chord set đang active
+    if (window.DisplaySettings?.renderLyricViewIfActive) {
+      window.DisplaySettings.renderLyricViewIfActive();
+      return;
+    }
+
+    // Fallback nếu DisplaySettings chưa load: dùng XML gốc
     const raw = window.App?.getOriginalXml?.();
     if (!raw) return;
-    const map = window.ChordCanvas?.getChordsMap?.() || {};
-    let xml = raw;
-    if (Object.keys(map).length && window.ChordCanvasXML?.cloneAndInjectChords) {
-      xml = window.ChordCanvasXML.cloneAndInjectChords(raw, map);
-    }
-    render('lyric-view-container', xml, window.App?.getCurrentTranspose?.() || 0);
+    render('lyric-view-container', raw, window.App?.getCurrentTranspose?.() || 0);
   }
 
   return { render, extract, reloadIfActive };

@@ -31,6 +31,53 @@
 .logo-icon { font-size: 1.5rem; }
 .logo-text { font-size: 1.1rem; font-weight: 700; background: linear-gradient(135deg, var(--accent), #7c3aed); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -.3px; }
 
+/* ---- SIDEBAR TABS ---- */
+.sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); }
+.sidebar-tab {
+  flex: 1; padding: .55rem .5rem; border: none; background: none;
+  font-family: var(--font-body); font-size: .8rem; font-weight: 600;
+  cursor: pointer; color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  transition: color var(--transition), border-color var(--transition);
+}
+.sidebar-tab:hover { color: var(--text-primary); }
+.sidebar-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ---- COMPACT SETTINGS PANEL ---- */
+.compact-settings-panel {
+  padding: .7rem .8rem;
+  width: max-content;
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  font-size: .82rem;
+}
+.compact-settings-panel .check-row {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  cursor: pointer;
+  padding: .2rem 0;
+  color: var(--text-secondary);
+  font-weight: 500;
+  transition: color var(--transition);
+}
+.compact-settings-panel .check-row:hover { color: var(--text-primary); }
+.compact-settings-panel .check-row + .check-row.divider-top {
+  border-top: 1px solid var(--border);
+  padding-top: .4rem;
+  margin-top: .1rem;
+}
+.compact-settings-panel input[type="checkbox"] {
+  width: 14px; height: 14px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ---- AUTH USERNAME ---- */
+.auth-username { margin-left: 4px; font-weight: 600; font-size: .8rem; }
+
 .sidebar-search { padding: .75rem 1rem .5rem; }
 .search-box { display: flex; align-items: center; gap: .5rem; background: var(--bg-overlay); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .45rem .75rem; transition: border-color var(--transition); }
 .search-box:focus-within { border-color: var(--border-active); }
@@ -84,7 +131,7 @@
 .toolbar-controls { display: flex; align-items: center; gap: 1.25rem; flex-shrink: 0; }
 .control-group { display: flex; align-items: center; gap: .5rem; }
 .control-label { font-size: .7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .6px; font-weight: 500; white-space: nowrap; }
-.toolbar-left.in-setlist { background: rgba(167, 139, 250, 0.1); border-radius: var(--radius-md); padding: 0.2rem 0.5rem; border: 1px dashed var(--accent); }
+.toolbar-left.in-setlist { background: rgba(167, 139, 250, 0.1); border-radius: 6px; padding: 0.2rem 0.5rem; border: 1px dashed var(--accent); }
 
 .nav-arrows { display: flex; gap: .15rem; margin-right: .5rem; flex-shrink: 0; }
 .nav-arrows .icon-btn { width: 28px; height: 28px; background: var(--bg-overlay); border: 1px solid var(--border); border-radius: var(--radius-xs); }
@@ -156,21 +203,48 @@ body.fullscreen-mode .osmd-container { max-width: 100%; padding: 1rem; margin-to
   right: 0;
   background: var(--bg-surface);
   border: 1px solid var(--border);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  border-radius: var(--radius-sm);
-  padding: 0.25rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,.2), 0 2px 8px rgba(0,0,0,.12);
+  border-radius: 8px;
+  padding: 0.3rem;
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
-  z-index: 9999; /* cao hơn toolbar (z-index:50) */
-  min-width: 140px;
-  /* Đảm bảo không bị clip bởi parent có overflow */
+  gap: 0.1rem;
+  z-index: 9999;
+  min-width: 150px;
+  animation: fadeScaleIn .12s ease;
   pointer-events: auto;
 }
+.dropdown-menu.hidden { display: none !important; }
+
+@keyframes fadeScaleIn {
+  from { opacity: 0; transform: scale(.96) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1)  translateY(0); }
+}
+
+/* Setlist detail */
+.setlist-detail-view { padding: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.setlist-detail-header { display: flex; align-items: center; gap: .5rem; margin-bottom: .25rem; }
+.setlist-detail-title { margin: 0; font-size: 1rem; flex: 1; font-weight: 600; }
+.setlist-items { display: flex; flex-direction: column; gap: 0.25rem; }
+.setlist-add-container { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.25rem; }
+.setlist-add-container.hidden { display: none; }
+.setlist-search-results {
+  width: 100%; max-height: 250px; overflow-y: auto;
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: 4px; padding: 0;
+}
+/* Sidebar helpers */
+.sidebar-actions { padding: 0.5rem 1rem; display: flex; flex-direction: column; gap: .3rem; }
+.mt-half { margin-top: .4rem; }
+.sidebar-tab-content { display: block; }
+.sidebar-tab-content.hidden { display: none; }
 
 /* =============================================
    RESPONSIVE — Tablet & Mobile
    ============================================= */
+
+/* Mặc định: ẩn các phần tử chỉ hiện trên mobile */
+.mobile-only { display: none !important; }
 
 /* --- Tablet (≤ 1024px) --- */
 @media (max-width: 1024px) {
@@ -196,23 +270,21 @@ body.fullscreen-mode .osmd-container { max-width: 100%; padding: 1rem; margin-to
     overflow-x: auto;
     scrollbar-width: none;
     flex-wrap: nowrap !important;
-    min-height: 42px;
+    min-height: 44px;
   }
   .page-bar::-webkit-scrollbar { display: none; }
   .page-bar-left, .page-bar-right {
     flex-shrink: 0;
     flex-wrap: nowrap;
   }
-  #zoom-slider { width: 70px; }
+  #zoom-slider { width: 80px; }
 }
 
-/* --- Mobile (≤ 768px) --- */
-.mobile-only { display: none !important; }
-
-@media (max-width: 768px) {
+/* --- iPad / Tablet Portrait (≤ 900px) --- */
+/* Sidebar chuyển sang overlay để không che nội dung */
+@media (max-width: 900px) {
   .mobile-only { display: inline-flex !important; }
-  
-  /* Sidebar: overlay toàn màn hình */
+
   .sidebar {
     position: fixed;
     left: 0; top: 0; bottom: 0;
@@ -236,6 +308,15 @@ body.fullscreen-mode .osmd-container { max-width: 100%; padding: 1rem; margin-to
   }
   .main-content { margin-left: 0; }
 
+  /* Touch targets iPad - tối thiểu 36px */
+  .transpose-btn { width: 32px !important; height: 32px !important; }
+  .icon-btn { width: 36px; height: 36px; min-width: 36px; }
+  .page-bar { min-height: 48px; }
+  #zoom-slider { width: 80px; }
+}
+
+/* --- Mobile (≤ 768px) --- */
+@media (max-width: 768px) {
   /* Toolbar: một dòng, cuộn ngang qua toolbar-controls */
   .toolbar {
     height: auto;
@@ -244,16 +325,15 @@ body.fullscreen-mode .osmd-container { max-width: 100%; padding: 1rem; margin-to
     gap: 0.5rem;
     flex-wrap: nowrap;
     justify-content: flex-start;
-    overflow: visible; /* cần visible để dropdown lồi ra được */
+    overflow: visible;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
   }
   .toolbar::-webkit-scrollbar { display: none; }
-  .toolbar-left { min-width: 0; flex: 1; }
-  .song-title { font-size: .8rem; }
+  .song-title { font-size: .8rem; max-width: 120px; }
   .song-key-badge { font-size: .65rem; }
   .nav-arrows { margin-right: .25rem; }
-  
+
   #btn-open-sidebar {
     position: sticky;
     left: 0;
@@ -272,20 +352,19 @@ body.fullscreen-mode .osmd-container { max-width: 100%; padding: 1rem; margin-to
     flex: 1 1 auto;
     gap: .25rem;
     padding-right: .25rem;
-    overflow-x: auto; /* toolbar-controls cuộn ngang thay vì toolbar */
-    overflow-y: visible; /* cho phép dropdown lồi xuống */
+    overflow-x: auto;
+    overflow-y: visible;
     scrollbar-width: none;
     mask-image: none; -webkit-mask-image: none;
   }
   .toolbar-controls::-webkit-scrollbar { display: none; }
 
-  /* Ẩn bớt một số tính năng ko dành cho đt nếu cần (Tống khứ panel/print) */
+  /* Ẩn bớt một số tính năng ko cần trên mobile */
   #btn-session-panel, #btn-print, #btn-fullscreen { display: none !important; }
 
   /* Các nút trong toolbar: thu nhỏ, icon only */
   .btn-sm { padding: .3rem .4rem; font-size: .75rem; gap: 0; }
   .btn-sm svg { width: 15px; height: 15px; margin: 0; }
-  /* Ẩn text của nút, chỉ giữ SVG */
   .toolbar-controls .btn-sm > *:not(svg):not(select) { display: none; }
   .toolbar-controls select { max-width: 52px; padding: .15rem .2rem; font-size: .7rem; }
 
@@ -296,7 +375,7 @@ body.fullscreen-mode .osmd-container { max-width: 100%; padding: 1rem; margin-to
     flex-wrap: nowrap !important;
     padding: .25rem .5rem;
     gap: .5rem;
-    min-height: 40px;
+    min-height: 44px;
   }
   .page-bar::-webkit-scrollbar { display: none; }
   .page-bar-left, .page-bar-right {
@@ -305,31 +384,37 @@ body.fullscreen-mode .osmd-container { max-width: 100%; padding: 1rem; margin-to
     gap: .4rem;
   }
   #zoom-slider { width: 60px; }
-  .chord-set-bar { gap: .3rem; }
-  .chord-set-label { display: none; }
-  .chord-set-select { max-width: 80px; font-size: .7rem; }
 
-  /* Transpose nút */
-  .transpose-btn { width: 26px; height: 26px; }
-  .transpose-display { min-width: 26px; font-size: .8rem; }
-  #btn-transpose-reset { display: none; } /* ẩn nút Reset trên mobile */
-  #btn-new-chord-set { font-size: .65rem; padding: .15rem .35rem; }
+  /* Chord set bar: compact nhưng không bị cắt */
+  .chord-set-bar { gap: .25rem; flex-shrink: 0; }
+  .chord-set-label { display: none; }
+  .chord-set-select { max-width: 90px; font-size: .7rem; min-width: 70px; }
+  #btn-new-chord-set { font-size: .65rem; padding: .2rem .4rem; flex-shrink: 0; }
+
+  /* Transpose nút — tăng touch target */
+  .transpose-btn { width: 32px !important; height: 32px !important; }
+  .transpose-display { min-width: 28px; font-size: .8rem; }
+  #btn-transpose-reset { display: none; }
 }
 
 /* --- Small phone (≤ 480px) --- */
 @media (max-width: 480px) {
-  .toolbar { padding: 0 .5rem; gap: .3rem; }
-  .nav-arrows .icon-btn { width: 24px; height: 24px; }
-  .song-title { font-size: .75rem; }
-  
+  .toolbar { padding: 0 .4rem; gap: .25rem; }
+  .nav-arrows .icon-btn { width: 28px; height: 28px; }
+  .song-title { font-size: .75rem; max-width: 90px; }
+
   /* Page bar: page indicator ngắn gọn */
   .page-indicator { font-size: .7rem; }
-  
+
   /* Ẩn thêm các nút phụ */
   #btn-mixer, #btn-dark-mode { display: none; }
-  
-  .btn-sm { padding: .25rem .35rem; }
-  .icon-btn { width: 28px; height: 28px; }
+
+  .btn-sm { padding: .28rem .38rem; }
+  .icon-btn { width: 30px; height: 30px; }
+
+  /* Chord set: chỉ giữ select + nút tạo mới */
+  .chord-set-select { max-width: 75px; }
+  #btn-delete-chord-set { display: none !important; }
 }
 
 /* =============================================

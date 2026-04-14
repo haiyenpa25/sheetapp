@@ -12,14 +12,14 @@
   </div>
 
   <!-- SIDEBAR TABS -->
-  <div class="sidebar-tabs" id="sidebar-tabs" style="display:flex; border-bottom:1px solid var(--border);">
-    <button class="sidebar-tab active" data-tab="library" style="flex:1; padding:.5rem; border:none; background:none; font-weight:600; cursor:pointer; color:var(--accent);">Kho Nhạc</button>
-    <button class="sidebar-tab" data-tab="setlist" style="flex:1; padding:.5rem; border:none; background:none; font-weight:600; cursor:pointer; color:var(--text-secondary);">Setlists</button>
+  <div class="sidebar-tabs" id="sidebar-tabs">
+    <button class="sidebar-tab active" data-tab="library">Kho Nhạc</button>
+    <button class="sidebar-tab" data-tab="setlist">Setlists</button>
   </div>
 
   <div class="sidebar-search">
-    <div style="margin-bottom:0.4rem; display:flex; gap:0.2rem;">
-      <select id="category-filter" class="form-input w-full" style="padding:.3rem .5rem; font-size:.8rem; border-color:transparent; background:var(--bg-overlay);">
+    <div class="mt-half">
+      <select id="category-filter" class="form-input w-full select-toolbar" style="height: 30px; border-color: var(--border);">
         <option value="">Tất cả danh mục</option>
         <!-- Rendered via JS -->
       </select>
@@ -31,8 +31,8 @@
   </div>
 
   <div class="sidebar-actions">
-    <button id="btn-admin-console" class="btn btn-primary btn-sm w-full hidden" style="background: linear-gradient(135deg, #1e293b, #334155); border:none;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;margin-right:6px;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <button id="btn-admin-console" class="btn btn-sm w-full hidden" style="background: linear-gradient(135deg, #1e293b, #334155); color: #fff; border: none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       Ban Quản Trị
     </button>
     <button id="btn-create-setlist" class="btn btn-primary btn-sm w-full hidden">
@@ -72,21 +72,21 @@
           <small>Chỉ Quản trị mới có thể tạo</small>
         </div>
       </div>
-      
+
       <!-- SETLIST DETAIL VIEW -->
-      <div id="setlist-detail" class="song-list hidden" style="display: flex; flex-direction: column; gap: 0.5rem; padding: 0.5rem;">
-        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+      <div id="setlist-detail" class="song-list hidden setlist-detail-view">
+        <div class="setlist-detail-header">
           <button id="btn-back-setlists" class="icon-btn" title="Quay lại">
-            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
-          <h3 id="setlist-detail-title" style="margin: 0; font-size: 1rem; flex: 1;">Setlist</h3>
+          <h3 id="setlist-detail-title" class="setlist-detail-title">Setlist</h3>
           <button id="btn-play-setlist" class="btn btn-sm btn-primary">Phát</button>
         </div>
-        <div id="setlist-items" style="display: flex; flex-direction: column; gap: 0.25rem;"></div>
-        
-        <div id="setlist-add-container" style="margin-top: 0.5rem; display: none; flex-direction: column; gap: 0.25rem;">
-          <input type="text" id="setlist-search-song-input" class="form-input w-full" placeholder="Gõ tìm bài hát để thêm..." autocomplete="off" style="font-size: 0.85rem; padding: 0.4rem 0.5rem; border-color: var(--accent);">
-          <div id="setlist-search-results" class="song-list hidden" style="width: 100%; max-height: 250px; overflow-y: auto; background: var(--surface-1); border: 1px solid var(--border); border-radius: 4px; padding: 0;"></div>
+        <div id="setlist-items" class="setlist-items"></div>
+
+        <div id="setlist-add-container" class="setlist-add-container hidden">
+          <input type="text" id="setlist-search-song-input" class="form-input w-full" placeholder="Gõ tìm bài hát để thêm..." autocomplete="off">
+          <div id="setlist-search-results" class="song-list hidden setlist-search-results"></div>
         </div>
       </div>
     </div>

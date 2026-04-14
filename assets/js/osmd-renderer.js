@@ -185,6 +185,7 @@ const OSMDRenderer = (() => {
 
       refreshRules();
       await osmd.render();
+      _compactTitleSVG();
       isLoaded = true;
       if (onReadyCallback) onReadyCallback(osmd);
       return osmd;
@@ -217,6 +218,7 @@ const OSMDRenderer = (() => {
 
       refreshRules();
       await osmd.render();
+      _compactTitleSVG();
       if (onReadyCallback) onReadyCallback(osmd);  // Gọi lại để ChordCanvas rebuild
       return osmd;
     } catch (err) {
@@ -233,6 +235,7 @@ const OSMDRenderer = (() => {
     if (osmd && isLoaded) {
       osmd.zoom = currentZoom;
       await osmd.render();
+      _compactTitleSVG();
       // Gọi onReadyCallback để ChordCanvas rebuild sau zoom
       if (onReadyCallback) onReadyCallback(osmd);
     }
@@ -266,6 +269,48 @@ const OSMDRenderer = (() => {
   function _debounce(fn, ms) {
     let t;
     return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+  }
+
+  /**
+   * Thu nhỏ title text trong OSMD SVG sau khi render.
+   * OSMD thường render title với font-size lớn nhất (~18-24px tuỳ zoom).
+   * Hàm này cap xuống tối đa MAX_TITLE_PX để tiết kiệm không gian dọc.
+   */
+  function _compactTitleSVG() {
+    const MAX_TITLE_PX = 13; // px — giới hạn font-size title, tuỳ chỉnh ở đây
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const svg = container.querySelector('svg');
+    if (!svg) return;
+
+    const texts = Array.from(svg.querySelectorAll('text'));
+    if (!texts.length) return;
+
+    // Tìm font-size lớn nhất trong SVG (là title)
+    let maxSize = 0;
+    texts.forEach(t => {
+      // OSMD set bằng attribute, không qua CSS
+      const fsAttr = t.getAttribute('font-size');
+      if (fsAttr) {
+        const fs = parseFloat(fsAttr);
+        if (fs > maxSize) maxSize = fs;
+      }
+    });
+
+    if (!maxSize || maxSize <= MAX_TITLE_PX) return; // Không cần thu nhỏ
+
+    // Tìm và thu nhỏ các text có font-size >= 75% maxSize (title + subtitle)
+    const threshold = maxSize * 0.75;
+    texts.forEach(t => {
+      const fsAttr = t.getAttribute('font-size');
+      if (!fsAttr) return;
+      const fs = parseFloat(fsAttr);
+      if (fs >= threshold) {
+        // Scale proportionally, không để dưới MIN (8px)
+        const newSize = Math.max(8, Math.round(fs * (MAX_TITLE_PX / maxSize)));
+        t.setAttribute('font-size', String(newSize));
+      }
+    });
   }
 
   function setCompactMode(val) {

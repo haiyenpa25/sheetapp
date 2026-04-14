@@ -164,29 +164,19 @@ const DisplaySettings = (() => {
                     // Mở chế độ Lời
                     lyricContainer.classList.remove('hidden');
                     const osmd = document.getElementById('osmd-container');
-                    if(osmd) osmd.style.display = 'none'; // Ẩn nhưng không xoá DOM
-                    btnLyricView.classList.add('bg-primary');
-                    btnLyricView.style.color = 'white';
+                    if(osmd) osmd.style.display = 'none';
+                    btnLyricView.classList.add('active');
                     if (btnText) btnText.textContent = 'Bản Nhạc';
                     
-                    // Render Lời
                     try {
-                        const rawXml = window.App?.getOriginalXml?.();
-                        const chordsMap = window.ChordCanvas?.getChordsMap?.() || {};
-                        let finalXml = rawXml;
-                        if (Object.keys(chordsMap).length > 0 && window.ChordCanvasXML?.cloneAndInjectChords) {
-                            finalXml = window.ChordCanvasXML.cloneAndInjectChords(rawXml, chordsMap);
-                        }
-                        const trOffset = window.App?.getCurrentTranspose?.() || 0;
-                        window.LyricExtractor.render('lyric-view-container', finalXml, trOffset);
+                        _renderLyricView();
                     } catch(e) { console.error('Lỗi render LyricView', e); }
                 } else {
                     // Mở lại bản nhạc
                     lyricContainer.classList.add('hidden');
                     const osmd = document.getElementById('osmd-container');
                     if(osmd) osmd.style.display = 'block';
-                    btnLyricView.classList.remove('bg-primary');
-                    btnLyricView.style.color = '';
+                    btnLyricView.classList.remove('active');
                     if (btnText) btnText.textContent = 'Lời Nhạc';
                 }
             });
@@ -318,7 +308,51 @@ const DisplaySettings = (() => {
         _onChordPrefPreview();
     }
 
-    return { init, getChordPrefs, getCompactPrefs };
+    /**
+     * Build XML đúng với chord set hiện tại.
+     * - Nếu đang dùng custom set (VD: Hoài Dinh): lấy customChords inject vào XML gốc
+     * - Nếu default: dùng XML gốc (có harmony tag sẵn)
+     */
+    function _buildLyricXml() {
+        const rawXml = window.App?.getOriginalXml?.();
+        if (!rawXml) return rawXml;
+
+        const currentSet = window.ChordCanvas?.getCurrentSet?.() || 'default';
+
+        if (currentSet !== 'default') {
+            // Custom set: inject custom chords, xóa hết harmony gốc
+            const customChords = window.ChordCanvas?.getCustomChords?.() || {};
+
+            // Apply transpose vào custom chords trước khi inject
+            const trOffset = window.App?.getCurrentTranspose?.() || 0;
+            let transposedChords = customChords;
+            if (trOffset !== 0 && window.TransposeEngine) {
+                transposedChords = {};
+                for (const [k, chord] of Object.entries(customChords)) {
+                    transposedChords[k] = window.TransposeEngine.transposeChord(chord, trOffset);
+                }
+            }
+
+            if (window.ChordCanvasXML?.cloneAndInjectChords) {
+                // cloneAndInjectChords xóa harmony cũ và inject mới
+                return window.ChordCanvasXML.cloneAndInjectChords(rawXml, transposedChords);
+            }
+        }
+
+        // Default: trả về XML gốc (LyricExtractor sẽ parse harmony tag có sẵn)
+        return rawXml;
+    }
+
+    function _renderLyricView() {
+        const xml = _buildLyricXml();
+        const trOffset = window.App?.getCurrentTranspose?.() || 0;
+        const currentSet = window.ChordCanvas?.getCurrentSet?.() || 'default';
+        // Nếu custom: đã transpose trong _buildLyricXml rồi, truyền 0 vào render
+        const renderOffset = (currentSet !== 'default') ? 0 : trOffset;
+        window.LyricExtractor?.render?.('lyric-view-container', xml, renderOffset);
+    }
+
+    return { init, getChordPrefs, getCompactPrefs, renderLyricViewIfActive: _renderLyricView };
 })();
 
 window.DisplaySettings = DisplaySettings;
