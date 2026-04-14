@@ -70,6 +70,9 @@ const DisplaySettings = (() => {
                 e.stopPropagation();
                 const isHidden = compactPanel.classList.contains('hidden');
                 if (isHidden) {
+                    if (compactPanel.parentNode !== document.body) {
+                        document.body.appendChild(compactPanel);
+                    }
                     compactPanel.classList.remove('hidden');
                     // Positioning Fixed for mobile/tablet escape
                     const rect = btnCompactSettings.getBoundingClientRect();

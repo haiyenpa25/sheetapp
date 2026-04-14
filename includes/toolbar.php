@@ -112,8 +112,11 @@
         const menu = details?.querySelector('.dropdown-menu');
         if (!details || !menu) return;
 
-        // Dùng position:fixed để thoát overflow clipping (mobile/tablet)
+        // Dùng position:fixed và body.appendChild để thoát overflow clipping (mobile/tablet Webkit bug)
         function positionDropdown() {
+          if (menu.parentNode !== document.body) {
+              document.body.appendChild(menu);
+          }
           const sumRect = details.querySelector('summary').getBoundingClientRect();
           const menuW = menu.offsetWidth || 160;
           let left = sumRect.right - menuW;
@@ -129,7 +132,12 @@
         }
 
         details.addEventListener('toggle', function() {
-          if (details.open) positionDropdown();
+          if (details.open) {
+              menu.style.display = '';
+              positionDropdown();
+          } else {
+              menu.style.display = 'none';
+          }
         });
 
         // Đóng dropdown khi click ra ngoài
