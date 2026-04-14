@@ -107,7 +107,7 @@ const Auth = (() => {
     }
 
     // Nút import chỉ admin mới có
-    document.getElementById('btn-import-sheet')?.classList.toggle('hidden', !canEdit);
+    document.getElementById('btn-admin-console')?.classList.toggle('hidden', !canEdit);
 
     // Xử lý các nút add to setlist được render động
     document.querySelectorAll('.song-add-setlist-btn').forEach(btn => {

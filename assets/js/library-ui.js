@@ -23,56 +23,7 @@ const LibraryUI = (() => {
     document.getElementById('btn-prev-song')?.addEventListener('click', () => App?.navigatePrev?.());
     document.getElementById('btn-next-song')?.addEventListener('click', () => App?.navigateNext?.());
 
-    // Nút Thêm Category nhanh
-    document.getElementById('btn-add-category')?.addEventListener('click', async () => {
-      const name = prompt('Nhập tên Danh Mục mới:');
-      if (name && name.trim()) {
-        try {
-          const res = await fetch('api/categories.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({name: name.trim()})
-          });
-          const data = await res.json();
-          if (data.id) {
-             App?.showToast('Đã thêm danh mục: ' + data.name, 'success');
-             await loadCategories();
-          } else if(data.error) App?.showToast('Lỗi: ' + data.error, 'error');
-        } catch(err) {
-           App?.showToast('Lỗi tạo danh mục', 'error');
-        }
-      }
-    });
 
-    // Nút lưu trong modal Edit Song
-    document.getElementById('btn-close-edit-song')?.addEventListener('click', () => {
-       document.getElementById('edit-song-modal')?.classList.add('hidden');
-    });
-    document.getElementById('btn-save-edit-song')?.addEventListener('click', async () => {
-       const id = document.getElementById('edit-song-id').value;
-       const title = document.getElementById('edit-song-title').value.trim();
-       const catId = document.getElementById('edit-song-category').value;
-       if(!id || !title) return;
-       try {
-           const res = await fetch(`api/songs.php?id=${id}`, {
-               method: 'PUT',
-               headers: {'Content-Type': 'application/json'},
-               body: JSON.stringify({title: title, categoryId: catId})
-           });
-           const data = await res.json();
-           if(data.error) {
-               App?.showToast('Lỗi: ' + data.error, 'error');
-           } else {
-               App?.showToast('Cập nhật thành công', 'success');
-               document.getElementById('edit-song-modal').classList.add('hidden');
-               const s = songs.find(x => String(x.id) === String(id));
-               if (s) { s.title = title; s.category_id = catId; }
-               render(songs);
-           }
-       } catch(err) {
-           App?.showToast('Lỗi khi lưu', 'error');
-       }
-    });
 
   }
 
@@ -149,17 +100,7 @@ const LibraryUI = (() => {
         const id = item.dataset.id;
         _promptAddToSetlist(id);
       });
-      item.querySelector('.song-edit-btn')?.addEventListener('click', e => {
-        e.stopPropagation();
-        const id = item.dataset.id;
-        const song = songs.find(s => String(s.id) === String(id));
-        if (song) {
-            document.getElementById('edit-song-id').value = song.id;
-            document.getElementById('edit-song-title').value = song.title;
-            document.getElementById('edit-song-category').value = song.category_id || 1;
-            document.getElementById('edit-song-modal').classList.remove('hidden');
-        }
-      });
+
     });
 
     if (activeSongId) _highlightActive(activeSongId);
@@ -167,7 +108,6 @@ const LibraryUI = (() => {
     // Toggle admin buttons
     if (window.Auth && window.Auth.isAdmin()) {
       el.querySelectorAll('.song-add-setlist-btn').forEach(b => b.classList.remove('hidden'));
-      el.querySelectorAll('.song-edit-btn').forEach(b => b.classList.remove('hidden'));
     }
   }
 
@@ -277,7 +217,6 @@ const LibraryUI = (() => {
           <div class="song-item-meta">${keyBadge}</div>
         </div>
         <div class="song-item-actions">
-          <button class="icon-btn-xs song-edit-btn hidden" title="Sửa bài hát">✏️</button>
           <button class="icon-btn-xs song-add-setlist-btn hidden" title="Thêm vào Setlist">✚</button>
           <button class="icon-btn-xs song-delete-btn" title="Xoá bài hát">🗑</button>
         </div>

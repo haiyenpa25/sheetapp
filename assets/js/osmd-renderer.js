@@ -46,9 +46,7 @@ const OSMDRenderer = (() => {
 
     // Force specific rules onto the rules object as some versions ignore constructor config
     if (osmd.rules) {
-        osmd.rules.DefaultColorChordSymbol = '#dc2626';     // Đỏ đậm nổi bật
-        osmd.rules.ChordSymbolTextHeight = 3.0;             // Tăng kích thước (Gốc: 2.2)
-        osmd.rules.ChordSymbolYOffset = 1.5;
+        refreshRules();
         osmd.rules.ChordSymbolFontFamily = "OSMDChordFont, sans-serif";
     }
 
@@ -70,13 +68,99 @@ const OSMDRenderer = (() => {
    */
   function refreshRules() {
     if (osmd && osmd.rules) {
-        osmd.rules.DefaultColorChordSymbol = '#dc2626';
-        osmd.rules.ChordSymbolTextHeight = 3.0;
-        osmd.rules.ChordSymbolYOffset = 1.5;
+        let prefs = { size: 3.0, yOffset: 1.5, color: '#dc2626' };
+        if (window.DisplaySettings) prefs = DisplaySettings.getChordPrefs();
+
+        osmd.rules.DefaultColorChordSymbol = prefs.color;
+        osmd.rules.ChordSymbolTextHeight = prefs.size;
+        osmd.rules.ChordSymbolYOffset = prefs.yOffset;
     }
   }
 
   /**
+   * Cắt tỉa XML gốc ngay từ trong trứng nước (Xoá thẻ DOM) để dẹp sạch nốt bè/chùm
+   */
+  function preprocessXML(xml) {
+      if (!window.DisplaySettings || !_isCompactMode) return xml;
+      const prefs = DisplaySettings.getCompactPrefs();
+      if (!prefs.hideVoices && !prefs.hideChordNotes) return xml;
+
+      try {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(xml, "application/xml");
+
+          if (prefs.hideVoices) {
+              const voices = doc.querySelectorAll("note voice");
+              voices.forEach(v => {
+                  if (parseInt(v.textContent) > 1) {
+                      v.parentNode.remove();
+                  }
+              });
+          }
+
+          if (prefs.hideChordNotes) {
+              const measures = doc.querySelectorAll("measure");
+              measures.forEach(measure => {
+                  const notes = measure.querySelectorAll("note");
+                  let currentPrimaryNote = null;
+                  let maxPitchVal = -1;
+                  let maxPitchNode = null;
+
+                  notes.forEach(note => {
+                      if (note.querySelector("rest")) return;
+
+                      const pitchNode = note.querySelector("pitch");
+                      if (!pitchNode) return;
+
+                      const step = pitchNode.querySelector("step")?.textContent;
+                      const alterNode = pitchNode.querySelector("alter");
+                      const alter = alterNode ? parseInt(alterNode.textContent) : 0;
+                      const octave = parseInt(pitchNode.querySelector("octave")?.textContent || "0");
+                      
+                      const stepVals = { 'C':0, 'D':2, 'E':4, 'F':5, 'G':7, 'A':9, 'B':11 };
+                      const pitchVal = octave * 12 + (stepVals[step] || 0) + alter;
+
+                      if (note.querySelector("chord")) {
+                          if (currentPrimaryNote) {
+                              if (pitchVal > maxPitchVal) {
+                                  maxPitchVal = pitchVal;
+                                  maxPitchNode = pitchNode.cloneNode(true);
+                              }
+                              note.parentNode.removeChild(note);
+                          }
+                      } else {
+                          // Kết thúc nhóm (cluster) cũ, áp dụng cao độ lớn nhất cho nốt chính
+                          if (currentPrimaryNote && maxPitchNode) {
+                              const pPitch = currentPrimaryNote.querySelector("pitch");
+                              if (pPitch && pPitch.innerHTML !== maxPitchNode.innerHTML) {
+                                  pPitch.innerHTML = maxPitchNode.innerHTML;
+                              }
+                          }
+                          // Bắt đầu nhóm mới với nốt không có chord
+                          currentPrimaryNote = note;
+                          maxPitchVal = pitchVal;
+                          maxPitchNode = pitchNode.cloneNode(true);
+                      }
+                  });
+                  
+                  // Xử lý nốt cuối cùng trong ô nhịp
+                  if (currentPrimaryNote && maxPitchNode) {
+                      const pPitch = currentPrimaryNote.querySelector("pitch");
+                      if (pPitch && pPitch.innerHTML !== maxPitchNode.innerHTML) {
+                          pPitch.innerHTML = maxPitchNode.innerHTML;
+                      }
+                  }
+              });
+          }
+
+          const serializer = new XMLSerializer();
+          return serializer.serializeToString(doc);
+      } catch (err) {
+          console.error("XML Preprocess error:", err);
+          return xml;
+      }
+  }
+
   /**
    * Nạp XML string vào OSMD và render.
    * @param {string} xmlString - Nội dung MusicXML
@@ -84,11 +168,12 @@ const OSMDRenderer = (() => {
    */
   async function load(xmlString, transposeValue = 0) {
     if (!osmd) throw new Error('OSMD chưa được khởi tạo. Gọi init() trước.');
-    currentXmlString = xmlString;
+    currentXmlString = xmlString; // Luôn giữ bản gốc
     isLoaded = false;
 
     try {
-      await osmd.load(xmlString);
+      const processedXml = preprocessXML(xmlString);
+      await osmd.load(processedXml);
       osmd.zoom = currentZoom;
       _applyCompactMode();
       
@@ -116,9 +201,10 @@ const OSMDRenderer = (() => {
    */
   async function reload(xmlString, transposeValue = 0) {
     if (!osmd) throw new Error('OSMD chưa init');
-    currentXmlString = xmlString;
+    if (xmlString) currentXmlString = xmlString;
     try {
-      await osmd.load(xmlString);
+      const processedXml = preprocessXML(currentXmlString);
+      await osmd.load(processedXml);
       osmd.zoom = currentZoom;
       if (window.InstrumentMixer?.restoreState) window.InstrumentMixer.restoreState();
       _applyCompactMode();
@@ -195,7 +281,10 @@ const OSMDRenderer = (() => {
   function _applyCompactMode() {
       if (!osmd || !osmd.sheet) return;
       
-      // Nếu không bật Gọn nhẹ thì giữ nguyên gốc (hoặc Mixers đã xử lý)
+      let compactPrefs = { hideBass: true, hideVoices: true, hideText: true };
+      if (window.DisplaySettings) compactPrefs = DisplaySettings.getCompactPrefs();
+      
+      // Nếu không bật Gọn nhẹ thì bật lại Text
       if (!_isCompactMode) {
           osmd.setOptions({
               drawComposer: true,
@@ -206,28 +295,56 @@ const OSMDRenderer = (() => {
           return;
       }
 
-      // KHI ĐANG BẬT GỌN NHẸ -> Chém Khóa Fa
+      // KHI ĐANG BẬT GỌN NHẸ -> Đọc cấu hình
       osmd.sheet.Instruments.forEach((ins, insIndex) => {
           if (ins.Staves) {
-              if (ins.Staves.length >= 2) {
-                  for (let i = 1; i < ins.Staves.length; i++) {
-                      ins.Staves[i].Visible = false;
+              if (compactPrefs.hideBass) {
+                  if (ins.Staves.length >= 2) {
+                      for (let i = 1; i < ins.Staves.length; i++) {
+                          ins.Staves[i].Visible = false;
+                      }
+                  }
+                  if (insIndex > 0) {
+                      ins.Visible = false; 
+                      ins.Staves.forEach(st => st.Visible = false);
                   }
               }
-              if (insIndex > 0) {
-                  ins.Visible = false; 
-                  ins.Staves.forEach(st => st.Visible = false);
+              
+              if (compactPrefs.hideVoices && insIndex === 0) {
+                  if (ins.Voices) {
+                      ins.Voices.forEach(voice => {
+                          if (voice.VoiceId > 1) {
+                              voice.Visible = false;
+                          }
+                      });
+                  }
               }
           }
       });
 
-      // Ẩn văn bản thừa
-      osmd.setOptions({
-          drawComposer: false,
-          drawCredits: false,
-          drawSubtitle: false,
-          drawLyricist: false
-      });
+      // Ẩn văn bản theo cấu hình
+      if (compactPrefs.hideText) {
+          osmd.setOptions({
+              drawComposer: false,
+              drawCredits: false,
+              drawSubtitle: false,
+              drawLyricist: false
+          });
+      } else {
+          osmd.setOptions({
+              drawComposer: true,
+              drawCredits: true,
+              drawSubtitle: true,
+              drawLyricist: true
+          });
+      }
+
+      // Title Option
+      if (compactPrefs.hideTitle) {
+          osmd.setOptions({ drawTitle: false });
+      } else {
+          osmd.setOptions({ drawTitle: true });
+      }
   }
 
   return { init, load, reload, setZoom, getInstance, getIsLoaded, getCurrentXml, getCurrentZoom, onReady, destroy, setCompactMode, getCompactMode };

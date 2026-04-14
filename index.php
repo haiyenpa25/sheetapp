@@ -40,6 +40,7 @@ echo cssTag('components.css');
 </main>
 
 <?php require_once __DIR__ . '/includes/modals.php'; ?>
+<?php require_once __DIR__ . '/includes/admin_console.php'; ?>
 
 <!-- ===== SCRIPTS ===== -->
 <!-- OSMD from CDN -->
@@ -59,6 +60,8 @@ echo jsTag('auth.js');
 echo jsTag('library-ui.js');
 echo jsTag('setlist-ui.js');
 echo jsTag('importer.js');
+echo jsTag('admin-ui.js');
+echo jsTag('display-settings.js');
 echo jsTag('chord-canvas-xml.js');
 echo jsTag('chord-canvas-ui.js');
 echo jsTag('chord-canvas.js');

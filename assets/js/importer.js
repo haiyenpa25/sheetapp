@@ -10,7 +10,7 @@ const Importer = (() => {
   let selectedFile  = null;
   let onSuccessCb   = null;
 
-  const modal      = () => document.getElementById('import-modal');
+  const modal      = () => document.getElementById('admin-modal');
   const progressEl = () => document.getElementById('import-progress');
   const progressBar = () => document.getElementById('import-progress-bar');
   const progressTxt = () => document.getElementById('import-progress-text');

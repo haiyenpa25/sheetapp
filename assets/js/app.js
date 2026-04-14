@@ -33,6 +33,7 @@ const App = (() => {
     LibraryUI.init();
     if (window.SetlistUI) SetlistUI.init();
     Importer.init();
+    if (window.DisplaySettings) DisplaySettings.init();
 
     LibraryUI.onSelect(song => loadSong(song));
     LibraryUI.onDelete(songId => {
