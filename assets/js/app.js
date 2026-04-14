@@ -254,6 +254,7 @@ const App = (() => {
 
       if (window.ChordCanvas) window.ChordCanvas.onOSMDRendered();
       if (window.AnnotationCanvas) window.AnnotationCanvas.onOSMDRendered();
+      if (window.LyricExtractor) window.LyricExtractor.reloadIfActive();
     } catch (err) {
       AppUI.showToast('Lỗi khi dịch giọng', 'error');
     } finally {
@@ -307,6 +308,9 @@ const App = (() => {
     await OSMDRenderer.setZoom(currentZoom);
     SessionTracker.setZoom(currentZoom);
     if (window.ChordCanvas) setTimeout(() => window.ChordCanvas.onOSMDRendered(), 200);
+    
+    const lvc = document.getElementById('lyric-view-container');
+    if (lvc) lvc.style.fontSize = `${percent}%`;
   }
 
   /* ====================== BIND CONTROLS ====================== */

@@ -73,13 +73,21 @@
       </div>
     </div>
 
+    <!-- LYRIC VIEW TOGGLE -->
+    <div class="control-group">
+      <button id="btn-lyric-view" class="btn btn-ghost btn-sm" title="Tuỳ chọn hiển thị Hợp Âm Lời Nhạc">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        <span class="btn-text">Lời Nhạc</span>
+      </button>
+    </div>
+
     <!-- MORE OPTIONS DROPDOWN -->
-    <details class="control-group dropdown-details" id="more-options-dropdown" style="position: relative;">
-      <summary class="btn btn-ghost btn-sm" title="Tuỳ chọn thêm" style="list-style: none; cursor: pointer;">
+    <div class="control-group" id="more-options-group" style="position: relative;">
+      <button id="btn-more-options" class="btn btn-ghost btn-sm" title="Tuỳ chọn thêm" style="padding: 0.4rem;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
         <span class="btn-text">Tuỳ Chọn</span>
-      </summary>
-      <div class="dropdown-menu" id="main-dropdown-menu">
+      </button>
+      <div class="dropdown-menu hidden" id="main-dropdown-menu">
         
         <button id="btn-mixer" class="btn btn-ghost btn-sm" disabled title="Bật/Tắt nhạc cụ" style="justify-content: flex-start; padding: 0.4rem 0.5rem;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-right:8px;"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
@@ -90,8 +98,6 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-right:8px;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
           Sân Khấu
         </button>
-
-
 
         <button id="btn-session-panel" class="btn btn-ghost btn-sm" disabled style="justify-content: flex-start; padding: 0.4rem 0.5rem;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-right:8px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
@@ -104,64 +110,60 @@
         </button>
 
       </div>
-    </details>
+    </div>
     
     <script>
       (function() {
-        const details = document.getElementById('more-options-dropdown');
-        const menu = details?.querySelector('.dropdown-menu');
-        if (!details || !menu) return;
+        const btnOptions = document.getElementById('btn-more-options');
+        const menuOptions = document.getElementById('main-dropdown-menu');
+        if (!btnOptions || !menuOptions) return;
 
-        // Dùng position:fixed và body.appendChild để thoát overflow clipping (mobile/tablet Webkit bug)
-        function positionDropdown() {
-          if (menu.parentNode !== document.body) {
-              document.body.appendChild(menu);
-          }
-          const sumRect = details.querySelector('summary').getBoundingClientRect();
-          const menuW = menu.offsetWidth || 160;
-          let left = sumRect.right - menuW;
-          // Đảm bảo không bị cắt mép trái
-          if (left < 8) left = 8;
-          // Đảm bảo không bị cắt mép phải
-          if (left + menuW > window.innerWidth - 8) left = window.innerWidth - menuW - 8;
-          menu.style.position = 'fixed';
-          menu.style.top = (sumRect.bottom + 5) + 'px';
-          menu.style.left = left + 'px';
-          menu.style.right = 'auto';
-          menu.style.zIndex = '99999';
-        }
-
-        details.addEventListener('toggle', function() {
-          if (details.open) {
-              menu.style.display = '';
-              positionDropdown();
-          } else {
-              menu.style.display = 'none';
-          }
+        btnOptions.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isHidden = menuOptions.classList.contains('hidden');
+            if (isHidden) {
+                if (menuOptions.parentNode !== document.body) {
+                    document.body.appendChild(menuOptions);
+                }
+                menuOptions.classList.remove('hidden');
+                
+                const sumRect = btnOptions.getBoundingClientRect();
+                const menuW = menuOptions.offsetWidth || 160;
+                let left = sumRect.right - menuW;
+                if (left < 8) left = 8;
+                if (left + menuW > window.innerWidth - 8) left = window.innerWidth - menuW - 8;
+                
+                menuOptions.style.position = 'fixed';
+                menuOptions.style.top = (sumRect.bottom + 5) + 'px';
+                menuOptions.style.left = left + 'px';
+                menuOptions.style.right = 'auto';
+                menuOptions.style.zIndex = '99999';
+            } else {
+                menuOptions.classList.add('hidden');
+            }
         });
 
         // Đóng dropdown khi click ra ngoài
         document.addEventListener('click', function(e) {
-          if (details && !details.contains(e.target)) {
-            details.removeAttribute('open');
+          if (!btnOptions.contains(e.target) && !menuOptions.contains(e.target)) {
+            menuOptions.classList.add('hidden');
           }
         });
 
         // Tự đóng khi cuộn trang
         window.addEventListener('scroll', function() {
-          if (details.hasAttribute('open')) {
-            details.removeAttribute('open');
+          if (!menuOptions.classList.contains('hidden')) {
+            menuOptions.classList.add('hidden');
           }
         }, { passive: true });
 
         // Đóng khi bấm nút bên trong
-        details.querySelectorAll('.dropdown-menu .btn').forEach(btn => {
-          btn.addEventListener('click', () => details.removeAttribute('open'));
+        menuOptions.querySelectorAll('.btn').forEach(btn => {
+          btn.addEventListener('click', () => menuOptions.classList.add('hidden'));
         });
 
-        // Cập nhật lại vị trí khi resize/scroll (phòng trường hợp toolbar scroll ngang)
         window.addEventListener('resize', function() {
-          if (details.open) positionDropdown();
+          if (!menuOptions.classList.contains('hidden')) menuOptions.classList.add('hidden');
         });
       })();
     </script>

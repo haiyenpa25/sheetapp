@@ -151,6 +151,46 @@ const DisplaySettings = (() => {
                 }
             });
         });
+
+        // 3. Logic bật/tắt Giao diện Lời Nhạc
+        const btnLyricView = document.getElementById('btn-lyric-view');
+        if (btnLyricView) {
+            btnLyricView.addEventListener('click', () => {
+                const sheetArea = document.getElementById('sheet-area');
+                const lyricContainer = document.getElementById('lyric-view-container');
+                const btnText = btnLyricView.querySelector('.btn-text');
+                
+                if (lyricContainer.classList.contains('hidden')) {
+                    // Mở chế độ Lời
+                    lyricContainer.classList.remove('hidden');
+                    const osmd = document.getElementById('osmd-container');
+                    if(osmd) osmd.style.display = 'none'; // Ẩn nhưng không xoá DOM
+                    btnLyricView.classList.add('bg-primary');
+                    btnLyricView.style.color = 'white';
+                    if (btnText) btnText.textContent = 'Bản Nhạc';
+                    
+                    // Render Lời
+                    try {
+                        const rawXml = window.App?.getOriginalXml?.();
+                        const chordsMap = window.ChordCanvas?.getChordsMap?.() || {};
+                        let finalXml = rawXml;
+                        if (Object.keys(chordsMap).length > 0 && window.ChordCanvasXML?.cloneAndInjectChords) {
+                            finalXml = window.ChordCanvasXML.cloneAndInjectChords(rawXml, chordsMap);
+                        }
+                        const trOffset = window.App?.getCurrentTranspose?.() || 0;
+                        window.LyricExtractor.render('lyric-view-container', finalXml, trOffset);
+                    } catch(e) { console.error('Lỗi render LyricView', e); }
+                } else {
+                    // Mở lại bản nhạc
+                    lyricContainer.classList.add('hidden');
+                    const osmd = document.getElementById('osmd-container');
+                    if(osmd) osmd.style.display = 'block';
+                    btnLyricView.classList.remove('bg-primary');
+                    btnLyricView.style.color = '';
+                    if (btnText) btnText.textContent = 'Lời Nhạc';
+                }
+            });
+        }
     }
 
     function _loadPrefs() {

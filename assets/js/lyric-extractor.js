@@ -1,0 +1,229 @@
+/**
+ * lyric-extractor.js — v3.0
+ * Word-wrap flow: tất cả syllables chảy tự do trong 1 flex container.
+ * Khi font nhỏ → nhiều từ/dòng. Khi zoom → tự xuống dòng như real text.
+ */
+const LyricExtractor = (() => {
+  'use strict';
+
+  /* ─── Parse <harmony> → chord text ─────────────────── */
+  function parseHarmonyToText(h) {
+    const step  = h.querySelector('root-step')?.textContent?.trim() || '';
+    const alter = h.querySelector('root-alter')?.textContent?.trim();
+    const kind  = h.querySelector('kind')?.getAttribute('text') || '';
+    let str = step + (alter === '1' ? '#' : alter === '-1' ? 'b' : '') + kind;
+    const bs = h.querySelector('bass > bass-step')?.textContent?.trim();
+    if (bs) {
+      const ba = h.querySelector('bass > bass-alter')?.textContent?.trim();
+      str += '/' + bs + (ba === '1' ? '#' : ba === '-1' ? 'b' : '');
+    }
+    return str;
+  }
+
+  /* ─── Clean verse-number prefix: "1.Xxx" → "xxx" ─── */
+  function cleanFirstSyl(text) {
+    // "1.Cúi" → "Cúi",  "ĐK.Xxx" → mark as chorus
+    if (!text) return { text, isChorus: false };
+    const dkMatch = text.match(/^(ĐK|đk|DC|Điệp\s*khúc|Chorus)[:.\s]*(.*)/is);
+    if (dkMatch) return { text: dkMatch[2].trim(), isChorus: true };
+    const numMatch = text.match(/^\d+[.\s]+(.*)/);
+    if (numMatch) return { text: numMatch[1].trim(), isChorus: false };
+    return { text, isChorus: false };
+  }
+
+  /* ─── Extract: quét XML → flat syllable arrays per verse ─── */
+  function extract(xmlString, transposeOffset = 0) {
+    const doc = new DOMParser().parseFromString(xmlString, 'text/xml');
+    const part = doc.querySelector('part');
+    if (!part) return [];
+
+    const measures = part.querySelectorAll('measure');
+    const verseMap   = {};   // num → [{text, chord, isWordEnd}]
+    const verseLabel = {};   // num → 'verse:N' | 'chorus'
+    let currentChord = null;
+    const known = new Set();
+
+    measures.forEach(m => {
+      for (const c of m.children) {
+        if (c.tagName === 'harmony') {
+          let str = parseHarmonyToText(c);
+          const custom = c.hasAttribute('color');
+          if (!custom && transposeOffset !== 0 && window.TransposeEngine) {
+            str = window.TransposeEngine.transposeChord(str, transposeOffset);
+          }
+          currentChord = str;
+
+        } else if (c.tagName === 'note') {
+          if (c.querySelector('chord') || c.querySelector('grace')) continue;
+
+          if (c.querySelector('rest')) {
+            if (currentChord) {
+              known.forEach(n => {
+                verseMap[n].push({ text: '\u00a0', chord: currentChord, isWordEnd: true });
+              });
+              currentChord = null;
+            }
+            continue;
+          }
+
+          const lyrics = c.querySelectorAll('lyric');
+          if (lyrics.length > 0) {
+            lyrics.forEach(lyr => {
+              const num = lyr.getAttribute('number') || '1';
+              const raw = lyr.querySelector('text')?.textContent || '';
+              const syl = lyr.querySelector('syllabic')?.textContent || 'single';
+              const isEnd = syl === 'single' || syl === 'end';
+
+              if (!verseMap[num]) {
+                verseMap[num] = [];
+                // Detect label & clean from first syllable
+                const { text: cleaned, isChorus } = cleanFirstSyl(raw);
+                verseLabel[num] = isChorus ? 'chorus' : ('verse:' + num);
+                known.add(num);
+                verseMap[num].push({ text: cleaned, chord: currentChord, isWordEnd: isEnd });
+              } else {
+                verseMap[num].push({ text: raw, chord: currentChord, isWordEnd: isEnd });
+              }
+            });
+            currentChord = null;
+
+          } else if (currentChord) {
+            known.forEach(n => {
+              verseMap[n]?.push({ text: '\u00a0', chord: currentChord, isWordEnd: true });
+            });
+            currentChord = null;
+          }
+        }
+      }
+    });
+
+    // Sort and build final views
+    const sorted = Array.from(known).sort((a, b) => parseInt(a) - parseInt(b));
+    const views = [];
+    for (const num of sorted) {
+      const syls = (verseMap[num] || []).filter(s => s.text.trim() || s.chord);
+      if (!syls.length) continue;
+      const raw = verseLabel[num] || ('verse:' + num);
+      const isChorus = raw === 'chorus';
+      const idx = raw.match(/verse:(\d+)/)?.[1] || num;
+      views.push({
+        num,
+        label: isChorus ? 'Điệp Khúc' : 'Lời ' + idx,
+        isChorus,
+        syllables: syls
+      });
+    }
+    return views;
+  }
+
+  /* ─── Render ─────────────────────────────────────── */
+  function render(containerId, xmlString, transposeOffset = 0) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (!xmlString) {
+      container.innerHTML = `<div class="lv-empty"><span>🎵</span><p>Đang tải...</p></div>`;
+      return;
+    }
+
+    const views = extract(xmlString, transposeOffset);
+    if (!views.length) {
+      container.innerHTML = `
+        <div class="lv-empty">
+          <span>🎵</span>
+          <strong>Không có lời bài hát</strong>
+          <p>File nhạc này chưa có Lyrics trong chuẩn MusicXML.</p>
+        </div>`;
+      return;
+    }
+
+    // Header
+    const title = document.getElementById('song-title')?.textContent?.trim() || '';
+    const key   = document.getElementById('song-key')?.textContent?.trim()   || '';
+    let html = '<div class="lv-wrapper">';
+
+    if (title && title !== 'Chọn bài hát để bắt đầu') {
+      const trBadge = transposeOffset !== 0
+        ? `<span class="lv-trans-badge">${transposeOffset > 0 ? '+' : ''}${transposeOffset}</span>` : '';
+      html += `
+        <header class="lv-header">
+          <h2 class="lv-title">${title}</h2>
+          ${key ? `<p class="lv-key">🎼 Giọng <strong>${key}</strong>${trBadge}</p>` : ''}
+        </header>`;
+    }
+
+    for (const view of views) {
+      const sectionClass = view.isChorus ? 'lv-chorus' : 'lv-regular';
+      const labelIcon = view.isChorus ? '✦' : '';
+
+      html += `
+        <section class="lv-verse ${sectionClass}">
+          <div class="lv-label-row">
+            <span class="lv-verse-pill ${view.isChorus ? 'lv-pill-chorus' : 'lv-pill-verse'}">
+              ${labelIcon ? `<span class="lv-pill-icon">${labelIcon}</span>` : ''}${view.label}
+            </span>
+          </div>
+          <div class="lv-flow">`;
+
+      // Single flat flow — all syllables together, flex-wrap handles line breaking
+      for (const syl of view.syllables) {
+        const spClass = syl.isWordEnd ? 'lv-we' : 'lv-wm';
+        const rest    = !syl.text || syl.text === '\u00a0';
+
+        const chordEl = syl.chord
+          ? `<b class="lv-chord">${syl.chord}</b>`
+          : `<b class="lv-chord lv-chord-empty"></b>`;
+
+        const sylEl = rest
+          ? `<span class="lv-syl lv-rest">\u00a0\u00a0</span>`
+          : `<span class="lv-syl">${syl.text}</span>`;
+
+        html += `<span class="lv-pair ${spClass}">${chordEl}${sylEl}</span>`;
+      }
+
+      html += `</div></section>`;
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+    _applyStyles(container);
+  }
+
+  function _applyStyles(container) {
+    const p = window.DisplaySettings?.getChordPrefs?.();
+    if (p) {
+      if (p.color) container.style.setProperty('--lv-chord-color', p.color);
+      if (p.size) {
+        const em = Math.max(0.65, Math.min(1.1, p.size * 0.22));
+        container.style.setProperty('--lv-chord-size', em + 'em');
+      }
+    } else {
+      try {
+        const s = localStorage.getItem('sheetapp_chord_prefs');
+        if (s) {
+          const c = JSON.parse(s);
+          if (c.color) container.style.setProperty('--lv-chord-color', c.color);
+          if (c.size)  container.style.setProperty('--lv-chord-size', Math.max(0.65, Math.min(1.1, c.size * 0.22)) + 'em');
+        }
+      } catch (_) {}
+    }
+  }
+
+  function reloadIfActive() {
+    const el = document.getElementById('lyric-view-container');
+    if (!el || el.classList.contains('hidden')) return;
+    const raw = window.App?.getOriginalXml?.();
+    if (!raw) return;
+    const map = window.ChordCanvas?.getChordsMap?.() || {};
+    let xml = raw;
+    if (Object.keys(map).length && window.ChordCanvasXML?.cloneAndInjectChords) {
+      xml = window.ChordCanvasXML.cloneAndInjectChords(raw, map);
+    }
+    render('lyric-view-container', xml, window.App?.getCurrentTranspose?.() || 0);
+  }
+
+  return { render, extract, reloadIfActive };
+})();
+
+window.LyricExtractor = LyricExtractor;

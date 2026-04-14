@@ -213,3 +213,263 @@ body.dark-mode .chord-set-bar {
   .osmd-container svg { width: 100% !important; height: auto !important; page-break-inside: avoid; }
   .osmd-container svg path, .osmd-container svg text { fill: #000 !important; stroke: #000 !important; }
 }
+
+/* =============================================
+   LYRIC VIEWER v3 — Word-wrap flow + Premium pills
+   ============================================= */
+
+/* ══ Container ═══════════════════════════════ */
+.lyric-view-container {
+  max-width: 860px;
+  margin: 1.5rem auto;
+  padding: 2rem 2.25rem 3.5rem;
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: 0 4px 28px rgba(109,40,217,.09), 0 1px 6px rgba(0,0,0,.05);
+  min-height: 400px;
+  font-family: 'Inter', system-ui, sans-serif;
+
+  /* Chord token */
+  --lv-chord-color: #e11d48;
+  --lv-chord-size:  0.78em;
+
+  /* font-size is set via app.js for zoom: e.g. font-size: 120% */
+  font-size: 100%;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+/* ══ Dark mode ═══════════════════════════════ */
+body.dark-mode .lyric-view-container {
+  background: #111320;
+  color: #dde3f0;
+  box-shadow: 0 6px 40px rgba(0,0,0,.6);
+}
+body.dark-mode .lv-chord {
+  color: #f87171 !important;
+  border-bottom-color: rgba(248,113,113,.25) !important;
+}
+body.dark-mode .lv-syl       { color: #c8d0e5; }
+body.dark-mode .lv-header    { border-bottom-color: rgba(255,255,255,.08); }
+body.dark-mode .lv-regular   { background: rgba(255,255,255,.02); border-color: rgba(109,40,217,.2); }
+body.dark-mode .lv-chorus    { background: rgba(251,191,36,.07); border-color: rgba(251,191,36,.3); }
+body.dark-mode .lv-pill-verse  { background: rgba(109,40,217,.25); color: #a78bfa; }
+body.dark-mode .lv-pill-chorus { background: rgba(217,119,6,.25); color: #fcd34d; }
+body.dark-mode .lv-title     { color: #e2e8f0; }
+
+/* ══ Outer wrapper ═══════════════════════════ */
+.lv-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* ══ Song header ═════════════════════════════ */
+.lv-header {
+  text-align: center;
+  padding-bottom: 1.25rem;
+  border-bottom: 1.5px solid var(--border);
+}
+.lv-title {
+  font-size: 1.5em;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: var(--text-primary);
+  line-height: 1.25;
+  margin-bottom: 0.4em;
+}
+.lv-key {
+  font-size: 0.78em;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35em;
+}
+.lv-key strong { color: var(--accent); font-weight: 700; }
+.lv-trans-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.05em 0.5em;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 99px;
+  font-size: 0.82em;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+/* ══ Verse section ═══════════════════════════ */
+.lv-verse {
+  border-radius: var(--radius-sm);
+  padding: 1rem 1.25rem 1.1rem;
+  border: 1.5px solid transparent;
+}
+.lv-regular {
+  background: rgba(109,40,217,.025);
+  border-color: rgba(109,40,217,.12);
+}
+.lv-chorus {
+  background: rgba(245,158,11,.06);
+  border-color: rgba(245,158,11,.3);
+  position: relative;
+}
+/* Decorative left accent for chorus */
+.lv-chorus::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3.5px;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  background: linear-gradient(180deg, #f59e0b, #fbbf24);
+}
+
+/* ══ Section label row ════════════════════════ */
+.lv-label-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.9em;
+}
+.lv-label-row::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.12;
+}
+
+/* ═ Pill badge ═ */
+.lv-verse-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.22em 0.75em 0.22em 0.6em;
+  border-radius: 99px;
+  font-size: 0.65em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  user-select: none;
+}
+.lv-pill-verse {
+  background: rgba(109,40,217,.1);
+  color: var(--accent);
+}
+.lv-pill-chorus {
+  background: rgba(217,119,6,.12);
+  color: #b45309;
+  box-shadow: 0 0 0 1.5px rgba(245,158,11,.35);
+}
+.lv-pill-icon {
+  font-size: 0.9em;
+  opacity: 0.85;
+}
+
+/* ══ THE KEY PART: word-wrap flow ═════════════
+   All syllables in one flex container.
+   flex-wrap: wrap → natural text reflow.
+   When font is small: many words per line.
+   When zoomed (font-size: 140%): fewer per line, wraps down.
+   ═══════════════════════════════════════════ */
+.lv-flow {
+  display: flex;
+  flex-wrap: wrap;       /* WORD-WRAP: browser decides line length */
+  align-items: flex-end; /* chords+lyric as unit, bottoms aligned */
+  column-gap: 0;
+  row-gap: 1.55em;       /* space between wrapped rows */
+  overflow: visible;
+}
+
+/* ══ Each chord+syllable pair ════════════════ */
+.lv-pair {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+/* Word-end: a little right margin acts as the space between words */
+.lv-we { margin-right: 0.42em; }
+/* Word-mid: glued syllable — no space */
+.lv-wm { margin-right: 0.02em; }
+
+/* Hyphen between glued syllables */
+.lv-wm .lv-syl::after {
+  content: '-';
+  opacity: 0.35;
+  margin-left: 1px;
+}
+
+/* ══ Chord symbol ════════════════════════════ */
+.lv-chord {
+  display: block;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: var(--lv-chord-size);
+  font-weight: 800;
+  color: var(--lv-chord-color);
+  line-height: 1;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.25em;
+  min-height: calc(var(--lv-chord-size) * 1.5);  /* keeps empty slots in line */
+  padding-bottom: 1px;
+  border-bottom: 1.5px dotted rgba(225,29,72,.28);
+}
+.lv-chord-empty {
+  visibility: hidden;
+  border-bottom-color: transparent !important;
+  pointer-events: none;
+}
+
+/* ══ Lyric syllable ══════════════════════════ */
+.lv-syl {
+  display: block;
+  font-size: 1.15em;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.lv-rest { color: transparent !important; user-select: none; }
+
+/* ══ Verse label color variants ══════════════ */
+
+/* ══ Empty state ══════════════════════════════ */
+.lv-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 4rem 2rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+.lv-empty span { font-size: 2.5rem; }
+.lv-empty strong { color: var(--text-secondary); }
+.lv-empty p { font-size: 0.85rem; }
+
+/* ══ Mobile ══════════════════════════════════ */
+@media (max-width: 600px) {
+  .lyric-view-container {
+    margin: 0.5rem;
+    padding: 1.25rem 1rem 2rem;
+    --lv-chord-size: 0.75em;
+  }
+  .lv-syl { font-size: 1.05em; }
+  .lv-flow { row-gap: 1.35em; }
+  .lv-verse { padding: 0.75rem 0.9rem 0.85rem; }
+}
+
+/* ══ Print ═══════════════════════════════════ */
+@media print {
+  .lyric-view-container {
+    max-width: 100%;
+    box-shadow: none;
+    margin: 0;
+    padding: 1rem;
+  }
+  .lv-verse { border: 1px solid #ddd !important; background: none !important; }
+  .lv-chorus::before { display: none; }
+}
+
+

@@ -140,5 +140,6 @@
   <!-- OSMD CONTAINER -->
   <div id="sheet-area" class="sheet-area hidden">
     <div id="osmd-container" class="osmd-container"></div>
+    <div id="lyric-view-container" class="lyric-view-container hidden"></div>
   </div>
 </div>

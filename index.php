@@ -54,6 +54,7 @@ function jsTag(string $file): string {
     return "<script src=\"assets/js/{$file}?v={$v}\"></script>\n";
 }
 echo jsTag('osmd-renderer.js');
+echo jsTag('lyric-extractor.js');
 echo jsTag('transpose-engine.js');
 echo jsTag('session-tracker.js');
 echo jsTag('auth.js');
