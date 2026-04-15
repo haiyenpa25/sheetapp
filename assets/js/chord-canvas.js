@@ -265,19 +265,24 @@ const ChordCanvas = (() => {
       });
       container.appendChild(span);
 
-      // FIX #1: Badge ✎ tím nhỏ — chỉ hiện khi edit mode, click để sửa hợp âm
+      // FIX #1: Badge tím đủ lớn — cùng size với "+" dot, hiện khi edit mode
+      // Đặt tại CX, CY (đúng vị trí hợp âm đã có trên SVG)
+      const dotSize2 = ChordCanvasUI.getDotSize(scale);
+      const fSize2   = Math.max(10, Math.round(11 * scale));
       const badge = document.createElement('div');
       badge.className = DOT_CLASS + ' cc-edit-badge';
       badge.textContent = '✎';
       badge.title = `Sửa hợp âm: ${chord}`;
-      ChordCanvasUI.applyAbsolute(badge, cx + 20, cy - 6, [
+      ChordCanvasUI.applyAbsolute(badge, cx, cy, [
         'display:' + (_editEnabled ? 'flex' : 'none'),
         'align-items:center', 'justify-content:center',
-        'width:15px', 'height:15px', 'border-radius:50%',
-        'background:rgba(109,40,217,0.85)', 'color:#fff',
-        'font-size:9px', 'line-height:1',
-        'box-shadow:0 1px 3px rgba(109,40,217,0.5)',
-        'pointer-events:auto', 'cursor:pointer', 'user-select:none', 'z-index:10'
+        `width:${dotSize2}px`, `height:${dotSize2}px`, 'border-radius:50%',
+        'background:rgba(109,40,217,0.82)',
+        'border:2px solid rgba(255,255,255,0.7)',
+        'color:#fff', `font-size:${fSize2}px`, 'line-height:1',
+        'box-shadow:0 1px 5px rgba(109,40,217,0.5)',
+        'pointer-events:auto', 'cursor:pointer', 'user-select:none',
+        'z-index:10', 'font-style:normal'
       ]);
       badge.addEventListener('click', e => { e.stopPropagation(); _showPopup(badge, measureIdx, noteIdx, chord); });
       container.appendChild(badge);
