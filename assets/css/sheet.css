@@ -503,6 +503,96 @@ body.dark-mode .lv-title     { color: #e2e8f0; }
   .lv-chorus::before { display: none; }
 }
 
+/* ══ Mode toggle button ══════════════════════ */
+.lv-header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.lv-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.3em 0.85em;
+  border-radius: 99px;
+  border: 1.5px solid rgba(109,40,217,.25);
+  background: rgba(109,40,217,.06);
+  color: var(--accent);
+  font-size: 0.7em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s, border-color 0.18s, transform 0.12s;
+  margin-top: 0.15em;
+  align-self: flex-start;
+}
+.lv-mode-btn:hover {
+  background: rgba(109,40,217,.14);
+  border-color: rgba(109,40,217,.5);
+  transform: translateY(-1px);
+}
+body.dark-mode .lv-mode-btn {
+  border-color: rgba(167,139,250,.35);
+  background: rgba(167,139,250,.1);
+  color: #a78bfa;
+}
+
+/* ══ INLINE MODE — [C] word word [D] word ════ */
+.lvi-line {
+  font-size: 1.1em;
+  font-weight: 500;
+  line-height: 1.9;
+  color: var(--text-primary);
+  margin: 0;
+  word-break: break-word;
+}
+
+.lvi-token {
+  display: inline;
+}
+
+.lvi-chord {
+  display: inline;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 0.82em;
+  font-weight: 800;
+  color: var(--lv-chord-color);
+  letter-spacing: -0.01em;
+}
+
+.lvi-word {
+  display: inline;
+  color: var(--text-primary);
+}
+
+.lvi-word-only {
+  display: inline;
+  color: var(--text-primary);
+}
+
+/* Dark mode inline */
+body.dark-mode .lvi-chord {
+  color: #f87171 !important;
+}
+body.dark-mode .lvi-line,
+body.dark-mode .lvi-word,
+body.dark-mode .lvi-word-only {
+  color: #c8d0e5;
+}
+
+/* Mobile inline */
+@media (max-width: 600px) {
+  .lvi-line { font-size: 1em; line-height: 1.8; }
+}
+
+/* Print inline */
+@media print {
+  .lv-mode-btn { display: none; }
+}
+
 /* =============================================
    OSMD TITLE — làm đẹp tên bài trong sheet nhạc
    ============================================= */

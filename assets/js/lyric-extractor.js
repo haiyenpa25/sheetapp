@@ -1,27 +1,27 @@
 /**
- * lyric-extractor.js — v3.1
+ * lyric-extractor.js — v3.2
  * Word-wrap flow: tất cả syllables chảy tự do trong 1 flex container.
+ * + Inline mode: hợp âm [C] nằm ngay trong dòng lời.
  */
 const LyricExtractor = (() => {
   'use strict';
 
-  /* ─── Transpose chord text bằng Tonal.Note.transpose ─── */
+  const MODE_KEY = 'sheetapp_lyric_mode'; // 'stacked' | 'inline'
+  let _currentMode = localStorage.getItem(MODE_KEY) || 'stacked';
+
+  /* ─── Transpose chord text ─── */
   function _transposeChordText(chordStr, semitones) {
     if (!chordStr || semitones === 0) return chordStr;
-    // Dùng TransposeEngine nếu có
     if (window.TransposeEngine?.transposeChord) {
       const result = window.TransposeEngine.transposeChord(chordStr, semitones);
       if (result && result !== chordStr || semitones === 0) return result || chordStr;
     }
-    // Fallback: dùng Tonal.Note trực tiếp
     if (!window.Tonal) return chordStr;
     try {
-      // Tách root note (VD: "Eb", "F#", "A") và suffix ("m", "7", "maj7", v.v.)
       const match = chordStr.match(/^([A-G][#b]?)(.*)/);
       if (!match) return chordStr;
       const root   = match[1];
       const suffix = match[2] || '';
-      // Transpose root note
       const INTERVALS = ['1P','2m','2M','3m','3M','4P','4A','5P','6m','6M','7m','7M'];
       const dir = semitones < 0 ? '-' : '';
       const abs = Math.abs(semitones) % 12;
@@ -34,8 +34,7 @@ const LyricExtractor = (() => {
     }
   }
 
-  /* ─── Parse <harmony> → chord text ─────────────────── */
-
+  /* ─── Parse <harmony> → chord text ─── */
   function parseHarmonyToText(h) {
     const step  = h.querySelector('root-step')?.textContent?.trim() || '';
     const alter = h.querySelector('root-alter')?.textContent?.trim();
@@ -49,26 +48,25 @@ const LyricExtractor = (() => {
     return str;
   }
 
-  /* ─── Clean verse-number prefix: "1.Xxx" → "xxx" ─── */
+  /* ─── Clean verse-number prefix ─── */
   function cleanFirstSyl(text) {
-    // "1.Cúi" → "Cúi",  "ĐK.Xxx" → mark as chorus
     if (!text) return { text, isChorus: false };
     const dkMatch = text.match(/^(ĐK|đk|DC|Điệp\s*khúc|Chorus)[:.\s]*(.*)/is);
     if (dkMatch) return { text: dkMatch[2].trim(), isChorus: true };
-    const numMatch = text.match(/^\d+[.\s]+(.*)/);
+    const numMatch = text.match(/^\d+[\.\s]+(.*)/);
     if (numMatch) return { text: numMatch[1].trim(), isChorus: false };
     return { text, isChorus: false };
   }
 
-  /* ─── Extract: quét XML → flat syllable arrays per verse ─── */
+  /* ─── Extract syllables per verse ─── */
   function extract(xmlString, transposeOffset = 0) {
     const doc = new DOMParser().parseFromString(xmlString, 'text/xml');
     const part = doc.querySelector('part');
     if (!part) return [];
 
     const measures = part.querySelectorAll('measure');
-    const verseMap   = {};   // num → [{text, chord, isWordEnd}]
-    const verseLabel = {};   // num → 'verse:N' | 'chorus'
+    const verseMap   = {};
+    const verseLabel = {};
     let currentChord = null;
     const known = new Set();
 
@@ -77,9 +75,7 @@ const LyricExtractor = (() => {
         if (c.tagName === 'harmony') {
           let str = parseHarmonyToText(c);
           const custom = c.hasAttribute('color');
-          if (!custom && transposeOffset !== 0) {
-            str = _transposeChordText(str, transposeOffset);
-          }
+          if (!custom && transposeOffset !== 0) str = _transposeChordText(str, transposeOffset);
           currentChord = str;
 
         } else if (c.tagName === 'note') {
@@ -87,9 +83,7 @@ const LyricExtractor = (() => {
 
           if (c.querySelector('rest')) {
             if (currentChord) {
-              known.forEach(n => {
-                verseMap[n].push({ text: '\u00a0', chord: currentChord, isWordEnd: true });
-              });
+              known.forEach(n => { verseMap[n].push({ text: '\u00a0', chord: currentChord, isWordEnd: true }); });
               currentChord = null;
             }
             continue;
@@ -105,7 +99,6 @@ const LyricExtractor = (() => {
 
               if (!verseMap[num]) {
                 verseMap[num] = [];
-                // Detect label & clean from first syllable
                 const { text: cleaned, isChorus } = cleanFirstSyl(raw);
                 verseLabel[num] = isChorus ? 'chorus' : ('verse:' + num);
                 known.add(num);
@@ -115,18 +108,14 @@ const LyricExtractor = (() => {
               }
             });
             currentChord = null;
-
           } else if (currentChord) {
-            known.forEach(n => {
-              verseMap[n]?.push({ text: '\u00a0', chord: currentChord, isWordEnd: true });
-            });
+            known.forEach(n => { verseMap[n]?.push({ text: '\u00a0', chord: currentChord, isWordEnd: true }); });
             currentChord = null;
           }
         }
       }
     });
 
-    // Sort and build final views
     const sorted = Array.from(known).sort((a, b) => parseInt(a) - parseInt(b));
     const views = [];
     for (const num of sorted) {
@@ -135,17 +124,43 @@ const LyricExtractor = (() => {
       const raw = verseLabel[num] || ('verse:' + num);
       const isChorus = raw === 'chorus';
       const idx = raw.match(/verse:(\d+)/)?.[1] || num;
-      views.push({
-        num,
-        label: isChorus ? 'Điệp Khúc' : 'Lời ' + idx,
-        isChorus,
-        syllables: syls
-      });
+      views.push({ num, label: isChorus ? 'Điệp Khúc' : 'Lời ' + idx, isChorus, syllables: syls });
     }
     return views;
   }
 
-  /* ─── Render ─────────────────────────────────────── */
+  /* ─── Build inline HTML từ syllables ─── */
+  function _renderInlineSection(syllables) {
+    // Ghép syllable thành words, chord lấy từ syl đầu của mỗi word
+    const words = [];
+    let buf = '', chordBuf = null, firstOfWord = true;
+
+    for (const syl of syllables) {
+      if (firstOfWord && syl.chord) chordBuf = syl.chord;
+      const t = (syl.text === '\u00a0' || !syl.text) ? '' : syl.text;
+      buf += t;
+      if (syl.isWordEnd) {
+        const wordText = buf.trim();
+        if (chordBuf || wordText) words.push({ chord: chordBuf, text: wordText });
+        buf = ''; chordBuf = null; firstOfWord = true;
+      } else {
+        firstOfWord = false;
+      }
+    }
+    if (buf.trim() || chordBuf) words.push({ chord: chordBuf, text: buf.trim() });
+
+    let html = '';
+    for (const w of words) {
+      if (w.chord) {
+        html += `<span class="lvi-token"><span class="lvi-chord">[${w.chord}]</span>${w.text ? ` <span class="lvi-word">${w.text}</span>` : ''}</span> `;
+      } else if (w.text) {
+        html += `<span class="lvi-token lvi-word-only">${w.text}</span> `;
+      }
+    }
+    return html;
+  }
+
+  /* ─── Render (stacked hoặc inline) ─── */
   function render(containerId, xmlString, transposeOffset = 0) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -158,16 +173,11 @@ const LyricExtractor = (() => {
 
     const views = extract(xmlString, transposeOffset);
     if (!views.length) {
-      container.innerHTML = `
-        <div class="lv-empty">
-          <span>🎵</span>
-          <strong>Không có lời bài hát</strong>
-          <p>File nhạc này chưa có Lyrics trong chuẩn MusicXML.</p>
-        </div>`;
+      container.innerHTML = `<div class="lv-empty"><span>🎵</span><strong>Không có lời bài hát</strong><p>File nhạc này chưa có Lyrics trong chuẩn MusicXML.</p></div>`;
       return;
     }
 
-    // Header
+    const isInline = _currentMode === 'inline';
     const title = document.getElementById('song-title')?.textContent?.trim() || '';
     const key   = document.getElementById('song-key')?.textContent?.trim()   || '';
     let html = '<div class="lv-wrapper">';
@@ -175,9 +185,14 @@ const LyricExtractor = (() => {
     if (title && title !== 'Chọn bài hát để bắt đầu') {
       const trBadge = transposeOffset !== 0
         ? `<span class="lv-trans-badge">${transposeOffset > 0 ? '+' : ''}${transposeOffset}</span>` : '';
+      const modeLabel   = isInline ? '↕ Dạng Hợp Âm' : '≡ Dạng Inline';
+      const modeTitle   = isInline ? 'Chuyển sang kiểu hợp âm trên lời' : 'Chuyển sang kiểu hợp âm trong dòng';
       html += `
         <header class="lv-header">
-          <h2 class="lv-title">${title}</h2>
+          <div class="lv-header-top">
+            <h2 class="lv-title">${title}</h2>
+            <button class="lv-mode-btn" id="lv-mode-toggle" title="${modeTitle}">${modeLabel}</button>
+          </div>
           ${key ? `<p class="lv-key">🎼 Giọng <strong>${key}</strong>${trBadge}</p>` : ''}
         </header>`;
     }
@@ -192,31 +207,45 @@ const LyricExtractor = (() => {
             <span class="lv-verse-pill ${view.isChorus ? 'lv-pill-chorus' : 'lv-pill-verse'}">
               ${labelIcon ? `<span class="lv-pill-icon">${labelIcon}</span>` : ''}${view.label}
             </span>
-          </div>
-          <div class="lv-flow">`;
+          </div>`;
 
-      // Single flat flow — all syllables together, flex-wrap handles line breaking
-      for (const syl of view.syllables) {
-        const spClass = syl.isWordEnd ? 'lv-we' : 'lv-wm';
-        const rest    = !syl.text || syl.text === '\u00a0';
-
-        const chordEl = syl.chord
-          ? `<b class="lv-chord">${syl.chord}</b>`
-          : `<b class="lv-chord lv-chord-empty"></b>`;
-
-        const sylEl = rest
-          ? `<span class="lv-syl lv-rest">\u00a0\u00a0</span>`
-          : `<span class="lv-syl">${syl.text}</span>`;
-
-        html += `<span class="lv-pair ${spClass}">${chordEl}${sylEl}</span>`;
+      if (isInline) {
+        // Inline mode: [C] word word [D] word
+        html += `<p class="lvi-line">${_renderInlineSection(view.syllables)}</p>`;
+      } else {
+        // Stacked mode: chord trên, lyric dưới
+        html += `<div class="lv-flow">`;
+        for (const syl of view.syllables) {
+          const spClass = syl.isWordEnd ? 'lv-we' : 'lv-wm';
+          const rest    = !syl.text || syl.text === '\u00a0';
+          const chordEl = syl.chord
+            ? `<b class="lv-chord">${syl.chord}</b>`
+            : `<b class="lv-chord lv-chord-empty"></b>`;
+          const sylEl = rest
+            ? `<span class="lv-syl lv-rest">\u00a0\u00a0</span>`
+            : `<span class="lv-syl">${syl.text}</span>`;
+          html += `<span class="lv-pair ${spClass}">${chordEl}${sylEl}</span>`;
+        }
+        html += `</div>`;
       }
 
-      html += `</div></section>`;
+      html += `</section>`;
     }
 
     html += '</div>';
     container.innerHTML = html;
     _applyStyles(container);
+
+    // Bind toggle
+    document.getElementById('lv-mode-toggle')?.addEventListener('click', () => {
+      _currentMode = _currentMode === 'stacked' ? 'inline' : 'stacked';
+      localStorage.setItem(MODE_KEY, _currentMode);
+      if (window.DisplaySettings?.renderLyricViewIfActive) {
+        window.DisplaySettings.renderLyricViewIfActive();
+      } else {
+        render(containerId, xmlString, transposeOffset);
+      }
+    });
   }
 
   function _applyStyles(container) {
@@ -242,14 +271,10 @@ const LyricExtractor = (() => {
   function reloadIfActive() {
     const el = document.getElementById('lyric-view-container');
     if (!el || el.classList.contains('hidden')) return;
-
-    // Delegate sang DisplaySettings để dùng đúng chord set đang active
     if (window.DisplaySettings?.renderLyricViewIfActive) {
       window.DisplaySettings.renderLyricViewIfActive();
       return;
     }
-
-    // Fallback nếu DisplaySettings chưa load: dùng XML gốc
     const raw = window.App?.getOriginalXml?.();
     if (!raw) return;
     render('lyric-view-container', raw, window.App?.getCurrentTranspose?.() || 0);
