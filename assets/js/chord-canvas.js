@@ -479,6 +479,8 @@ const ChordCanvas = (() => {
        _build();
     }
     _updateSetUI();
+    // Lưu chord set vào URL
+    window.URLState?.update?.({ set: name });
   }
 
   async function createSet(name) {

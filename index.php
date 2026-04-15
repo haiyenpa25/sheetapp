@@ -61,6 +61,7 @@ echo jsTag('transpose-engine.js');
 echo jsTag('session-tracker.js');
 echo jsTag('auth.js');
 echo jsTag('history-manager.js');
+echo jsTag('url-state.js');
 echo jsTag('library-ui.js');
 echo jsTag('setlist-ui.js');
 

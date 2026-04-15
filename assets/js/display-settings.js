@@ -157,10 +157,9 @@ const DisplaySettings = (() => {
         const btnLyricView = document.getElementById('btn-lyric-view');
         if (btnLyricView) {
             btnLyricView.addEventListener('click', () => {
-                const sheetArea = document.getElementById('sheet-area');
                 const lyricContainer = document.getElementById('lyric-view-container');
                 const btnText = btnLyricView.querySelector('.btn-text');
-                
+
                 if (lyricContainer.classList.contains('hidden')) {
                     // Mở chế độ Lời
                     lyricContainer.classList.remove('hidden');
@@ -168,41 +167,22 @@ const DisplaySettings = (() => {
                     if(osmd) osmd.style.display = 'none';
                     btnLyricView.classList.add('active');
                     if (btnText) btnText.textContent = 'Bản Nhạc';
-                    
-                    // FIX #2: Nếu đang dùng custom chord set → disable transpose (đã inject sẵn vào XML)
-                    const activeSet = window.ChordCanvas?.getCurrentSet?.() || 'default';
-                    if (activeSet !== 'default') {
-                        const btnU = document.getElementById('btn-transpose-up');
-                        const btnD = document.getElementById('btn-transpose-down');
-                        const btnR = document.getElementById('btn-transpose-reset');
-                        if (btnU) { btnU.disabled = true; btnU.title = 'Không thể chuyển tông khi dùng bộ hợp âm tuỳ chỉnh'; }
-                        if (btnD) { btnD.disabled = true; btnD.title = 'Không thể chuyển tông khi dùng bộ hợp âm tuỳ chỉnh'; }
-                        if (btnR) { btnR.disabled = true; }
-                        const capoBadge = document.getElementById('capo-badge');
-                        if (capoBadge) capoBadge.classList.add('hidden');
-                    }
-                    
+                    // Cập nhật URL
+                    window.URLState?.update?.({ v: 'lyric' });
                     try {
                         _renderLyricView();
                     } catch(e) { console.error('Lỗi render LyricView', e); }
                 } else {
-                    // Quay lại bản nhạc — reload OSMD để tránh drift và đảm bảo chord dots đúng vị trí
+                    // Quay lại bản nhạc
                     const scrollY = window.scrollY;
                     lyricContainer.classList.add('hidden');
                     const osmd = document.getElementById('osmd-container');
                     if(osmd) osmd.style.display = 'block';
                     btnLyricView.classList.remove('active');
                     if (btnText) btnText.textContent = 'Lời Nhạc';
-
-                    // FIX #2: Restore transpose controls (App sẽ set disabled đúng khi reloadCurrentXML)
-                    const btnU = document.getElementById('btn-transpose-up');
-                    const btnD = document.getElementById('btn-transpose-down');
-                    const btnR = document.getElementById('btn-transpose-reset');
-                    if (btnU) { btnU.title = 'Tăng 1 cung'; }
-                    if (btnD) { btnD.title = 'Hạ 1 cung'; }
-                    // disabled state sẽ được set lại bởi App khi reload xong
-
-                    // Re-render OSMD nhẹ để chord canvas rebuild đúng
+                    // Cập nhật URL
+                    window.URLState?.update?.({ v: 'sheet' });
+                    // Re-render OSMD
                     if (window.App?.reloadCurrentXML) {
                         window.App.reloadCurrentXML().then(() => {
                             window.scrollTo(0, scrollY);
@@ -213,6 +193,14 @@ const DisplaySettings = (() => {
                 }
             });
         }
+
+        // 4. Khi đổi bộ hợp âm mà lyric view đang mở → re-render lyric
+        document.getElementById('chord-set-selector')?.addEventListener('change', () => {
+            const lv = document.getElementById('lyric-view-container');
+            if (lv && !lv.classList.contains('hidden')) {
+                setTimeout(() => _renderLyricView(), 100);
+            }
+        });
     }
 
     function _loadPrefs() {

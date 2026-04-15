@@ -186,6 +186,9 @@ const App = (() => {
       AppUI.updateSessionPanel(currentTranspose, SessionTracker.getHistory());
       AppUI.showToast(`Đã mở: ${song.title}`, 'info');
 
+      // Restore trạng thái từ URL sau khi load xong
+      _restoreFromURL();
+
       // Track recently viewed
       if (window.HistoryManager) window.HistoryManager.trackView(song);
 
@@ -216,6 +219,8 @@ const App = (() => {
     currentTranspose = newVal;
     AppUI.updateTransposeDisplay(currentTranspose);
     AppUI.updateSongInfo(currentSong, currentTranspose);
+    // Lưu tông vào URL
+    window.URLState?.update?.({ t: currentTranspose });
 
     clearTimeout(_transposeTimer);
     _transposeTimer = setTimeout(() => _commitTranspose(), 400);
@@ -291,6 +296,7 @@ const App = (() => {
     currentTranspose = 0;
     AppUI.updateTransposeDisplay(currentTranspose);
     AppUI.updateSongInfo(currentSong, 0);
+    window.URLState?.update?.({ t: 0 });
     await _commitTranspose();
     SessionTracker.setTranspose(0);
   }
@@ -329,6 +335,53 @@ const App = (() => {
     if (lvc) lvc.style.fontSize = `${percent}%`;
   }
 
+  /* ====================== RESTORE FROM URL ====================== */
+  /**
+   * Sau khi song load xong, đọc URL params và apply lại view/set/compact.
+   * Chỉ apply params có trong URL (khác mặc định).
+   * Transpose đã được apply sớm hơn trong loadSong (SessionTracker).
+   */
+  function _restoreFromURL() {
+    if (!window.URLState) return;
+    const state = URLState.get();
+
+    // Restore compact mode
+    if (state.compact && !OSMDRenderer.getCompactMode()) {
+      setTimeout(() => {
+        OSMDRenderer.setCompactMode(true);
+        const btn = document.getElementById('btn-compact-mode');
+        if (btn) { btn.classList.add('active'); btn.style.color = 'var(--accent)'; }
+      }, 300);
+    }
+
+    // Restore chord set
+    if (state.set && state.set !== 'default') {
+      setTimeout(() => {
+        const sel = document.getElementById('chord-set-selector');
+        if (sel) {
+          sel.value = state.set;
+          sel.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }, 400);
+    }
+
+    // Restore lyric view + lyric variant
+    if (state.v === 'lyric') {
+      setTimeout(() => {
+        const btn = document.getElementById('btn-lyric-view');
+        const lyric = document.getElementById('lyric-view-container');
+        if (lyric && lyric.classList.contains('hidden') && btn) {
+          btn.click(); // Lấy lyric render bình thường
+        }
+        // Restore inline mode nếu có
+        if (state.lv === 'inline') {
+          const modeKey = 'sheetapp_lyric_mode';
+          localStorage.setItem(modeKey, 'inline');
+        }
+      }, 600);
+    }
+  }
+
   /* ====================== BIND CONTROLS ====================== */
   function _bindToolbarControls() {
     document.getElementById('btn-transpose-up')?.addEventListener('click', e => { e.currentTarget.blur(); transposeBy(+1); });
@@ -347,15 +400,15 @@ const App = (() => {
     document.getElementById('btn-compact-mode')?.addEventListener('click', (e) => {
       const btn = e.currentTarget;
       const isCompact = OSMDRenderer.getCompactMode();
-      
       OSMDRenderer.setCompactMode(!isCompact);
-      
       if (!isCompact) {
          btn.classList.add('active');
          btn.style.color = 'var(--accent)';
+         window.URLState?.update?.({ compact: true });
       } else {
          btn.classList.remove('active');
          btn.style.color = '';
+         window.URLState?.update?.({ compact: false });
       }
     });
 

@@ -240,6 +240,7 @@ const LyricExtractor = (() => {
     document.getElementById('lv-mode-toggle')?.addEventListener('click', () => {
       _currentMode = _currentMode === 'stacked' ? 'inline' : 'stacked';
       localStorage.setItem(MODE_KEY, _currentMode);
+      window.URLState?.update?.({ lv: _currentMode });
       if (window.DisplaySettings?.renderLyricViewIfActive) {
         window.DisplaySettings.renderLyricViewIfActive();
       } else {
