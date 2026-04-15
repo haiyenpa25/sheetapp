@@ -194,13 +194,6 @@ const DisplaySettings = (() => {
             });
         }
 
-        // 4. Khi đổi bộ hợp âm mà lyric view đang mở → re-render lyric
-        document.getElementById('chord-set-selector')?.addEventListener('change', () => {
-            const lv = document.getElementById('lyric-view-container');
-            if (lv && !lv.classList.contains('hidden')) {
-                setTimeout(() => _renderLyricView(), 100);
-            }
-        });
     }
 
     function _loadPrefs() {

@@ -188,8 +188,8 @@ const App = (() => {
       AppUI.updateSessionPanel(currentTranspose, SessionTracker.getHistory());
       AppUI.showToast(`Đã mở: ${song.title}`, 'info');
 
-      // Restore trạng thái từ URL sau khi load xong
-      _restoreFromURL();
+      // Restore trạng thái từ URL sau khi load xong (AWAIT để chord set load xong trước khi enable controls)
+      await _restoreFromURL();
 
       // Track recently viewed
       if (window.HistoryManager) window.HistoryManager.trackView(song);
