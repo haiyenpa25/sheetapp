@@ -169,6 +169,19 @@ const DisplaySettings = (() => {
                     btnLyricView.classList.add('active');
                     if (btnText) btnText.textContent = 'Bản Nhạc';
                     
+                    // FIX #2: Nếu đang dùng custom chord set → disable transpose (đã inject sẵn vào XML)
+                    const activeSet = window.ChordCanvas?.getCurrentSet?.() || 'default';
+                    if (activeSet !== 'default') {
+                        const btnU = document.getElementById('btn-transpose-up');
+                        const btnD = document.getElementById('btn-transpose-down');
+                        const btnR = document.getElementById('btn-transpose-reset');
+                        if (btnU) { btnU.disabled = true; btnU.title = 'Không thể chuyển tông khi dùng bộ hợp âm tuỳ chỉnh'; }
+                        if (btnD) { btnD.disabled = true; btnD.title = 'Không thể chuyển tông khi dùng bộ hợp âm tuỳ chỉnh'; }
+                        if (btnR) { btnR.disabled = true; }
+                        const capoBadge = document.getElementById('capo-badge');
+                        if (capoBadge) capoBadge.classList.add('hidden');
+                    }
+                    
                     try {
                         _renderLyricView();
                     } catch(e) { console.error('Lỗi render LyricView', e); }
@@ -180,6 +193,15 @@ const DisplaySettings = (() => {
                     if(osmd) osmd.style.display = 'block';
                     btnLyricView.classList.remove('active');
                     if (btnText) btnText.textContent = 'Lời Nhạc';
+
+                    // FIX #2: Restore transpose controls (App sẽ set disabled đúng khi reloadCurrentXML)
+                    const btnU = document.getElementById('btn-transpose-up');
+                    const btnD = document.getElementById('btn-transpose-down');
+                    const btnR = document.getElementById('btn-transpose-reset');
+                    if (btnU) { btnU.title = 'Tăng 1 cung'; }
+                    if (btnD) { btnD.title = 'Hạ 1 cung'; }
+                    // disabled state sẽ được set lại bởi App khi reload xong
+
                     // Re-render OSMD nhẹ để chord canvas rebuild đúng
                     if (window.App?.reloadCurrentXML) {
                         window.App.reloadCurrentXML().then(() => {

@@ -374,12 +374,31 @@ const OSMDRenderer = (() => {
 
       _isCompactMode = !!val;
       if (isLoaded && osmd && currentXmlString) {
-          // Sử dụng reload() để OSMD ép tính toán lại layout và Rules từ đầu.
           reload(currentXmlString);
       }
   }
 
   function getCompactMode() { return _isCompactMode; }
+
+  /**
+   * FIX #4: Ẩn chữ "Điệp Khúc", Coda, D.C., Fine... trong SVG khi compact mode bật.
+   * Các text này xuất phát từ <rehearsal> hoặc <direction><words> trong MusicXML.
+   */
+  function _hideRepeatLabels(hide) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const svg = container.querySelector('svg');
+    if (!svg) return;
+
+    const REPEAT_PATTERN = /^(đi[eệ]p\s*kh[úu]c|coda|d\.?c\.?|da\s*capo|fine|segno|d\.?s\.?|chorus|refrain)/i;
+
+    svg.querySelectorAll('text').forEach(t => {
+      const txt = t.textContent.trim();
+      if (REPEAT_PATTERN.test(txt)) {
+        t.style.display = hide ? 'none' : '';
+      }
+    });
+  }
 
   function _applyCompactMode() {
       if (!osmd || !osmd.sheet) return;
@@ -448,6 +467,9 @@ const OSMDRenderer = (() => {
       } else {
           osmd.setOptions({ drawTitle: true });
       }
+
+      // FIX #4: Ẩn / hiện chữ Điệp Khúc/Coda sau khi OSMD render xong SVG
+      setTimeout(() => _hideRepeatLabels(_isCompactMode), 400);
   }
 
   return { init, load, reload, setZoom, setZoomSilent, getInstance, getIsLoaded, getCurrentXml, getCurrentZoom, onReady, destroy, setCompactMode, getCompactMode };

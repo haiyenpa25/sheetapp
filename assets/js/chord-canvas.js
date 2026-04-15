@@ -28,7 +28,7 @@ const ChordCanvas = (() => {
       if (e.key === 'Escape') { _closePopup(); setAddMode(false); }
     });
     
-    // Resize Observer để tự động di chuyển hợp âm khi màn hình thay đổi
+    // ResizeObserver: rebuild khi container resize (khi đổi cửa sổ)
     const container = document.getElementById('osmd-container');
     if (container) {
       let rTid = null;
@@ -38,6 +38,18 @@ const ChordCanvas = (() => {
         rTid = setTimeout(() => { if (_editEnabled) _build(); }, 150);
       });
       _ro.observe(container);
+    }
+
+    // FIX #3: iPad pinch zoom không trigger ResizeObserver — phải dùng visualViewport
+    if (window.visualViewport) {
+      let vpTid = null;
+      const onVpChange = () => {
+        if (!_editEnabled) return;
+        clearTimeout(vpTid);
+        vpTid = setTimeout(() => { if (_editEnabled) _build(); }, 250);
+      };
+      window.visualViewport.addEventListener('resize', onVpChange);
+      window.visualViewport.addEventListener('scroll', onVpChange);
     }
     
     console.log('[CC] init OK');
@@ -108,6 +120,8 @@ const ChordCanvas = (() => {
     document.getElementById('btn-add-chord-mode')?.classList.toggle('active', on);
     document.getElementById('add-chord-hint')?.classList.toggle('hidden', !on);
     document.querySelectorAll('.' + BTN_CLASS).forEach(d => { d.style.display = on ? 'flex' : 'none'; });
+    // FIX #1: toggle badge "sửa" trên các ô đã có hợp âm
+    document.querySelectorAll('.cc-edit-badge').forEach(d => { d.style.display = on ? 'flex' : 'none'; });
     
     // Nếu AnnotateMode đang bật thì tắt
     if (on && window.AnnotationCanvas && document.getElementById('btn-add-annotate-mode')?.classList.contains('active')) {
@@ -232,11 +246,11 @@ const ChordCanvas = (() => {
 
     const scale = ChordCanvasUI.getScale();
     if (chord) {
-      if (!_editEnabled && _currentSet === 'default') return; // Chỉ default + không edit mới skip
+      if (!_editEnabled && _currentSet === 'default') return;
       
       const span = document.createElement('span');
       span.className = DOT_CLASS + ' cc-chord-text';
-      span.title = chord; // Tooltip để thấy chord khi hover
+      span.title = chord;
       ChordCanvasUI.applyAbsolute(span, cx, cy, [
         'white-space:nowrap', 'user-select:none',
         'opacity:0', 'width:60px', 'height:26px',
@@ -244,14 +258,30 @@ const ChordCanvas = (() => {
         'cursor:pointer',
         'display:block'
       ]);
-      
       span.addEventListener('click', e => { 
         if (!_editEnabled) return;
         e.stopPropagation(); 
         _showPopup(span, measureIdx, noteIdx, chord); 
       });
-      
       container.appendChild(span);
+
+      // FIX #1: Badge ✎ tím nhỏ — chỉ hiện khi edit mode, click để sửa hợp âm
+      const badge = document.createElement('div');
+      badge.className = DOT_CLASS + ' cc-edit-badge';
+      badge.textContent = '✎';
+      badge.title = `Sửa hợp âm: ${chord}`;
+      ChordCanvasUI.applyAbsolute(badge, cx + 20, cy - 6, [
+        'display:' + (_editEnabled ? 'flex' : 'none'),
+        'align-items:center', 'justify-content:center',
+        'width:15px', 'height:15px', 'border-radius:50%',
+        'background:rgba(109,40,217,0.85)', 'color:#fff',
+        'font-size:9px', 'line-height:1',
+        'box-shadow:0 1px 3px rgba(109,40,217,0.5)',
+        'pointer-events:auto', 'cursor:pointer', 'user-select:none', 'z-index:10'
+      ]);
+      badge.addEventListener('click', e => { e.stopPropagation(); _showPopup(badge, measureIdx, noteIdx, chord); });
+      container.appendChild(badge);
+
     } else {
       const dotSize = ChordCanvasUI.getDotSize(scale);
       const fSize   = Math.max(10, Math.round(12 * scale));
