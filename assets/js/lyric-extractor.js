@@ -12,10 +12,11 @@ const LyricExtractor = (() => {
   /* ─── Transpose chord text ─── */
   function _transposeChordText(chordStr, semitones) {
     if (!chordStr || semitones === 0) return chordStr;
+    // TransposeEngine.transposeChord có fallback nội bộ (không cần Tonal.js)
     if (window.TransposeEngine?.transposeChord) {
-      const result = window.TransposeEngine.transposeChord(chordStr, semitones);
-      if (result && result !== chordStr || semitones === 0) return result || chordStr;
+      return window.TransposeEngine.transposeChord(chordStr, semitones) || chordStr;
     }
+    // Tonal.js trực tiếp (only when TransposeEngine not available at all)
     if (!window.Tonal) return chordStr;
     try {
       const match = chordStr.match(/^([A-G][#b]?)(.*)/);

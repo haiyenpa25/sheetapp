@@ -33,20 +33,52 @@ const TransposeEngine = (() => {
   /**
    * Dịch giọng một hợp âm hoàn chỉnh (có tính cả bass notes như Cmaj7/G).
    */
+  /**
+   * Transpose thủ công (không cần Tonal.js) — dùng bảng chromatic nội bộ.
+   * Xử lý: chords đơn (Am, D7), slash chords (C/E), enharmonics (#/b).
+   */
+  function _manualTranspose(chordName, semitones, useFlats = false) {
+      if (!chordName) return chordName;
+      const m = chordName.match(/^([A-G][#b]?)([^/]*)(\/([A-G][#b]?))?$/);
+      if (!m) return chordName;
+      const root    = m[1];
+      const suffix  = m[2] || '';
+      const bass    = m[4] || null;
+      const arr     = useFlats ? NOTES_FLAT : NOTES_SHARP;
+      // Tìm index trong SHARP hoặc FLAT
+      let idx = NOTES_SHARP.indexOf(root);
+      if (idx === -1) idx = NOTES_FLAT.indexOf(root);
+      if (idx === -1) return chordName;
+      const newRoot = arr[((idx + semitones) % 12 + 12) % 12];
+      let result = newRoot + suffix;
+      if (bass) {
+          let bi = NOTES_SHARP.indexOf(bass);
+          if (bi === -1) bi = NOTES_FLAT.indexOf(bass);
+          const newBass = bi !== -1 ? arr[((bi + semitones) % 12 + 12) % 12] : bass;
+          result += '/' + newBass;
+      }
+      return result;
+  }
+
   function transposeChord(chordName, semitones, useFlats = false) {
       if (!chordName || semitones === 0) return chordName;
-      if (!window.Tonal) return chordName;
+
+      // Nếu Tonal không load được → dùng fallback nội bộ
+      if (!window.Tonal) {
+          return _manualTranspose(chordName, semitones, useFlats);
+      }
 
       try {
           const interv = getInterval(semitones);
           // Tonal.Chord.transpose sẽ tự động dịch root và bass note!
           let tr = window.Tonal.Chord.transpose(chordName, interv);
-          
+
           // Phân tách Root và Bass để ép enharmonic
           const parts = tr.split('/');
-          let rootNote = parts[0].match(/^[A-G][#b]*/)[0];
+          let rootNote = parts[0].match(/^[A-G][#b]*/)?.[0];
+          if (!rootNote) return _manualTranspose(chordName, semitones, useFlats);
           let suffix = parts[0].substring(rootNote.length);
-          
+
           let forcedRoot = forceEnharmonic(rootNote, useFlats);
           let res = forcedRoot + suffix;
           if (parts.length > 1) {
@@ -54,8 +86,8 @@ const TransposeEngine = (() => {
           }
           return res;
       } catch (e) {
-          console.error("Tonal Transpose Error", e);
-          return chordName;
+          console.warn('[TransposeEngine] Tonal lỗi, dùng fallback:', e.message);
+          return _manualTranspose(chordName, semitones, useFlats);
       }
   }
 
@@ -163,3 +195,5 @@ const TransposeEngine = (() => {
 
   return { transposeChord, transposeXML, suggestBestCapo, extractChordsFromXML, NOTES_SHARP, NOTES_FLAT };
 })();
+
+window.TransposeEngine = TransposeEngine;

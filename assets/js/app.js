@@ -236,61 +236,81 @@ const App = (() => {
 
     // Kiểm tra Lyric View có đang active không
     const lyricContainer = document.getElementById('lyric-view-container');
-    const isLyricActive = lyricContainer && !lyricContainer.classList.contains('hidden');
+    const isLyricActive  = lyricContainer && !lyricContainer.classList.contains('hidden');
 
-    // Scroll Lock Mechanism
-    const container = document.querySelector('.sheet-viewer-wrapper');
-    const scrollY = window.scrollY;
+    // Build processedXml với custom chords (nếu có)
+    let processedXml = originalXml;
+    const currentSet = window.ChordCanvas?.getCurrentSet?.() || 'default';
+    if (currentSet !== 'default') {
+      const customChordsMap = window.ChordCanvas?.getCustomChords?.();
+      processedXml = window.ChordCanvasXML?.cloneAndInjectChords?.(processedXml, customChordsMap) || processedXml;
+    }
+
+    if (isLyricActive) {
+      // ── Lyric View mode ────────────────────────────────────────────────
+      // KHÔNG reload OSMD (container đang display:none → osmd.render() sẽ HANG)
+      // Chỉ cần re-render lyric view với transpose mới
+      try {
+        SessionTracker.setTranspose(currentTranspose);
+        if (window.DisplaySettings?.renderLyricViewIfActive) {
+          window.DisplaySettings.renderLyricViewIfActive();
+        }
+        // Capo badge (không cần OSMD)
+        if (window.TransposeEngine) {
+          let chordList = [];
+          if (currentSet !== 'default' && window.ChordCanvas) {
+            const obj = window.ChordCanvas.getCustomChords?.();
+            if (obj) chordList = Object.values(obj);
+          }
+          if (chordList.length === 0) chordList = TransposeEngine.extractChordsFromXML(processedXml);
+          const tc = chordList.map(c => TransposeEngine.transposeChord(c, currentTranspose));
+          AppUI.updateCapoBadge(TransposeEngine.suggestBestCapo(tc));
+        }
+      } finally {
+        if (disp) disp.style.opacity = '';
+      }
+      return; // Xong — OSMD sẽ được reload khi user đóng lyric view
+    }
+
+    // ── Sheet View mode ───────────────────────────────────────────────────
+    // Scroll Lock
+    const container  = document.querySelector('.sheet-viewer-wrapper');
+    const scrollY    = window.scrollY;
     const wrapScroll = container ? container.scrollTop : 0;
     if (container) container.style.minHeight = container.scrollHeight + 'px';
 
     try {
-      let processedXml = originalXml;
-      const currentSet = window.ChordCanvas?.getCurrentSet?.() || 'default';
-      if (currentSet !== 'default') {
-        const customChordsMap = window.ChordCanvas?.getCustomChords?.();
-        processedXml = window.ChordCanvasXML?.cloneAndInjectChords?.(processedXml, customChordsMap) || processedXml;
-      }
-
       if (window.InstrumentMixer?.preserveState) window.InstrumentMixer.preserveState();
-
-      // Luôn reload OSMD (dù đang ẩn) để state nhất quán
       await OSMDRenderer.reload(processedXml, currentTranspose);
       SessionTracker.setTranspose(currentTranspose);
-      
+
       if (window.TransposeEngine) {
-          let chordList = [];
-          if (currentSet !== 'default' && window.ChordCanvas) {
-              const obj = window.ChordCanvas.getCustomChords?.();
-              if (obj) chordList = Object.values(obj);
-          }
-          if (chordList.length === 0) {
-              chordList = TransposeEngine.extractChordsFromXML(processedXml);
-          }
-          const transposedChords = chordList.map(c => TransposeEngine.transposeChord(c, currentTranspose));
-          AppUI.updateCapoBadge(TransposeEngine.suggestBestCapo(transposedChords));
+        let chordList = [];
+        if (currentSet !== 'default' && window.ChordCanvas) {
+          const obj = window.ChordCanvas.getCustomChords?.();
+          if (obj) chordList = Object.values(obj);
+        }
+        if (chordList.length === 0) chordList = TransposeEngine.extractChordsFromXML(processedXml);
+        const transposedChords = chordList.map(c => TransposeEngine.transposeChord(c, currentTranspose));
+        AppUI.updateCapoBadge(TransposeEngine.suggestBestCapo(transposedChords));
       }
 
-      if (window.ChordCanvas) window.ChordCanvas.onOSMDRendered();
+      if (window.ChordCanvas)     window.ChordCanvas.onOSMDRendered();
       if (window.AnnotationCanvas) window.AnnotationCanvas.onOSMDRendered();
     } catch (err) {
-      console.warn('[App] OSMD reload lỗi (có thể do container ẩn):', err.message);
+      console.warn('[App] OSMD reload lỗi:', err.message);
     } finally {
-      // LUÔN re-render Lyric View nếu đang active, bất kể OSMD có thành công hay không
-      if (isLyricActive && window.DisplaySettings?.renderLyricViewIfActive) {
-        window.DisplaySettings.renderLyricViewIfActive();
-      }
-      
       if (disp) disp.style.opacity = '';
       setTimeout(() => {
         if (container) {
-            container.style.minHeight = '';
-            container.scrollTop = wrapScroll;
+          container.style.minHeight = '';
+          container.scrollTop = wrapScroll;
         }
         window.scrollTo(0, scrollY);
       }, 50);
     }
   }
+
 
   async function resetTranspose() {
     if (currentTranspose === 0) return;
