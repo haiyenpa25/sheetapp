@@ -472,7 +472,7 @@ const OSMDRenderer = (() => {
       setTimeout(() => _hideRepeatLabels(_isCompactMode), 400);
   }
 
-  return { init, load, reload, setZoom, setZoomSilent, getInstance, getIsLoaded, getCurrentXml, getCurrentZoom, onReady, destroy, setCompactMode, getCompactMode };
+  return { init, load, reload, setZoom, setZoomSilent, getInstance, getIsLoaded, getCurrentXml, getCurrentZoom, onReady, destroy, setCompactMode, getCompactMode, refreshRules };
 })();
 
 window.OSMDRenderer = OSMDRenderer;

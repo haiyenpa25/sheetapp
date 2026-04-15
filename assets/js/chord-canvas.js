@@ -184,8 +184,6 @@ const ChordCanvas = (() => {
     const mapped = _mapNotes(notes, rawChordMap);
     mapped.forEach(m => _placeDot(m));
 
-    // FIX: Tạo badge ✎ tại đúng vị trí SVG chord text (G, C, D7...) thay vì tại note
-    if (_editEnabled) _buildEditBadgesOnSVG(mapped, rawChordMap);
   }
 
   /* ─── Edit Badges on SVG Chord Symbols ──────────────────────── */
@@ -313,30 +311,50 @@ const ChordCanvas = (() => {
     const cy = (rect.top - cRect.top) - 20;
 
     const scale = ChordCanvasUI.getScale();
+    const dotSize = ChordCanvasUI.getDotSize(scale);
+    const fSize   = Math.max(10, Math.round(11 * scale));
     if (chord) {
       if (!_editEnabled && _currentSet === 'default') return;
-      
+
+      // Badge ✎ tím — cùng size và CX/CY với nút +, đặt trên đúng vùng hợp âm
+      const badge = document.createElement('div');
+      badge.className = DOT_CLASS + ' cc-edit-badge';
+      badge.textContent = '\u270e'; // ✎
+      badge.title = 'S\u1eeda h\u1ee3p \u00e2m: ' + chord;
+      ChordCanvasUI.applyAbsolute(badge, cx - dotSize / 2, cy - dotSize / 2, [
+        'display:' + (_editEnabled ? 'flex' : 'none'),
+        'align-items:center', 'justify-content:center',
+        'width:' + dotSize + 'px', 'height:' + dotSize + 'px', 'border-radius:50%',
+        'background:rgba(109,40,217,0.87)',
+        'border:2.5px solid rgba(255,255,255,0.8)',
+        'color:#fff', 'font-size:' + fSize + 'px', 'line-height:1',
+        'box-shadow:0 2px 7px rgba(109,40,217,0.55)',
+        'pointer-events:auto', 'cursor:pointer', 'user-select:none', 'z-index:12'
+      ]);
+      badge.addEventListener('click', e => {
+        e.stopPropagation();
+        _showPopup(badge, measureIdx, noteIdx, chord);
+      });
+      container.appendChild(badge);
+
+      // Invisible wider click zone phía dưới badge (dễ bấm hơn trên mobile)
       const span = document.createElement('span');
       span.className = DOT_CLASS + ' cc-chord-text';
       span.title = chord;
-      ChordCanvasUI.applyAbsolute(span, cx, cy, [
+      ChordCanvasUI.applyAbsolute(span, cx - 30, cy, [
         'white-space:nowrap', 'user-select:none',
-        'opacity:0', 'width:60px', 'height:26px',
+        'opacity:0', 'width:60px', 'height:22px',
         'pointer-events:' + (_editEnabled ? 'auto' : 'none'),
-        'cursor:pointer',
-        'display:block'
+        'cursor:pointer', 'display:block'
       ]);
-      span.addEventListener('click', e => { 
+      span.addEventListener('click', e => {
         if (!_editEnabled) return;
-        e.stopPropagation(); 
-        _showPopup(span, measureIdx, noteIdx, chord); 
+        e.stopPropagation();
+        _showPopup(span, measureIdx, noteIdx, chord);
       });
       container.appendChild(span);
-      // Badge ✎ sẽ được tạo bởi _buildEditBadgesOnSVG() đặt tại vị trí SVG text thực
 
     } else {
-      const dotSize = ChordCanvasUI.getDotSize(scale);
-      const fSize   = Math.max(10, Math.round(12 * scale));
       const btn = document.createElement('div');
       btn.className = DOT_CLASS + ' ' + BTN_CLASS;
       btn.textContent = '+';
@@ -396,6 +414,9 @@ const ChordCanvas = (() => {
   async function _saveChord(measureIdx, noteIdx, chordInput, refreshLayout = true) {
     const semitones = window.App?.getCurrentTranspose?.() ?? 0;
     const chordOriginalKey = semitones !== 0 ? TransposeEngine.transposeChord(chordInput, -semitones) : chordInput;
+
+    // Đảm bảo màu hợp âm luôn đúng (tránh màu đen sau khi reload)
+    window.OSMDRenderer?.refreshRules?.();
 
     if (_currentSet === 'default') {
       await ChordCanvasXML.injectXml(measureIdx, noteIdx, chordOriginalKey, refreshLayout);
