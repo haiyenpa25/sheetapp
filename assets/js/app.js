@@ -135,8 +135,10 @@ const App = (() => {
 
       const settings = await SessionTracker.loadSong(song.id);
       
-      // Ưu tiên Transpose Override từ Setlist, nếu không thì lấy Session Tracker, mặc định 0
-      currentTranspose = transposeOverride !== null ? transposeOverride : (settings.lastTranspose || 0);
+      // Ưu tiên: 1) transposeOverride (Setlist) 2) URL param t 3) SessionTracker 4) 0
+      const _urlT = window.URLState?.get?.()?.t ?? 0;
+      currentTranspose = transposeOverride !== null ? transposeOverride
+                       : (_urlT !== 0 ? _urlT : (settings.lastTranspose || 0));
       currentZoom      = settings.zoomLevel     || 1.0;
 
       AppUI.setLoadingText('Đang xử lý dữ liệu hồ sơ...');
@@ -338,47 +340,46 @@ const App = (() => {
   /* ====================== RESTORE FROM URL ====================== */
   /**
    * Sau khi song load xong, đọc URL params và apply lại view/set/compact.
-   * Chỉ apply params có trong URL (khác mặc định).
-   * Transpose đã được apply sớm hơn trong loadSong (SessionTracker).
+   * Dùng chuỗi async tuần tự (không timeout song song) để tránh race condition.
+   * - Transpose: đã được đọc từ URL trong loadSong rồi
+   * - Compact: apply ngay sau load
+   * - Chord set: switch async (fetch từ server)
+   * - Lyric view: mở SAU KHI chord set đã load xong
    */
-  function _restoreFromURL() {
+  async function _restoreFromURL() {
     if (!window.URLState) return;
     const state = URLState.get();
 
     // Restore compact mode
     if (state.compact && !OSMDRenderer.getCompactMode()) {
-      setTimeout(() => {
-        OSMDRenderer.setCompactMode(true);
-        const btn = document.getElementById('btn-compact-mode');
-        if (btn) { btn.classList.add('active'); btn.style.color = 'var(--accent)'; }
-      }, 300);
+      OSMDRenderer.setCompactMode(true);
+      const btn = document.getElementById('btn-compact-mode');
+      if (btn) { btn.classList.add('active'); btn.style.color = 'var(--accent)'; }
     }
 
-    // Restore chord set
+    // Restore chord set (async, chờ fetch xong mới mở lyric)
     if (state.set && state.set !== 'default') {
-      setTimeout(() => {
-        const sel = document.getElementById('chord-set-selector');
-        if (sel) {
-          sel.value = state.set;
-          sel.dispatchEvent(new Event('change', { bubbles: true }));
+      const sel = document.getElementById('chord-set-selector');
+      if (sel && sel.value !== state.set) {
+        // Trực tiếp gọi switchSet để đảm bảo await đúng
+        if (window.ChordCanvas?.switchSet) {
+          await window.ChordCanvas.switchSet(state.set);
         }
-      }, 400);
+      }
     }
 
-    // Restore lyric view + lyric variant
+    // Sau khi chord set đã load xong, mới mở lyric view
     if (state.v === 'lyric') {
-      setTimeout(() => {
-        const btn = document.getElementById('btn-lyric-view');
-        const lyric = document.getElementById('lyric-view-container');
-        if (lyric && lyric.classList.contains('hidden') && btn) {
-          btn.click(); // Lấy lyric render bình thường
-        }
-        // Restore inline mode nếu có
-        if (state.lv === 'inline') {
-          const modeKey = 'sheetapp_lyric_mode';
-          localStorage.setItem(modeKey, 'inline');
-        }
-      }, 600);
+      // Restore inline mode trước khi render
+      if (state.lv === 'inline') {
+        localStorage.setItem('sheetapp_lyric_mode', 'inline');
+      }
+      // Mở lyric view
+      const btnLV = document.getElementById('btn-lyric-view');
+      const lyric = document.getElementById('lyric-view-container');
+      if (lyric && lyric.classList.contains('hidden') && btnLV) {
+        btnLV.click();
+      }
     }
   }
 
