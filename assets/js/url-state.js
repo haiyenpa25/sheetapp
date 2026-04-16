@@ -15,7 +15,7 @@ const URLState = (() => {
   'use strict';
 
   // Default values — omit from URL if matches
-  const DEFAULTS = { t: 0, v: 'sheet', lv: 'stacked', set: 'default', compact: false };
+  const DEFAULTS = { t: 0, v: 'sheet', lv: 'stacked', set: 'HD', compact: false };
 
   /**
    * Đọc state hiện tại từ URL
@@ -27,7 +27,7 @@ const URLState = (() => {
       t:       parseInt(p.get('t') || '0', 10),
       v:       p.get('v')       || 'sheet',
       lv:      p.get('lv')      || 'stacked',
-      set:     p.get('set')     || 'default',
+      set:     p.get('set')     || 'HD',
       compact: p.get('compact') === '1',
     };
   }
@@ -43,7 +43,7 @@ const URLState = (() => {
         (k === 't'       && v === 0)         ||
         (k === 'v'       && v === 'sheet')    ||
         (k === 'lv'      && v === 'stacked')  ||
-        (k === 'set'     && v === 'default')  ||
+        (k === 'set'     && v === 'HD')       ||
         (k === 'compact' && !v);
 
       if (isDefault) {
