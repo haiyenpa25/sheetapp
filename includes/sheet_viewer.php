@@ -91,7 +91,7 @@
         </label>
         <select id="chord-set-selector" class="chord-set-select" disabled
                 onchange="ChordCanvas.switchSet(this.value)">
-          <option value="default">Mặc định</option>
+          <option value="default">TLH</option>
         </select>
         <button id="btn-new-chord-set" class="btn btn-xs btn-outline-primary"
                 title="Tạo bộ hợp âm mới theo người"

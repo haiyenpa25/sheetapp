@@ -540,7 +540,7 @@ const ChordCanvas = (() => {
       if (r.success) sets = ['default', ...r.sets];
     } catch(e) {}
 
-    selector.innerHTML = sets.map(s => `<option value="${s}" ${s === _currentSet ? 'selected' : ''}>${s === 'default' ? 'Hợp âm mặc định' : s}</option>`).join('');
+    selector.innerHTML = sets.map(s => `<option value="${s}" ${s === _currentSet ? 'selected' : ''}>${s === 'default' ? 'TLH' : s}</option>`).join('');
     
     const isAdmin = window.Auth?.isAdmin?.();
     if (deleteBtn) deleteBtn.style.display = (_currentSet !== 'default' && isAdmin) ? 'inline-flex' : 'none';
