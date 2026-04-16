@@ -542,10 +542,11 @@ const ChordCanvas = (() => {
 
     selector.innerHTML = sets.map(s => `<option value="${s}" ${s === _currentSet ? 'selected' : ''}>${s === 'default' ? 'TLH' : s}</option>`).join('');
     
-    const isAdmin = window.Auth?.isAdmin?.();
+    const isAdmin   = window.Auth?.isAdmin?.()   ?? false;
+    const isLoggedIn = window.Auth?.isLoggedIn?.() ?? false;
     if (deleteBtn) deleteBtn.style.display = (_currentSet !== 'default' && isAdmin) ? 'inline-flex' : 'none';
     const newBtn = document.getElementById('btn-new-chord-set');
-    if (newBtn) newBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+    if (newBtn) newBtn.classList.toggle('hidden', !isLoggedIn);
     
     // Disable selector if user is not admin and wants to switch to add mode wait, actually guests can switch sets to VIEW them.
   }
@@ -553,11 +554,12 @@ const ChordCanvas = (() => {
   function _updateSetUI() {
     const selector = document.getElementById('chord-set-selector');
     if (selector) selector.value = _currentSet;
-    const isAdmin = window.Auth?.isAdmin?.();
-    const deleteBtn = document.getElementById('btn-delete-chord-set');
-    if (deleteBtn) deleteBtn.style.display = (_currentSet !== 'default' && isAdmin) ? 'inline-flex' : 'none';
-    const newBtn = document.getElementById('btn-new-chord-set');
-    if (newBtn) newBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+    const isAdmin2    = window.Auth?.isAdmin?.()    ?? false;
+    const isLoggedIn2 = window.Auth?.isLoggedIn?.() ?? false;
+    const deleteBtn2  = document.getElementById('btn-delete-chord-set');
+    if (deleteBtn2) deleteBtn2.style.display = (_currentSet !== 'default' && isAdmin2) ? 'inline-flex' : 'none';
+    const newBtn2 = document.getElementById('btn-new-chord-set');
+    if (newBtn2) newBtn2.classList.toggle('hidden', !isLoggedIn2);
     const clearBtn = document.getElementById('btn-clear-all-chords');
     if (clearBtn) clearBtn.classList.toggle('hidden', _currentSet === 'default');
   }

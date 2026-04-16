@@ -86,21 +86,34 @@ const Auth = (() => {
       loggedInPanel?.classList.add('hidden');
     }
 
-    // Ẩn/hiện các nút thao tác chỉnh sửa dựa trên Role
-    const canEdit = isAdmin();
-    document.getElementById('btn-add-chord-mode')?.classList.toggle('hidden', !canEdit);
-    document.getElementById('btn-new-chord-set')?.classList.toggle('hidden', !canEdit);
+    // Phân quyền:
+    //  - canEdit (isAdmin): thao tác nâng cao (ghi chú, xoá bộ hợp âm, import...)
+    //  - loggedIn: thao tác cơ bản (thêm hợp âm, tạo bộ hợp âm mới)
+    const canEdit  = isAdmin();
+    const loggedIn = isLoggedIn();
+
+    // Thêm hợp âm — CHỈ CẦN đăng nhập
+    document.getElementById('btn-add-chord-mode')?.classList.toggle('hidden', !loggedIn);
+    // Tạo bộ hợp âm mới — CHỈ CẦN đăng nhập
+    document.getElementById('btn-new-chord-set')?.classList.toggle('hidden', !loggedIn);
+    // Ghi chú — Admin only
     document.getElementById('btn-add-annotate-mode')?.classList.toggle('hidden', !canEdit);
-    
-    // Nút thùng rác được điều khiển trực tiếp bởi ChordCanvas, nhưng cũng có thể ẩn mặc định ở đây
+
+    // FAB items — đồng bộ với quyền của từng nút
+    document.getElementById('fab-chord')?.classList.toggle('hidden', !loggedIn);
+    document.getElementById('fab-annotate')?.classList.toggle('hidden', !canEdit);
+
+    // Nút thùng rác chord set — admin only
     const delBtn = document.getElementById('btn-delete-chord-set');
     if (delBtn && !canEdit) delBtn.style.display = 'none';
 
-    // Xử lý các UI phụ thuộc Role
-    if (!canEdit) {
+    // Tắt mode khi mất quyền
+    if (!loggedIn) {
       if (document.getElementById('btn-add-chord-mode')?.classList.contains('active')) {
           window.ChordCanvas?.setAddMode(false);
       }
+    }
+    if (!canEdit) {
       if (document.getElementById('btn-add-annotate-mode')?.classList.contains('active')) {
           window.AnnotationCanvas?.setAddMode(false);
       }
@@ -157,7 +170,11 @@ const Auth = (() => {
     return _role === 'admin';
   }
 
-  return { init, checkSession, isAdmin, getUser: () => _currentUser };
+  function isLoggedIn() {
+    return _currentUser !== null;
+  }
+
+  return { init, checkSession, isAdmin, isLoggedIn, getUser: () => _currentUser };
 })();
 
 window.Auth = Auth;
