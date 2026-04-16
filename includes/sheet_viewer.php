@@ -93,10 +93,11 @@
                 onchange="ChordCanvas.switchSet(this.value)">
           <option value="default">TLH</option>
         </select>
-        <button id="btn-new-chord-set" class="btn btn-xs btn-outline-primary"
+        <button id="btn-new-chord-set" class="btn btn-xs btn-ghost" style="color: var(--accent); font-weight: 600; padding: 0.2rem 0.4rem;"
                 title="Tạo bộ hợp âm mới theo người"
                 onclick="ChordCanvas.showNewSetModal()">
-          + Tạo mới
+          <span class="desktop-only">+ Tạo mới</span>
+          <span class="mobile-only">+ Tạo</span>
         </button>
         <button id="btn-delete-chord-set" class="btn btn-xs btn-danger"
                 title="Xóa bộ hợp âm đang chọn"
