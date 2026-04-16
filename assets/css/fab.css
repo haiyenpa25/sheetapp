@@ -143,38 +143,7 @@ body.dark .fab-item-label { color: #c4b5fd; }
   Item 4 goes slightly below FAB, which is fine since FAB is 24px from bottom.
 */
 
-.fab-wrap.fab-open .fab-item { opacity: 1; pointer-events: auto; }
-
-.fab-wrap.fab-open .fab-item[data-index="0"] {
-  transform: none;
-  bottom: 99px;
-  right:  27px;
-  transition-delay: 0.00s;
-}
-.fab-wrap.fab-open .fab-item[data-index="1"] {
-  transform: none;
-  bottom: 89px;
-  right:  63px;
-  transition-delay: 0.04s;
-}
-.fab-wrap.fab-open .fab-item[data-index="2"] {
-  transform: none;
-  bottom: 63px;
-  right:  89px;
-  transition-delay: 0.08s;
-}
-.fab-wrap.fab-open .fab-item[data-index="3"] {
-  transform: none;
-  bottom: 27px;
-  right:  99px;
-  transition-delay: 0.12s;
-}
-.fab-wrap.fab-open .fab-item[data-index="4"] {
-  transform: none;
-  bottom: -4px;   /* slightly below fab but still visible */
-  right:  89px;
-  transition-delay: 0.16s;
-}
+/* Position is now handled dynamically via JS (fab.js) */
 
 /* ---- PULSE khi mới vào ---- */
 @keyframes fab-appear-pulse {

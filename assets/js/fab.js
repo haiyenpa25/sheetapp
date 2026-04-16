@@ -84,22 +84,66 @@ const FAB = (() => {
   /* ---------- OPEN / CLOSE ---------- */
   function _openMenu() {
     _open = true;
-    document.getElementById('fab-wrap')?.classList.add('fab-open');
+    const wrap = document.getElementById('fab-wrap');
+    if (!wrap) return;
+    wrap.classList.add('fab-open');
     document.getElementById('fab-backdrop')?.classList.add('active');
+    
     const iconMenu  = document.querySelector('.fab-icon-menu');
     const iconClose = document.querySelector('.fab-icon-close');
     if (iconMenu)  iconMenu.style.display  = 'none';
     if (iconClose) iconClose.style.display = '';
+
+    // JS-based Fan-out positioning (bỏ qua các nút ẩn)
+    // Tỏa từ 90 độ (lên trên) đến 180 độ (sang trái).
+    const items = Array.from(wrap.querySelectorAll('.fab-item:not(.hidden)'));
+    const total = items.length;
+    if (total === 0) return;
+    
+    // Bán kính xòe quạt
+    const R = 72;
+    // Điểm bát đầu (90 độ = PI/2, thẳng lên), Điểm kết thúc (180 độ = PI, ngang trái)
+    // Phân bổ đều giữa PI/2 và PI
+    let startAngle = Math.PI / 2;
+    let endAngle   = Math.PI;
+    
+    // Nếu có ít nút thì thu hẹp góc lại cho đẹp
+    if (total === 1) endAngle = Math.PI / 2;
+    else if (total === 2) endAngle = Math.PI / 2 + Math.PI / 4;
+    
+    const step = total > 1 ? (endAngle - startAngle) / (total - 1) : 0;
+    
+    items.forEach((item, index) => {
+      const angle = startAngle + step * index;
+      const dx = Math.cos(angle) * R; // Âm: sang trái
+      const dy = -Math.sin(angle) * R; // Âm: lên trên
+      
+      item.style.transform = `translate(${dx}px, ${dy}px) scale(1)`;
+      item.style.opacity = '1';
+      item.style.pointerEvents = 'auto';
+    });
   }
 
   function _close() {
     _open = false;
-    document.getElementById('fab-wrap')?.classList.remove('fab-open');
+    const wrap = document.getElementById('fab-wrap');
+    if (wrap) wrap.classList.remove('fab-open');
     document.getElementById('fab-backdrop')?.classList.remove('active');
+    
     const iconMenu  = document.querySelector('.fab-icon-menu');
     const iconClose = document.querySelector('.fab-icon-close');
     if (iconMenu)  iconMenu.style.display  = '';
     if (iconClose) iconClose.style.display = 'none';
+
+    // Reset JS positions
+    if (wrap) {
+      const items = wrap.querySelectorAll('.fab-item');
+      items.forEach(item => {
+        item.style.transform = ''; // Về CSS mặc định: translate(50%, 50%) scale(0)
+        item.style.opacity = '';
+        item.style.pointerEvents = '';
+      });
+    }
   }
 
   /* ---------- ACTIONS ---------- */
