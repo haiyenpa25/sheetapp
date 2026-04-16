@@ -377,32 +377,28 @@ const App = (() => {
       if (btn) { btn.classList.add('active'); btn.style.color = 'var(--accent)'; }
     }
 
-    // Restore chord set — MẶC ĐỊNH LÀ HD
-    // - URL không có set → auto chọn HD  
-    // - URL có set=default/TLH → giữ TLH (người dùng chủ động chọn)
-    // - URL có set=XYZ → chọn XYZ
+    // Restore chord set
+    // HD đã được ChordCanvas.loadSong() preload làm mặc định.
+    // Chỉ cần override khi URL chỉ định set khác:
+    //   - ?set=default hoặc ?set=TLH → quay về TLH (hợp âm gốc XML)
+    //   - ?set=XYZ (cụ thể, khác HD/default) → chuyển về XYZ
     const urlSet = state.set || '';
     if (urlSet === 'default') {
-      // Người dùng chủ động chọn TLH → giữ nguyên, không switch
-    } else if (urlSet && urlSet !== 'default') {
-      // URL có set cụ thể → switch về set đó
+      // Người dùng chủ động chọn TLH
+      if (window.ChordCanvas?.switchSet) await window.ChordCanvas.switchSet('default');
+    } else if (urlSet && urlSet !== 'default' && urlSet !== 'HD') {
+      // Set cụ thể khác HD (VD: Hoài Dinh, ...)
       if (window.ChordCanvas?.getCurrentSet?.() !== urlSet && window.ChordCanvas?.switchSet) {
         await window.ChordCanvas.switchSet(urlSet);
       }
-    } else {
-      // Không có set trong URL → mặc định HD
-      if (window.ChordCanvas?.getCurrentSet?.() !== 'HD' && window.ChordCanvas?.switchSet) {
-        await window.ChordCanvas.switchSet('HD');
-      }
     }
+    // urlSet === '' hoặc urlSet === 'HD' → HD đã sẵn (không cần switch thêm)
 
     // Sau khi chord set đã load xong, mới mở lyric view
     if (state.v === 'lyric') {
-      // Restore inline mode trước khi render
       if (state.lv === 'inline') {
         localStorage.setItem('sheetapp_lyric_mode', 'inline');
       }
-      // Mở lyric view
       const btnLV = document.getElementById('btn-lyric-view');
       const lyric = document.getElementById('lyric-view-container');
       if (lyric && lyric.classList.contains('hidden') && btnLV) {

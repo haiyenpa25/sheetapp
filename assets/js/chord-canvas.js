@@ -104,11 +104,25 @@ const ChordCanvas = (() => {
     });
   }
 
-  function loadSong() {
+  async function loadSong(songId) {
     _clear();
     setAddMode(false);
-    _currentSet   = 'default';
+    _currentSet   = 'HD';   // MẶC ĐỊ NH đầu tiên là HD
     _customChords = {};
+
+    // Pre-fetch HD chords đồng thời với XML fetch của app.js (không block)
+    if (songId) {
+      try {
+        const res = await fetch(`api/chord_sets.php?action=load&songId=${encodeURIComponent(songId)}&name=HD`);
+        const r   = await res.json();
+        if (r.success && r.chords) {
+          r.chords.forEach(({ measureIdx, noteIdx, chord }) => {
+            _customChords[`${measureIdx}_${noteIdx}`] = chord;
+          });
+        }
+      } catch(e) {}
+    }
+
     setTimeout(_refreshSetDropdown, 300);
   }
 
@@ -576,9 +590,9 @@ const ChordCanvas = (() => {
 
   /* ─── Exports ────────────────────────────────────────────────── */
   function resetSet() {
-      _currentSet = 'default';
-      _customChords = {};
-      _updateSetUI();
+    _currentSet = 'HD';   // Reset về HD (không phải default) khi chuyển bài
+    _customChords = {};
+    _updateSetUI();
   }
 
   return {
