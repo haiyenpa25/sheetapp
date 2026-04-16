@@ -377,14 +377,22 @@ const App = (() => {
       if (btn) { btn.classList.add('active'); btn.style.color = 'var(--accent)'; }
     }
 
-    // Restore chord set (async, chờ fetch xong mới mở lyric)
-    if (state.set && state.set !== 'default') {
-      const sel = document.getElementById('chord-set-selector');
-      if (sel && sel.value !== state.set) {
-        // Trực tiếp gọi switchSet để đảm bảo await đúng
-        if (window.ChordCanvas?.switchSet) {
-          await window.ChordCanvas.switchSet(state.set);
-        }
+    // Restore chord set — MẶC ĐỊNH LÀ HD
+    // - URL không có set → auto chọn HD  
+    // - URL có set=default/TLH → giữ TLH (người dùng chủ động chọn)
+    // - URL có set=XYZ → chọn XYZ
+    const urlSet = state.set || '';
+    if (urlSet === 'default') {
+      // Người dùng chủ động chọn TLH → giữ nguyên, không switch
+    } else if (urlSet && urlSet !== 'default') {
+      // URL có set cụ thể → switch về set đó
+      if (window.ChordCanvas?.getCurrentSet?.() !== urlSet && window.ChordCanvas?.switchSet) {
+        await window.ChordCanvas.switchSet(urlSet);
+      }
+    } else {
+      // Không có set trong URL → mặc định HD
+      if (window.ChordCanvas?.getCurrentSet?.() !== 'HD' && window.ChordCanvas?.switchSet) {
+        await window.ChordCanvas.switchSet('HD');
       }
     }
 
