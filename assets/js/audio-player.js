@@ -19,6 +19,12 @@ const SheetAudioPlayer = (() => {
     document.getElementById('audio-speed')?.addEventListener('change', (e) => {
       setSpeed(parseFloat(e.target.value));
     });
+    
+    document.getElementById('audio-playback-mode')?.addEventListener('change', () => {
+      if (_isPlaying) {
+        applyPlaybackMode();
+      }
+    });
   }
 
   function setup(osmd) {
@@ -44,6 +50,9 @@ const SheetAudioPlayer = (() => {
       
       // Load current score
       await _player.loadScore(_osmd);
+      
+      // Apply Playback Mode Before Playing
+      applyPlaybackMode();
       
       // Auto-scroll logic
       _player.on("iteration", notes => {
@@ -99,11 +108,69 @@ const SheetAudioPlayer = (() => {
     }
   }
 
+  function applyPlaybackMode() {
+    if (!_player || !_osmd) return;
+    const mode = document.getElementById('audio-playback-mode')?.value || 'satb';
+    
+    const instruments = _player.scoreInstruments || _player.instruments || [];
+    if (!instruments.length && _osmd.sheet.Instruments) {
+       // fallback, sometimes it's mapped differently
+    }
+
+    // Logic tắt tiếng theo SATB:
+    // Sheet thánh ca thường có 4 Parts (Soprano, Alto, Tenor, Bass) hoặc 2 Parts (Treble, Bass)
+    for (let i = 0; i < instruments.length; i++) {
+        let isMuted = false;
+        
+        if (mode !== 'satb') {
+           if (instruments.length >= 4) {
+               // 4 Parts
+               if (mode === 'soprano' && i !== 0) isMuted = true;
+               if (mode === 'alto' && i !== 1) isMuted = true;
+               if (mode === 'tenor' && i !== 2) isMuted = true;
+               if (mode === 'bass' && i !== 3) isMuted = true;
+           } else {
+               // 2 Parts or less (Piano style)
+               if (mode === 'soprano' || mode === 'alto') {
+                   if (i !== 0) isMuted = true; // Keep only Treble
+               }
+               if (mode === 'tenor' || mode === 'bass') {
+                   if (i !== 1) isMuted = true; // Keep only Bass
+               }
+           }
+        }
+        
+        // Áp dụng mute thông qua API khả dĩ của osmd-audio-player
+        const vol = isMuted ? 0 : 1;
+        const instrument = instruments[i];
+        
+        if (typeof _player.setInstrumentVolume === 'function') {
+            _player.setInstrumentVolume(instrument.id || instrument.InstrumentId || i, vol);
+        } else if (typeof _player.setVolume === 'function') {
+            _player.setVolume(instrument.id || i, vol);
+        }
+        
+        // Thử thay đổi trực tiếp qua object nếu các API trên không tồn tại
+        if (typeof instrument === 'object') {
+            instrument.volume = vol;
+            if (instrument.mute !== undefined) instrument.mute = isMuted;
+        }
+    }
+    
+    if (mode !== 'satb') {
+        window.App?.showToast?.(`Bật chế độ phát: ${mode.toUpperCase()}`, 'info');
+    }
+  }
+
   function enableBtn(enabled) {
     const btn = document.getElementById('btn-play-audio');
     const spd = document.getElementById('audio-speed');
+    const mode = document.getElementById('audio-playback-mode');
+    
     if (btn) btn.disabled = !enabled;
     if (spd) spd.disabled = !enabled;
+    if (mode) mode.disabled = !enabled;
+    
     if (!enabled) stop();
   }
 

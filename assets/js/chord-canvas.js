@@ -35,7 +35,7 @@ const ChordCanvas = (() => {
       _ro = new ResizeObserver(() => {
         if (!_editEnabled) return;
         clearTimeout(rTid);
-        rTid = setTimeout(() => { if (_editEnabled) _build(); }, 150);
+        rTid = setTimeout(() => { if (_editEnabled && !_popup) _build(); }, 150);
       });
       _ro.observe(container);
     }
@@ -46,7 +46,7 @@ const ChordCanvas = (() => {
       const onVpChange = () => {
         if (!_editEnabled) return;
         clearTimeout(vpTid);
-        vpTid = setTimeout(() => { if (_editEnabled) _build(); }, 250);
+        vpTid = setTimeout(() => { if (_editEnabled && !_popup) _build(); }, 250);
       };
       window.visualViewport.addEventListener('resize', onVpChange);
       window.visualViewport.addEventListener('scroll', onVpChange);
@@ -609,6 +609,7 @@ const ChordCanvas = (() => {
     },
     refreshSetDropdown: _refreshSetDropdown,
     openNextPopup,
+    isPopupOpen: () => !!_popup,
     saveChordWithoutReload: (m, n, c) => _saveChord(m, n, c, false),
     clearAllChords: async () => {
       if (_currentSet === 'default') {

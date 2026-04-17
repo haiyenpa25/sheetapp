@@ -24,6 +24,10 @@ const Importer = (() => {
     document.getElementById('btn-import')?.addEventListener('click', openModal);
     document.getElementById('btn-import-welcome')?.addEventListener('click', openModal);
     document.getElementById('btn-close-import')?.addEventListener('click', closeModal);
+    document.getElementById('btn-omr-upload')?.addEventListener('click', () => {
+      openModal();
+      switchTab('omr');
+    });
     modal()?.addEventListener('click', e => { if (e.target === modal()) closeModal(); });
 
     // Tabs

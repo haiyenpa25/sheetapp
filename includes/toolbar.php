@@ -35,6 +35,14 @@
         <option value="1.25">1.25×</option>
         <option value="1.5">1.5×</option>
       </select>
+      <!-- Phát nhạc bổng/trầm (SATB) -->
+      <select id="audio-playback-mode" class="select-toolbar" disabled title="Chế độ phát bè">
+        <option value="satb" selected>Tất cả</option>
+        <option value="soprano">Soprano (Nữ Cao)</option>
+        <option value="alto">Alto (Nữ Trầm)</option>
+        <option value="tenor">Tenor (Nam Cao)</option>
+        <option value="bass">Bass (Nam Trầm)</option>
+      </select>
     </div>
 
     <!-- AUTO SCROLL -->

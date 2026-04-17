@@ -59,6 +59,7 @@ const OSMDRenderer = (() => {
     // Resize observer để auto-reflow khi container thay đổi kích thước
     const resizeObserver = new ResizeObserver(_debounce(async () => {
       if (isLoaded) {
+          if (window.ChordCanvas?.isPopupOpen?.()) return; // KHÔNG re-render nếu đang nhập popup hợp âm (tránh mất focus)
           await osmd.render();
           _titleCompacted = false; // reset để compact lại sau resize
           _compactTitleSVG();

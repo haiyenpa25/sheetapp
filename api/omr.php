@@ -60,7 +60,8 @@ try {
             // Gọi OMR tiến trình ngầm
             // Trong môi trường Windows XAMPP:
             $workerPath = realpath(__DIR__ . '/omr_worker.php');
-            $command = "start /b php \"$workerPath\" $id";
+            $phpBin = PHP_BINARY;
+            $command = "start /b \"\" \"$phpBin\" \"$workerPath\" $id";
             pclose(popen($command, "r"));
 
             echo json_encode(['success' => true, 'id' => $id]);

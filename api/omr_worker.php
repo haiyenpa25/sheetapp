@@ -32,43 +32,63 @@ try {
     $outputDir = realpath(WORKSPACE_DIR);
     $musicXmlFile = $job_id . '.mxl'; // Audiveris xuất file tên thư mục .mxl hoặc file chuẩn
     
-    // ----------- CALL ENGINE (AUDIVERIS) -------------
-    // Lưu ý: Cần chắc chắn command 'Audiveris' đã có trong Windows PATH hoặc trỏ đường dẫn tuyệt đối tới bin/Audiveris.bat
-    // Ví dụ lệnh: Audiveris -batch -export -output "C:\...\omr_workspace" "C:\...\omr_workspace\omr_123.pdf"
+    // ----------- CALL ENGINE (OEMER) -------------
+    // Gọi oemer của Python để nhận diện ảnh thành musicxml
+    $outputBaseName = $job_id;
     
+    // Tìm đường dẫn thực thi của Oemer trên máy người dùng Windows
+    $oemerExe = 'oemer'; // Mặc định cho Docker (linux)
+    if (file_exists('C:\Users\haing\AppData\Roaming\Python\Python310\Scripts\oemer.exe')) {
+        $oemerExe = 'C:\Users\haing\AppData\Roaming\Python\Python310\Scripts\oemer.exe';
+    }
+
     $command = sprintf(
-        'Audiveris -batch -export -output %s %s 2>&1',
-        escapeshellarg($outputDir),
-        escapeshellarg($inputFile)
+        '%s %s -o %s 2>&1',
+        escapeshellarg($oemerExe),
+        escapeshellarg($inputFile),
+        escapeshellarg($outputDir)
     );
 
-    // Chạy CLI
+    // Chạy CLI Oemer
     exec($command, $output, $returnVar);
 
     // GHI LOG (Tuỳ chọn để debug)
     file_put_contents(WORKSPACE_DIR . $job_id . '_log.txt', implode("\n", $output));
 
     if ($returnVar === 0) {
-        // Cập nhật thành công. 
-        // Tuy nhiên Audiveris xuất file ra thư mục con có tên giống tên file input (trừ đuôi).
-        // Ví dụ: omr_workspace/omr_123/omr_123.mxl
-        // Do đó cần logic dò tìm file mxl/xml trong folder vừa tạo và di chuyển nó ra ngoài, sau đó đổi tên thành $musicXmlFile.
-        
+        // oemer xuất file có tên input + .musicxml
         $folderName = pathinfo($inputFile, PATHINFO_FILENAME);
-        $audiverisFolder = $outputDir . DIRECTORY_SEPARATOR . $folderName;
+        $generatedFile = $outputDir . DIRECTORY_SEPARATOR . $folderName . '.musicxml';
         
-        // Dò file .mxl sinh ra
-        $mxlFiles = glob($audiverisFolder . DIRECTORY_SEPARATOR . '*.mxl');
-        if (empty($mxlFiles)) {
-             $mxlFiles = glob($audiverisFolder . DIRECTORY_SEPARATOR . '*.xml'); // fallback
-        }
-
-        if (!empty($mxlFiles)) {
-            $generatedFile = $mxlFiles[0];
+        if (file_exists($generatedFile)) {
             $finalPath = $outputDir . DIRECTORY_SEPARATOR . $musicXmlFile;
-            rename($generatedFile, $finalPath);
             
-            // Cập nhật thành công
+            // Chạy công cụ đồng bộ XML (omr_sync)
+            $templatePath = realpath(__DIR__ . '/../storage/Thanh ca/001 HỠI THÁNH VƯƠNG, KÍP NGỰ LAI.xml');
+            if (file_exists($templatePath)) {
+                $syncCommand = sprintf(
+                    'php %s %s %s %s 2>&1',
+                    escapeshellarg(realpath(__DIR__ . '/../tools/omr_sync.php')),
+                    escapeshellarg($templatePath),
+                    escapeshellarg($generatedFile),
+                    escapeshellarg($finalPath)
+                );
+                exec($syncCommand, $syncOutput, $syncReturnVar);
+                file_put_contents(WORKSPACE_DIR . $job_id . '_sync_log.txt', implode("\n", $syncOutput));
+                
+                if ($syncReturnVar !== 0) {
+                     // Nếu sync fail, fallback dùng trực tiếp XML của oemer
+                     rename($generatedFile, $finalPath);
+                } else {
+                     // Xóa file raw của oemer
+                     @unlink($generatedFile);
+                }
+            } else {
+                // Nếu không có template, dùng luôn file do oemer tạo
+                rename($generatedFile, $finalPath);
+            }
+            
+            // Cập nhật Database
             $pdo->prepare("UPDATE omr_workspace SET status = 'completed', musicxml_path = ? WHERE id = ?")
                 ->execute([$musicXmlFile, $job_id]);
         } else {
