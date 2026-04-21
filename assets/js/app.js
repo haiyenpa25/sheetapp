@@ -326,7 +326,7 @@ const App = (() => {
       setTimeout(() => {
         if (container) {
           container.style.minHeight = '';
-          container.scrollTop = wrapScroll;
+          container.scrollTo({ left: 0, top: wrapScroll, behavior: 'instant' });
         }
         window.scrollTo({ left: 0, top: scrollY, behavior: 'instant' });
       }, 50);
