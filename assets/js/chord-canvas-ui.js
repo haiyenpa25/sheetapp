@@ -36,13 +36,15 @@ const ChordCanvasUI = (() => {
     pop.className = 'cc-popup';
     
     // Ràng buộc 2 bên mép màn hình để popup k bị văng (Mobile responsive)
-    let popLeft = ar.left + ar.width / 2;
+    let popLeft = ar.left + window.scrollX + ar.width / 2;
     const halfWidth = 110; // ~ 200px/2 + padding
     if (popLeft < halfWidth) popLeft = halfWidth;
-    if (popLeft > window.innerWidth - halfWidth) popLeft = window.innerWidth - halfWidth;
+    if (popLeft > document.documentElement.scrollWidth - halfWidth) popLeft = document.documentElement.scrollWidth - halfWidth;
+
+    const popTop = ar.top + window.scrollY - 12;
 
     pop.style.cssText = [
-      'position:fixed', `left:${popLeft}px`, `top:${ar.top - 12}px`,
+      'position:absolute', `left:${popLeft}px`, `top:${popTop}px`,
       'transform:translateX(-50%) translateY(-100%)', 'z-index:99999',
       'background:#fff', 'border:1.5px solid #6d28d9', 'border-radius:8px',
       'padding:.6rem .75rem', 'box-shadow:0 8px 28px rgba(109,40,217,.22)',
@@ -150,12 +152,25 @@ const ChordCanvasUI = (() => {
     pop.addEventListener('click', e => e.stopPropagation());
     
     const outside = ev => {
-      if (!pop.contains(ev.target) && ev.target !== anchor) {
-        callbacks.onClose();
-        document.removeEventListener('click', outside, true);
+      // Bỏ qua nếu click vào chính popup
+      if (pop.contains(ev.target)) return;
+      // Bỏ qua nếu click vào anchor (đã được xử lý ở ngõ gọi showPopup)
+      if (ev.target === anchor || anchor.contains(ev.target)) return;
+      
+      // Nếu focus đang ở input, blur nó trước để tránh keyboard giật cục
+      if (document.activeElement === inp) {
+        inp.blur();
       }
+
+      callbacks.onClose();
+      document.removeEventListener('pointerdown', outside, true);
+      document.removeEventListener('click', outside, true);
     };
-    setTimeout(() => document.addEventListener('click', outside, true), 80);
+
+    setTimeout(() => {
+      document.addEventListener('pointerdown', outside, true);
+      document.addEventListener('click', outside, true);
+    }, 150);
     
     return pop;
   }
