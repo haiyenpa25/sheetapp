@@ -113,6 +113,7 @@ const ChordCanvasUI = (() => {
     const doSave = () => {
       let val = inp.value.trim();
       val = formatChord(val);
+      if (document.activeElement === inp) inp.blur();
       callbacks.onClose();
       if (val) callbacks.onSave(val);
       else if (existing) callbacks.onDelete();
@@ -120,12 +121,14 @@ const ChordCanvasUI = (() => {
 
     pop.querySelector('#cc-pop-save')?.addEventListener('click', doSave);
     pop.querySelector('#cc-pop-del')?.addEventListener('click', () => {
+      if (document.activeElement === inp) inp.blur();
       callbacks.onClose(); callbacks.onDelete();
     });
     pop.querySelector('#cc-pop-cancel')?.addEventListener('click', callbacks.onClose);
     const doSaveNext = async () => {
       let val = inp.value.trim();
       val = formatChord(val);
+      if (document.activeElement === inp) inp.blur();
       callbacks.onClose();
       // Gọi lên Canvas để lưu âm thầm, không vẽ lại (fast entry)
       if (val) {

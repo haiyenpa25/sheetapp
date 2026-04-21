@@ -87,6 +87,28 @@ const App = (() => {
       document.getElementById('sidebar')?.classList.add('mobile-hidden');
     }
 
+    // Tự động tối ưu giao diện khi xoay ngang dọc thiết bị (iPad / Điện thoại)
+    window.addEventListener('resize', _debounce(() => {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      if (!sidebar) return;
+      
+      if (window.innerWidth <= 900) {
+        // Trạng thái Mobile / iPad đứng
+        if (!sidebar.classList.contains('mobile-hidden') && !overlay?.classList.contains('hidden')) {
+           // Đang mở sidebar trên mobile thì kệ nó
+        } else {
+           sidebar.classList.add('mobile-hidden');
+           sidebar.classList.remove('collapsed');
+           if (overlay) overlay.classList.add('hidden');
+        }
+      } else {
+        // Trạng thái Desktop / iPad ngang (rộng > 900px)
+        sidebar.classList.remove('mobile-hidden');
+        if (overlay) overlay.classList.add('hidden');
+      }
+    }, 250));
+
     document.getElementById('btn-fullscreen')?.addEventListener('click', AppUI.toggleFullscreen);
 
     _bindKeyboard();
@@ -306,7 +328,7 @@ const App = (() => {
           container.style.minHeight = '';
           container.scrollTop = wrapScroll;
         }
-        window.scrollTo(0, scrollY);
+        window.scrollTo({ left: 0, top: scrollY, behavior: 'instant' });
       }, 50);
     }
   }
