@@ -634,6 +634,16 @@ const App = (() => {
           break;
         case '+': case '=': if (e.ctrlKey) { e.preventDefault(); _adjustZoom(+10); } break;
         case '-': if (e.ctrlKey) { e.preventDefault(); _adjustZoom(-10); } break;
+        case 'z': case 'Z':
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            if (e.shiftKey) { window.ChordCanvas?.redo?.(); }
+            else            { window.ChordCanvas?.undo?.(); }
+          }
+          break;
+        case 'y': case 'Y':
+          if (e.ctrlKey || e.metaKey) { e.preventDefault(); window.ChordCanvas?.redo?.(); }
+          break;
       }
     });
   }

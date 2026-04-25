@@ -129,6 +129,10 @@ const ChordCanvasUI = (() => {
           <span>📚 Thư viện</span>
           <span id="cc-lib-tabs" style="display:flex;gap:2px;flex-wrap:wrap;"></span>
         </summary>
+        <input id="cc-lib-search" type="text" placeholder="Tìm hợp âm..." autocomplete="off"
+               style="width:100%;box-sizing:border-box;margin-top:4px;padding:2px 7px;
+                      border:1px solid #ddd;border-radius:5px;font-size:.75rem;
+                      outline:none;color:#374151;">
         <div id="cc-lib-chips" style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;max-height:72px;overflow-y:auto;"></div>
       </details>
       <div style="display:flex;gap:.35rem;justify-content:flex-end;">
@@ -217,6 +221,24 @@ const ChordCanvasUI = (() => {
       libTabs.appendChild(b);
     });
     renderLib(0);
+
+    /* search trong chord library */
+    const libSearch = pop.querySelector('#cc-lib-search');
+    libSearch?.addEventListener('input', e => {
+      const q = e.target.value.trim().toLowerCase();
+      if (!q) { renderLib(activeGrp); return; }
+      libChips.innerHTML = '';
+      const root    = inp.value.match(/^[A-Ga-g][b#]?/)?.[0];
+      const fmtRoot = root ? root.charAt(0).toUpperCase() + root.slice(1) : 'C';
+      _GROUPS.forEach(g => {
+        g.s.filter(s => (fmtRoot + s).toLowerCase().includes(q) || s.toLowerCase().includes(q))
+          .forEach(s => {
+            const label = fmtRoot + s;
+            libChips.appendChild(makeChip(label, false, v => { inp.value = v; inp.focus(); }));
+          });
+      });
+    });
+    libSearch?.addEventListener('keydown', e => e.stopPropagation());
 
     /* format */
     const formatChord = v => {

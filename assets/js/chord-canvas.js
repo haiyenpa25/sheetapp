@@ -9,13 +9,15 @@
 const ChordCanvas = (() => {
   'use strict';
 
-  /* ─── State ─────────────────────────────────────────────────── */
+  /* ─── State ───────────────────────────────────────────────────────────────── */
   let _editEnabled   = false;
   let _popup         = null;
   let _currentSet    = 'default';
   let _customChords  = {};
   let _noteEls       = [];
   let _ro            = null;
+  let _undoStack     = [];   // [{set, chords}]
+  let _redoStack     = [];   // [{set, chords}]
 
   const DOT_CLASS  = 'cc-dot';
   const BTN_CLASS  = 'cc-dot-btn';
@@ -445,7 +447,41 @@ const ChordCanvas = (() => {
   function _closePopup() { _popup?.remove(); _popup = null; }
 
   /* ─── Save / Delete chord ────────────────────────────────────── */
+  /* ─── Undo / Redo ────────────────────────────────────────────────────────── */
+  function _pushUndo() {
+    _undoStack.push({ set: _currentSet, chords: {..._customChords} });
+    if (_undoStack.length > 20) _undoStack.shift();
+    _redoStack = []; // clear redo on new action
+  }
+
+  async function undo() {
+    if (!_undoStack.length) { window.App?.showToast?.('Không có hành động để hoàn tác', 'info'); return; }
+    _redoStack.push({ set: _currentSet, chords: {..._customChords} });
+    const prev = _undoStack.pop();
+    _currentSet   = prev.set;
+    _customChords = prev.chords;
+    if (_currentSet !== 'default') {
+      await _saveCustomSet();
+    }
+    setTimeout(() => requestAnimationFrame(_build), 80);
+    window.App?.showToast?.('↩ Đã hoàn tác', 'info');
+  }
+
+  async function redo() {
+    if (!_redoStack.length) { window.App?.showToast?.('Không có hành động để làm lại', 'info'); return; }
+    _undoStack.push({ set: _currentSet, chords: {..._customChords} });
+    const next = _redoStack.pop();
+    _currentSet   = next.set;
+    _customChords = next.chords;
+    if (_currentSet !== 'default') {
+      await _saveCustomSet();
+    }
+    setTimeout(() => requestAnimationFrame(_build), 80);
+    window.App?.showToast?.('↪ Đã làm lại', 'info');
+  }
+
   async function _saveChord(measureIdx, noteIdx, chordInput, refreshLayout = true) {
+    _pushUndo();
     const semitones = window.App?.getCurrentTranspose?.() ?? 0;
     const chordOriginalKey = semitones !== 0 ? TransposeEngine.transposeChord(chordInput, -semitones) : chordInput;
 
@@ -468,6 +504,7 @@ const ChordCanvas = (() => {
   }
 
   async function _deleteChord(measureIdx, noteIdx) {
+    _pushUndo();
     if (_currentSet === 'default') {
       await ChordCanvasXML.removeXml(measureIdx, noteIdx);
     } else {
@@ -650,7 +687,9 @@ const ChordCanvas = (() => {
       window.App?.showToast?.('Đã xoá toàn bộ hợp âm!', 'success');
     },
     getCurrentSet: () => _currentSet,
-    getCustomChords: () => _customChords
+    getCustomChords: () => _customChords,
+    undo,
+    redo
   };
 })();
 
