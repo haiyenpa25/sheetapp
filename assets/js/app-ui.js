@@ -76,7 +76,8 @@ const AppUI = (() => {
      'btn-prev-song','btn-next-song', 'btn-mixer',
      'btn-add-annotate-mode','btn-add-chord-mode','btn-add-chord-mode-bar',
      'chord-set-selector', 'btn-play-audio',
-     'btn-auto-scroll','scroll-speed','btn-dark-mode'].forEach(id => {
+     'btn-auto-scroll','scroll-speed','btn-dark-mode',
+     'btn-perf-notes'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.disabled = !enabled;
     });
@@ -104,13 +105,17 @@ const AppUI = (() => {
   }
 
   function updateCapoBadge(capoValue) {
-    const badge = document.getElementById('capo-badge');
-    if (!badge) return;
+    const wrap   = document.getElementById('capo-wrap');
+    const sel    = document.getElementById('capo-select');
+    const hint   = document.getElementById('capo-hint');
+    if (!wrap) return;
     if (capoValue > 0) {
-      badge.textContent = `Capo ${capoValue}`;
-      badge.classList.remove('hidden');
+      wrap.classList.remove('hidden');
+      if (sel) sel.value = capoValue;
+      // Hint: tên hợp âm sau capo
+      if (hint) hint.textContent = `→ đàn ngăn ${capoValue}`;
     } else {
-      badge.classList.add('hidden');
+      wrap.classList.add('hidden');
     }
   }
 

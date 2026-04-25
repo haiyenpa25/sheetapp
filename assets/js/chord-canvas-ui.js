@@ -29,48 +29,108 @@ const ChordCanvasUI = (() => {
     ].join(';');
   }
 
+
+  /* ─── Chord history (localStorage) ─────────────────────────── */
+  const _HK = 'cc_chord_history';
+  function _getHist() { try { return JSON.parse(localStorage.getItem(_HK)||'[]'); } catch{return[];} }
+  function _pushHist(c) {
+    if (!c) return;
+    const h = _getHist().filter(x => x !== c); h.unshift(c);
+    localStorage.setItem(_HK, JSON.stringify(h.slice(0,20)));
+  }
+
+  /* ─── Key detection từ MusicXML ────────────────────────────── */
+  const _F2M = {'-6':'Gb','-5':'Db','-4':'Ab','-3':'Eb','-2':'Bb','-1':'F',
+                 '0':'C', '1':'G', '2':'D',  '3':'A',  '4':'E',  '5':'B',  '6':'F#'};
+  const _F2m = {'-6':'Eb','-5':'Bb','-4':'F','-3':'C','-2':'G','-1':'D',
+                 '0':'A', '1':'E', '2':'B',  '3':'F#', '4':'C#', '5':'G#','6':'D#'};
+  const _CR  = ['C','Db','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+  const _SH  = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+
+  function _detectKey() {
+    const xml = window.App?.getOriginalXml?.();
+    if (!xml) return null;
+    try {
+      const doc = new DOMParser().parseFromString(xml, 'text/xml');
+      const k   = doc.querySelector('key'); if (!k) return null;
+      const f   = String(parseInt(k.querySelector('fifths')?.textContent ?? '0'));
+      const m   = k.querySelector('mode')?.textContent?.toLowerCase() ?? 'major';
+      const r   = m === 'minor' ? (_F2m[f]??'A') : (_F2M[f]??'C');
+      return { root: r, mode: m, label: `${r} ${m==='minor'?'thứ':'trưởng'}` };
+    } catch { return null; }
+  }
+
+  function _diatonicChords(root, mode) {
+    const useFlat = ['F','Bb','Eb','Ab','Db','Gb'].includes(root);
+    const arr = useFlat ? _CR : _SH;
+    let ri = arr.indexOf(root); if (ri === -1) ri = _CR.indexOf(root); if (ri === -1) return [];
+    const pat = mode === 'minor'
+      ? [{d:0,s:'m'},{d:2,s:'dim'},{d:3,s:''},{d:5,s:'m'},{d:7,s:'m'},{d:7,s:'7'},{d:8,s:''},{d:10,s:''}]
+      : [{d:0,s:''},{d:2,s:'m'},{d:4,s:'m'},{d:5,s:''},{d:7,s:''},{d:7,s:'7'},{d:9,s:'m'},{d:11,s:'dim'}];
+    return [...new Set(pat.map(({d,s}) => arr[(ri+d)%12]+s))];
+  }
+
+  /* ─── Chord Library ─────────────────────────────────────────── */
+  const _GROUPS = [
+    { label:'Cơ bản',  s:['','m','7','m7','maj7','5','2'] },
+    { label:'Mở rộng', s:['9','m9','maj9','add9','6','m6','11','13','add11','6/9'] },
+    { label:'Jazz',    s:['maj9','maj13','9#11','7#9','7b9','13b9','m11','m13','maj7#11'] },
+    { label:'Altered', s:['7#5','7b5','7#11','7b13','7alt','aug7'] },
+    { label:'Dim/Aug', s:['dim','dim7','m7b5','aug','augmaj7'] },
+    { label:'Sus',     s:['sus2','sus4','7sus4','7sus2'] },
+  ];
+
   /* ─── Popup Hợp âm ─────────────────────────────────────────── */
   function createPopup(anchor, measureIdx, noteIdx, existing, currentSet, callbacks) {
     const ar  = anchor.getBoundingClientRect();
     const pop = document.createElement('div');
     pop.className = 'cc-popup';
-    
-    // Ràng buộc 2 bên mép màn hình để popup k bị văng (Mobile responsive)
-    let popLeft = ar.left + window.scrollX + ar.width / 2;
-    const halfWidth = 110; // ~ 200px/2 + padding
-    if (popLeft < halfWidth) popLeft = halfWidth;
-    if (popLeft > document.documentElement.scrollWidth - halfWidth) popLeft = document.documentElement.scrollWidth - halfWidth;
 
+    let popLeft = ar.left + window.scrollX + ar.width / 2;
+    const hw = 130;
+    if (popLeft < hw) popLeft = hw;
+    if (popLeft > document.documentElement.scrollWidth - hw) popLeft = document.documentElement.scrollWidth - hw;
     const popTop = ar.top + window.scrollY - 12;
+
+    const keyInfo  = _detectKey();
+    const keyLabel = keyInfo ? keyInfo.label : '';
+    const isDefault  = currentSet === 'default';
+    const semitones  = window.App?.getCurrentTranspose?.() ?? 0;
+    const keyHint    = semitones !== 0
+      ? `<span style="font-size:.6rem;color:#f59e0b;font-weight:600;margin-left:4px;">(tông ${semitones>0?'+':''}${semitones})</span>` : '';
 
     pop.style.cssText = [
       'position:absolute', `left:${popLeft}px`, `top:${popTop}px`,
       'transform:translateX(-50%) translateY(-100%)', 'z-index:99999',
-      'background:#fff', 'border:1.5px solid #6d28d9', 'border-radius:8px',
+      'background:#fff', 'border:1.5px solid #6d28d9', 'border-radius:10px',
       'padding:.6rem .75rem', 'box-shadow:0 8px 28px rgba(109,40,217,.22)',
-      'min-width:200px', 'pointer-events:auto'
+      'min-width:260px', 'max-width:320px', 'pointer-events:auto'
     ].join(';');
 
-    const isDefault  = currentSet === 'default';
-    const semitones  = window.App?.getCurrentTranspose?.() ?? 0;
-    const keyHint    = semitones !== 0
-      ? `<span style="font-size:.6rem;color:#f59e0b;font-weight:600;margin-left:4px;">
-           (tông ${semitones > 0 ? '+' : ''}${semitones} — nhập theo key này)
-         </span>` : '';
-         
     pop.innerHTML = `
       <div style="font-size:.65rem;font-weight:700;color:#6d28d9;text-transform:uppercase;
-                  letter-spacing:.5px;margin-bottom:.3rem;">
+                  letter-spacing:.5px;margin-bottom:.35rem;display:flex;align-items:center;gap:4px;">
         ${existing ? 'Sửa' : 'Thêm'} hợp âm
-        ${!isDefault ? `<span style="opacity:.6;font-weight:400"> · ${currentSet}</span>` : ''}
+        ${!isDefault ? `<span style="opacity:.6;font-weight:400">· ${currentSet}</span>` : ''}
+        ${keyLabel ? `<span style="opacity:.5;font-weight:400;font-size:.6rem">· ${keyLabel}</span>` : ''}
         ${keyHint}
       </div>
-      <input id="cc-pop-inp" type="text" maxlength="10" list="cc-chord-suggestions"
-             placeholder="VD: Am, D7, G…" value="${existing}" autocomplete="off"
-             style="width:100%;box-sizing:border-box;border:1px solid #ddd;border-radius:5px;text-transform:capitalize;
-                    padding:.3rem .55rem;font-size:.92rem;font-weight:700;font-family:monospace;
-                    color:#c00;outline:none;background:#fff;margin-bottom:.4rem;">
-      <datalist id="cc-chord-suggestions"></datalist>
+      <input id="cc-pop-inp" type="text" maxlength="12" autocomplete="off"
+             placeholder="VD: Am, D7, G…" value="${existing}"
+             style="width:100%;box-sizing:border-box;border:1px solid #ddd;border-radius:5px;
+                    padding:.3rem .55rem;font-size:.95rem;font-weight:700;font-family:monospace;
+                    color:#c00;outline:none;background:#fff;margin-bottom:.35rem;
+                    text-transform:capitalize;">
+      <div id="cc-sug-hist" style="display:flex;align-items:flex-start;gap:4px;min-height:22px;margin-bottom:2px;"></div>
+      <div id="cc-sug-key"  style="display:flex;align-items:flex-start;gap:4px;min-height:22px;margin-bottom:.35rem;"></div>
+      <details id="cc-lib-det" style="margin-bottom:.4rem;">
+        <summary style="font-size:.65rem;color:#9ca3af;cursor:pointer;list-style:none;
+                        display:flex;align-items:center;gap:4px;">
+          <span>📚 Thư viện</span>
+          <span id="cc-lib-tabs" style="display:flex;gap:2px;flex-wrap:wrap;"></span>
+        </summary>
+        <div id="cc-lib-chips" style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;max-height:72px;overflow-y:auto;"></div>
+      </details>
       <div style="display:flex;gap:.35rem;justify-content:flex-end;">
         <button id="cc-pop-save" class="btn btn-primary btn-xs">✓ Lưu</button>
         ${existing ? '<button id="cc-pop-del" class="btn btn-danger btn-xs">🗑</button>' : ''}
@@ -78,107 +138,151 @@ const ChordCanvasUI = (() => {
       </div>`;
 
     document.body.appendChild(pop);
-    
-    const inp = pop.querySelector('#cc-pop-inp');
-    const dl = pop.querySelector('#cc-chord-suggestions');
 
-    // Hàm chuẩn hóa Hợp âm (Viết hoa nốt gốc, b/# chuẩn)
-    const formatChord = (val) => {
-        if (!val) return val;
-        let res = val.charAt(0).toUpperCase() + val.substring(1);
-        if (res.length >= 2) {
-            let second = res.charAt(1).toLowerCase();
-            if (second === 'b' || second === '#') {
-               res = res.substring(0, 1) + second + res.substring(2);
-            }
-        }
-        return res;
+    const inp      = pop.querySelector('#cc-pop-inp');
+    const histDiv  = pop.querySelector('#cc-sug-hist');
+    const keyDiv   = pop.querySelector('#cc-sug-key');
+    const libTabs  = pop.querySelector('#cc-lib-tabs');
+    const libChips = pop.querySelector('#cc-lib-chips');
+    let   activeGrp = 0;
+
+    /* helper: make a chip */
+    const makeChip = (label, isHist, onClick) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.style.cssText = [
+        'padding:1px 7px','border-radius:99px','font-size:.72rem','font-weight:700',
+        'font-family:monospace','border:1px solid','cursor:pointer','white-space:nowrap',
+        isHist
+          ? 'background:#fef3c7;color:#92400e;border-color:#fde68a'
+          : 'background:#f3f0ff;color:#6d28d9;border-color:#ddd6fe'
+      ].join(';');
+      b.addEventListener('mouseenter', () => b.style.background = isHist ? '#d97706' : '#6d28d9');
+      b.addEventListener('mouseenter', () => b.style.color = '#fff');
+      b.addEventListener('mouseleave', () => { b.style.background = isHist ? '#fef3c7' : '#f3f0ff'; b.style.color = isHist ? '#92400e' : '#6d28d9'; });
+      b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); onClick(label); });
+      return b;
     };
 
-    inp.addEventListener('input', (e) => {
-        let val = e.target.value;
-        if (!val) { dl.innerHTML = ''; return; }
-        
-        // Auto suggestions
-        const rootMatch = val.match(/^[A-Ga-g][b#B]?/);
-        if (rootMatch) {
-            const root = formatChord(rootMatch[0]);
-            const suffixes = ['', 'm', '7', 'm7', 'maj7', '+', 'dim', 'sus4', 'sus2', 'm7b5', 'add9'];
-            dl.innerHTML = suffixes.map(s => `<option value="${root}${s}">`).join('');
-        }
+    /* populate history */
+    const hist = _getHist();
+    if (hist.length) {
+      const lbl = document.createElement('span');
+      lbl.textContent = '🕐';
+      lbl.style.cssText = 'font-size:.65rem;flex-shrink:0;margin-top:2px;';
+      histDiv.appendChild(lbl);
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:3px;';
+      hist.slice(0,8).forEach(c => wrap.appendChild(makeChip(c, true, v => { inp.value = v; inp.focus(); })));
+      histDiv.appendChild(wrap);
+    } else { histDiv.style.display = 'none'; }
+
+    /* populate key diatonic */
+    if (keyInfo) {
+      const diat = _diatonicChords(keyInfo.root, keyInfo.mode);
+      if (diat.length) {
+        const lbl = document.createElement('span');
+        lbl.textContent = '🎵';
+        lbl.style.cssText = 'font-size:.65rem;flex-shrink:0;margin-top:2px;';
+        keyDiv.appendChild(lbl);
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:3px;';
+        diat.forEach(c => wrap.appendChild(makeChip(c, false, v => { inp.value = v; inp.focus(); })));
+        keyDiv.appendChild(wrap);
+      }
+    } else { keyDiv.style.display = 'none'; }
+
+    /* library tabs */
+    const renderLib = (gi) => {
+      activeGrp = gi;
+      libChips.innerHTML = '';
+      libTabs.querySelectorAll('button').forEach((b,i) => {
+        b.style.background = i === gi ? '#6d28d9' : '#f3f4f6';
+        b.style.color      = i === gi ? '#fff' : '#6b7280';
+      });
+      const root = inp.value.match(/^[A-Ga-g][b#]?/)?.[0];
+      const fmtRoot = root ? root.charAt(0).toUpperCase() + root.slice(1) : null;
+      _GROUPS[gi].s.forEach(s => {
+        const label = fmtRoot ? fmtRoot + s : 'C' + s;
+        libChips.appendChild(makeChip(label, false, v => { inp.value = v; inp.focus(); }));
+      });
+    };
+
+    _GROUPS.forEach((g, i) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = g.label;
+      b.style.cssText = 'padding:1px 6px;border-radius:99px;font-size:.6rem;font-weight:600;border:1px solid #e5e7eb;cursor:pointer;';
+      b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); renderLib(i); });
+      libTabs.appendChild(b);
+    });
+    renderLib(0);
+
+    /* format */
+    const formatChord = v => {
+      if (!v) return v;
+      let r = v.charAt(0).toUpperCase() + v.substring(1);
+      if (r.length >= 2) { const c = r.charAt(1).toLowerCase(); if (c==='b'||c==='#') r = r[0]+c+r.slice(2); }
+      return r;
+    };
+
+    /* update lib chips when root changes */
+    inp.addEventListener('input', () => {
+      if (pop.querySelector('#cc-lib-det[open]')) renderLib(activeGrp);
     });
 
     setTimeout(() => { inp?.focus(); inp?.select(); }, 20);
 
     const doSave = () => {
-      let val = inp.value.trim();
-      val = formatChord(val);
+      let val = formatChord(inp.value.trim());
       if (document.activeElement === inp) inp.blur();
       callbacks.onClose();
-      if (val) callbacks.onSave(val);
+      if (val) { _pushHist(val); callbacks.onSave(val); }
       else if (existing) callbacks.onDelete();
     };
 
     pop.querySelector('#cc-pop-save')?.addEventListener('click', doSave);
-    pop.querySelector('#cc-pop-del')?.addEventListener('click', () => {
-      if (document.activeElement === inp) inp.blur();
-      callbacks.onClose(); callbacks.onDelete();
-    });
+    pop.querySelector('#cc-pop-del')?.addEventListener('click', () => { if (document.activeElement===inp) inp.blur(); callbacks.onClose(); callbacks.onDelete(); });
     pop.querySelector('#cc-pop-cancel')?.addEventListener('click', callbacks.onClose);
+
     const doSaveNext = async () => {
-      let val = inp.value.trim();
-      val = formatChord(val);
+      let val = formatChord(inp.value.trim());
       if (document.activeElement === inp) inp.blur();
       callbacks.onClose();
-      // Gọi lên Canvas để lưu âm thầm, không vẽ lại (fast entry)
       if (val) {
-         window.ChordCanvas?.saveChordWithoutReload?.(measureIdx, noteIdx, val);
-         // Render tạm để thấy trực quan ngay lập tức
-         anchor.style.opacity = '1';
-         anchor.style.background = 'transparent';
-         anchor.style.boxShadow = 'none';
-         anchor.innerHTML = `<span class="chord-dot-text" style="font-size:1.1rem; color:#8b5cf6">${val}</span>`;
+        _pushHist(val);
+        window.ChordCanvas?.saveChordWithoutReload?.(measureIdx, noteIdx, val);
+        anchor.style.opacity = '1'; anchor.style.background = 'transparent'; anchor.style.boxShadow = 'none';
+        anchor.innerHTML = `<span class="chord-dot-text" style="font-size:1.1rem;color:#8b5cf6">${val}</span>`;
       }
-      // Mở liền nốt sau đó
       window.ChordCanvas?.openNextPopup?.(measureIdx, noteIdx);
     };
 
     inp?.addEventListener('keydown', e => {
-      if (e.key === 'Enter')  { e.stopPropagation(); doSave(); e.preventDefault(); }
-      if (e.key === 'Escape') { e.stopPropagation(); callbacks.onClose(); e.preventDefault(); }
-      if (e.key === 'Tab' || e.code === 'Space' || e.key === 'ArrowRight') {
-        e.stopPropagation();
-        e.preventDefault();
-        doSaveNext();
-      }
+      if (e.key==='Enter')  { e.stopPropagation(); doSave(); e.preventDefault(); }
+      if (e.key==='Escape') { e.stopPropagation(); callbacks.onClose(); e.preventDefault(); }
+      if (e.key==='Tab'||e.code==='Space'||e.key==='ArrowRight') { e.stopPropagation(); e.preventDefault(); doSaveNext(); }
     });
     pop.addEventListener('click', e => e.stopPropagation());
-    
-    const outside = ev => {
-      // Bỏ qua nếu click vào chính popup
-      if (pop.contains(ev.target)) return;
-      // Bỏ qua nếu click vào anchor (đã được xử lý ở ngõ gọi showPopup)
-      if (ev.target === anchor || anchor.contains(ev.target)) return;
-      
-      // Nếu focus đang ở input, blur nó trước để tránh keyboard giật cục
-      if (document.activeElement === inp) {
-        inp.blur();
-      }
 
+    const outside = ev => {
+      if (pop.contains(ev.target)) return;
+      if (ev.target===anchor || anchor.contains(ev.target)) return;
+      if (document.activeElement===inp) inp.blur();
       callbacks.onClose();
       document.removeEventListener('pointerdown', outside, true);
       document.removeEventListener('click', outside, true);
     };
-
     setTimeout(() => {
       document.addEventListener('pointerdown', outside, true);
       document.addEventListener('click', outside, true);
     }, 150);
-    
+
     return pop;
   }
 
   /* ─── Modal Tạo Mới Hợp Âm ─────────────────────────────────── */
+
   function showNewSetModal(callbacks) {
     document.getElementById('cc-new-set-modal')?.remove();
 

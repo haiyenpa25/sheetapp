@@ -78,6 +78,7 @@ echo jsTag('chord-canvas-xml.js');
 echo jsTag('chord-canvas-ui.js');
 echo jsTag('chord-canvas.js');
 echo jsTag('annotation-canvas.js');
+echo jsTag('performance-notes.js');
 echo jsTag('instruments.js');
 echo jsTag('audio-player.js');
 echo jsTag('auto-scroller.js');

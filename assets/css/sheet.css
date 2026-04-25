@@ -70,11 +70,70 @@
 /* Reset button nhỏ hơn */
 .pb-reset-btn { padding: .18rem .42rem !important; font-size: .73rem !important; }
 
-/* Capo badge */
-.capo-badge {
-  font-size: .68rem; background: var(--accent); color: #fff;
-  padding: .12rem .45rem; border-radius: 99px; font-weight: 700;
-  cursor: help; white-space: nowrap; letter-spacing: .3px;
+/* Capo badge (legacy hidden) */
+.capo-badge { display: none !important; }
+
+/* Capo dropdown */
+.capo-wrap {
+  display: flex; align-items: center; gap: 4px;
+  background: var(--accent); border-radius: 99px;
+  padding: .1rem .4rem .1rem .55rem;
+}
+.capo-wrap.hidden { display: none !important; }
+.capo-label { font-size: .68rem; color: #fff; font-weight: 700; white-space: nowrap; }
+.capo-select {
+  font-size: .72rem; font-weight: 700; background: transparent;
+  color: #fff; border: none; outline: none; cursor: pointer;
+  padding: 0; width: 30px;
+}
+.capo-select option { background: var(--bg-surface); color: var(--text-primary); }
+.capo-hint {
+  font-size: .6rem; color: rgba(255,255,255,.8); max-width: 120px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ─── Performance Notes Panel ────────────────────────────── */
+#perf-notes-panel {
+  position: fixed; bottom: 60px; right: 16px; z-index: 9980;
+  width: 300px; background: var(--bg-surface);
+  border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.18);
+  font-size: .82rem; overflow: hidden;
+  animation: fadeSlideUp .18s ease;
+}
+#perf-notes-panel.hidden { display: none !important; }
+.pnp-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .55rem .75rem; background: var(--accent);
+  font-weight: 700; font-size: .8rem; color: #fff;
+}
+.pnp-header button {
+  background: transparent; border: none; color: rgba(255,255,255,.8);
+  font-size: 1rem; cursor: pointer; padding: 0 4px; line-height: 1;
+}
+.pnp-body { padding: .65rem .75rem; display: flex; flex-direction: column; gap: .5rem; }
+.pnp-row { display: flex; align-items: center; gap: .4rem; }
+.pnp-row label { font-size: .7rem; color: var(--text-muted); white-space: nowrap; min-width: 60px; }
+.pnp-row input {
+  flex: 1; padding: .25rem .45rem; border: 1px solid var(--border);
+  border-radius: 5px; font-size: .82rem; background: var(--bg-base);
+  color: var(--text-primary); outline: none;
+}
+.pnp-row-full { flex-direction: column; align-items: flex-start; }
+.pnp-row-full label { min-width: auto; }
+.pnp-row-full textarea {
+  width: 100%; box-sizing: border-box; resize: vertical;
+  min-height: 90px; padding: .35rem .5rem;
+  border: 1px solid var(--border); border-radius: 6px;
+  font-size: .8rem; font-family: inherit; line-height: 1.5;
+  background: var(--bg-base); color: var(--text-primary); outline: none;
+}
+.pnp-actions { display: flex; align-items: center; justify-content: flex-end; gap: .5rem; }
+.pnp-saved-hint { font-size: .7rem; color: var(--success); transition: opacity .3s; }
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* Guitar icon trong chord group */

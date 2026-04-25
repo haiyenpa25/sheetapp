@@ -34,6 +34,7 @@ const App = (() => {
     if (window.SetlistUI) SetlistUI.init();
     Importer.init();
     if (window.DisplaySettings) DisplaySettings.init();
+    if (window.PerformanceNotes) PerformanceNotes.init();
 
     LibraryUI.onSelect(song => loadSong(song));
     LibraryUI.onDelete(songId => {
@@ -166,7 +167,9 @@ const App = (() => {
     
     ChordCanvas.loadSong(song.id);
     AnnotationCanvas.loadSong(song.id);
+    if (window.PerformanceNotes) PerformanceNotes.loadSong(song.id);
     PageNav.reset();
+
     AppUI.showLoading(`Đang tải "${song.title}"...`);
     AppUI.enableControls(false);
 
