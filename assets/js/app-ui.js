@@ -66,6 +66,8 @@ const AppUI = (() => {
     document.getElementById('welcome-screen')?.classList.add('hidden');
     document.getElementById('sheet-area')?.classList.remove('hidden');
     document.getElementById('page-bar')?.classList.remove('hidden');
+    // Luôn hiện capo-wrap khi có bài đang mở
+    document.getElementById('capo-wrap')?.classList.remove('hidden');
     const wrapper = document.querySelector('.sheet-viewer-wrapper');
     if (wrapper) wrapper.scrollTop = 0;
   }
@@ -107,15 +109,25 @@ const AppUI = (() => {
   function updateCapoBadge(capoValue) {
     const wrap   = document.getElementById('capo-wrap');
     const sel    = document.getElementById('capo-select');
+    const badge  = document.getElementById('capo-badge');
     const hint   = document.getElementById('capo-hint');
     if (!wrap) return;
+
+    // Capo-wrap luôn visible khi bài đang mở
+    // (showOSMD đã remove hidden, không ẩn lại ở đây)
+
     if (capoValue > 0) {
-      wrap.classList.remove('hidden');
-      if (sel) sel.value = capoValue;
-      // Hint: tên hợp âm sau capo
-      if (hint) hint.textContent = `→ đàn ngăn ${capoValue}`;
+      // Hiển thị badge gợi ý capo
+      if (badge) {
+        badge.textContent = `Gợi ý Capo ${capoValue}`;
+        badge.style.display = '';
+        badge.classList.remove('hidden');
+      }
+      // Gợi ý trong select nhưng không tự thay đổi — để user quyết định
+      if (hint) hint.textContent = `(gợi ý ngăn ${capoValue})`;
     } else {
-      wrap.classList.add('hidden');
+      if (badge) { badge.style.display = 'none'; }
+      if (hint)  hint.textContent = '';
     }
   }
 

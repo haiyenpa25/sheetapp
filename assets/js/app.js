@@ -203,13 +203,13 @@ const App = (() => {
     currentSong = song;
     currentTranspose = 0;
     _capoLevel = 0;  // Reset capo về 0 khi load bài mới
-    // Reset capo UI
+    // Reset capo UI — chỉ reset giá trị, không ẩn wrap
+    // (capo-wrap sẽ được hiện lại bởi showOSMD() sau khi render xong)
     const capoSel  = document.getElementById('capo-select');
-    const capoWrap = document.getElementById('capo-wrap');
     const capoHint = document.getElementById('capo-hint');
     if (capoSel)  capoSel.value = '0';
-    if (capoWrap) capoWrap.classList.add('hidden');
     if (capoHint) capoHint.textContent = '';
+
     SheetAudioPlayer.stop();
     if (window.AutoScroller) window.AutoScroller.stop();
     
