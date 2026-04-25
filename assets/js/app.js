@@ -36,6 +36,26 @@ const App = (() => {
     Importer.init();
     if (window.DisplaySettings) DisplaySettings.init();
     if (window.PerformanceNotes) PerformanceNotes.init();
+    if (window.SongInfoBar)      SongInfoBar.init();
+
+    // Sprint B — Volume control
+    const volSlider = document.getElementById('volume-slider');
+    volSlider?.addEventListener('input', () => {
+      const vol = parseInt(volSlider.value) / 100;
+      _updateVolumeTrack(volSlider);
+      if (window.SheetAudioPlayer?.setVolume) SheetAudioPlayer.setVolume(vol);
+    });
+
+    // Sprint F — Dark mode toggle
+    const _darkBtn = document.getElementById('btn-dark-toggle');
+    const _savedDark = localStorage.getItem('sheetapp_dark_mode') === '1';
+    if (_savedDark) { document.body.classList.add('dark-mode'); _darkBtn?.classList.add('dark-active'); }
+    _darkBtn?.addEventListener('click', () => {
+      const on = document.body.classList.toggle('dark-mode');
+      _darkBtn.classList.toggle('dark-active', on);
+      localStorage.setItem('sheetapp_dark_mode', on ? '1' : '0');
+      App.showToast(on ? '🌙 Chế độ tối' : '☀️ Chế độ sáng', 'info');
+    });
 
     LibraryUI.onSelect(song => loadSong(song));
     LibraryUI.onDelete(songId => {
@@ -140,14 +160,27 @@ const App = (() => {
 
     document.getElementById('btn-fullscreen')?.addEventListener('click', AppUI.toggleFullscreen);
 
-    // Capo dropdown → tự động transpose
+    // Capo dropdown → tự động transpose + Sprint A2 chord tooltip
     document.getElementById('capo-select')?.addEventListener('change', e => {
       const newCapo = parseInt(e.target.value) || 0;
-      const delta   = _capoLevel - newCapo; // capo tăng → giảm tông hiển thị
+      const delta   = _capoLevel - newCapo;
       _capoLevel    = newCapo;
       if (delta !== 0) transposeBy(delta);
+
       const hint = document.getElementById('capo-hint');
-      if (hint) hint.textContent = newCapo > 0 ? `→ ngăn ${newCapo}, tông ${newCapo > 0 ? '+' : ''}${-newCapo * 1}` : '';
+      if (!hint) return;
+      if (newCapo > 0 && window.TransposeEngine) {
+        // Lấy 3 hợp âm phổ biến trong tông hiện tại và cho biết sẽ nghe như gì
+        const commonRoots = ['C','F','G','Am','Dm'];
+        const mapped = commonRoots.slice(0, 3).map(c => {
+          const transposed = TransposeEngine.transposeChord(c, -newCapo);
+          return `${transposed}→${c}`;
+        }).join(' ');
+        hint.textContent = `ngăn ${newCapo}: ${mapped}...`;
+        hint.title = `Đàn ${mapped} — nghe như không có capo`;
+      } else {
+        hint.textContent = '';
+      }
     });
 
     _bindKeyboard();
@@ -267,6 +300,13 @@ const App = (() => {
           const transposedChords = chordList.map(c => TransposeEngine.transposeChord(c, currentTranspose));
           AppUI.updateCapoBadge(TransposeEngine.suggestBestCapo(transposedChords));
       }
+
+      // Sprint A1 — Song Info Bar
+      if (window.SongInfoBar) SongInfoBar.loadSong(originalXml, song);
+
+      // Sprint B — Enable volume slider
+      const volSlider2 = document.getElementById('volume-slider');
+      if (volSlider2) { volSlider2.disabled = false; _updateVolumeTrack(volSlider2); }
 
       AppUI.showOSMD();
 
@@ -627,6 +667,7 @@ const App = (() => {
         case 'c': case 'C': if (originalXml) ChordCanvas.toggleAddMode(); break;
         case 'f': case 'F': AppUI.toggleFullscreen(); break;
         case 'p': case 'P': if (originalXml) window.print(); break;
+        case 'd': case 'D': document.getElementById('btn-dark-toggle')?.click(); break;
         case 'Escape':
           document.getElementById('import-modal')?.classList.add('hidden');
           document.getElementById('session-panel')?.classList.add('hidden');
@@ -694,20 +735,34 @@ const App = (() => {
     });
   }
 
+  /* ─── Sprint B: Volume track CSS update ─── */
+  function _updateVolumeTrack(slider) {
+    const pct = slider.value + '%';
+    slider.style.background = `linear-gradient(to right, var(--accent,#7c3aed) 0%, var(--accent,#7c3aed) ${pct}, #d1d5db ${pct})`;
+  }
+
+  /* ─── Sprint E1: Measure Progress ─── */
+  function updateMeasureProgress(current, total) {
+    if (!total) return;
+    const fill = document.getElementById('measure-progress-fill');
+    if (fill) fill.style.width = Math.round((current / total) * 100) + '%';
+  }
+
   // Boot on DOMContentLoaded
   document.addEventListener('DOMContentLoaded', init);
 
-  return { 
+  return {
     loadSong, loadSongWithProfile, transposeBy, resetTranspose, setZoom, navigateNext, navigatePrev,
     getCurrentTranspose: () => currentTranspose,
     getCurrentSongId:    () => currentSong?.id ?? null,
     getCurrentZoom:      () => currentZoom,
     saveModifiedXML,
     getOriginalXml: () => originalXml,
-    showToast: (m,t) => AppUI.showToast(m,t), // alias cho các module khác
+    showToast: (m,t) => AppUI.showToast(m,t),
     showLoading: (t) => AppUI.showLoading(t),
     hideLoading: () => AppUI.hideLoading(),
-    reloadCurrentXML: () => _commitTranspose()
+    reloadCurrentXML: () => _commitTranspose(),
+    updateMeasureProgress,
   };
 })();
 

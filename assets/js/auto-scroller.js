@@ -80,6 +80,13 @@ const AutoScroller = (() => {
         if (osmd.cursor.iterator.EndReached || osmd.cursor.isHidden) { stop(); return; }
         curDuration = _getDuration(osmd.cursor.iterator);
 
+        // Sprint E1 — Measure progress
+        try {
+          const curMeasure   = osmd.cursor.iterator.CurrentMeasureIndex ?? 0;
+          const totalMeasures = osmd.sheet?.SourceMeasures?.length ?? 1;
+          window.App?.updateMeasureProgress?.(curMeasure + 1, totalMeasures);
+        } catch(e) {}
+
         // Tính scroll target mới
         if (osmd.cursor.cursorElement) {
           const cRect   = osmd.cursor.cursorElement.getBoundingClientRect();
@@ -92,7 +99,7 @@ const AutoScroller = (() => {
         }
       }
 
-      // Smooth lerp scroll mỗi frame (không dùng behavior:'smooth' vì gây lag chồng)
+      // Smooth lerp scroll mỗi frame
       if (scrollTarget !== null) {
         const cur  = wrapper.scrollTop;
         const next = cur + (scrollTarget - cur) * 0.12;

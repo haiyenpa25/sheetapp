@@ -177,9 +177,19 @@
     <button class="hint-close-btn" onclick="window.ChordCanvas?.setAddMode(false)" title="Thoát chế độ nhập">✕</button>
   </div>
 
+  <!-- Song Info Strip — Sprint A1 -->
+  <div id="song-info-strip" class="song-info-strip si-hidden">
+    <div id="si-inner" class="si-inner"></div>
+    <button id="btn-song-info-toggle" class="si-toggle" title="Thu gọn">▼</button>
+  </div>
+
   <!-- OSMD CONTAINER -->
   <div id="sheet-area" class="sheet-area hidden">
     <div id="osmd-container" class="osmd-container"></div>
+    <!-- Measure Progress Bar — Sprint E1 -->
+    <div id="measure-progress-bar" class="measure-progress-bar" title="Click để nhảy đến vị trí">
+      <div id="measure-progress-fill" class="measure-progress-fill"></div>
+    </div>
     <div id="lyric-view-container" class="lyric-view-container hidden"></div>
   </div>
 </div>

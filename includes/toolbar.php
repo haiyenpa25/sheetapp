@@ -188,6 +188,20 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
     </div>
+    <!-- VOLUME CONTROL — Sprint B -->
+    <div class="control-group" id="volume-group">
+      <span class="volume-icon" title="Âm lượng">🔊</span>
+      <input id="volume-slider" type="range" min="0" max="100" value="80"
+             class="volume-slider" title="Âm lượng (0–100%)" disabled>
+    </div>
+
+    <!-- DARK MODE — Sprint F -->
+    <div class="control-group">
+      <button id="btn-dark-toggle" class="icon-btn" title="Chế độ tối/sáng (D)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+
     <!-- FULLSCREEN -->
     <div class="control-group">
       <button id="btn-fullscreen" class="icon-btn" title="Toàn màn hình (F)"

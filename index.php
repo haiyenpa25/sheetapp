@@ -84,8 +84,10 @@ echo jsTag('audio-player.js');
 echo jsTag('auto-scroller.js');
 echo jsTag('page-nav.js');
 echo jsTag('app-ui.js');
+echo jsTag('song-info-bar.js');   // Sprint A1
 echo jsTag('app.js');
 echo jsTag('fab.js');
+
 
 ?>
 

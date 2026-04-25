@@ -152,20 +152,21 @@ const AnnotationCanvas = (() => {
 
     const scale = window.App?.getCurrentZoom?.() ?? 1.0;
 
-    if (anno && anno.text) {
+      if (anno && anno.text) {
       const div = document.createElement('div');
       div.className = DOT_CLASS;
-      div.textContent = anno.text;
-      
+      div.textContent = (anno.icon ? anno.icon + ' ' : '') + anno.text;
+      div.dataset.color = anno.color || 'yellow';
+
       div.style.cssText = [
         'position:absolute', `left:${cx}px`, `top:${cy}px`,
         'transform:translateX(-50%)', 'z-index:90',
-        'background:#fef3c7', 'border:1px solid #d97706', 'border-radius:4px',
-        `font-size:${Math.max(10, 11 * scale)}px`, 'color:#92400e', 'padding:2px 6px',
+        'border-radius:4px',
+        `font-size:${Math.max(10, 11 * scale)}px`, 'padding:2px 7px',
         'white-space:nowrap', 'user-select:none', 'pointer-events:auto', 'cursor:pointer',
-        'box-shadow:0 2px 4px rgba(217,119,6,.15)'
+        'box-shadow:0 2px 4px rgba(0,0,0,.12)'
       ].join(';');
-      
+
       div.addEventListener('click', e => { e.stopPropagation(); _showPopup(div, measureIdx, noteIdx, anno); });
       container.appendChild(div);
     } else if (_editEnabled) {
@@ -188,28 +189,55 @@ const AnnotationCanvas = (() => {
     }
   }
 
-  /* ─── Popup ─────────────────────────────────────────────────── */
+  /* ─── Popup (Sprint C1: colors + icons) ────────────────────── */
+  const _COLORS = [
+    { id:'yellow', hex:'#fbbf24', title:'Nhắc nhở' },
+    { id:'blue',   hex:'#60a5fa', title:'Kỹ thuật' },
+    { id:'red',    hex:'#f87171', title:'Quan trọng' },
+    { id:'green',  hex:'#34d399', title:'Hiệu quả' },
+    { id:'purple', hex:'#a78bfa', title:'Nâng cao' },
+  ];
+  const _ICONS = [
+    { icon:'🎹', label:'Đàn' }, { icon:'🎵', label:'Hát' },
+    { icon:'⚡', label:'Nhanh' }, { icon:'🐢', label:'Chậm' },
+    { icon:'⚠️', label:'Lưu ý' }, { icon:'🔄', label:'Lặp' },
+  ];
+
   function _showPopup(anchor, measureIdx, noteIdx, anno) {
     _closePopup();
+    let selColor = anno?.color || 'yellow';
+    let selIcon  = anno?.icon  || '';
     const ar  = anchor.getBoundingClientRect();
     const pop = document.createElement('div');
     pop.className = 'cc-popup';
     pop.style.cssText = [
       'position:fixed', `left:${ar.left + ar.width / 2}px`, `top:${ar.bottom + 8}px`,
       'transform:translateX(-50%)', 'z-index:99999',
-      'background:#fff', 'border:1.5px solid #059669', 'border-radius:8px',
-      'padding:.6rem .75rem', 'box-shadow:0 8px 28px rgba(5,150,105,.22)',
-      'min-width:200px', 'pointer-events:auto'
+      'background:#fff', 'border:1.5px solid #059669', 'border-radius:10px',
+      'padding:.65rem .8rem', 'box-shadow:0 8px 28px rgba(5,150,105,.22)',
+      'min-width:230px', 'pointer-events:auto'
     ].join(';');
 
+    const colorBtns = _COLORS.map(c =>
+      `<button class="ano-color-btn ${selColor===c.id?'active':''}" data-color="${c.id}"
+               style="background:${c.hex}" title="${c.title}"></button>`
+    ).join('');
+    const iconBtns = _ICONS.map(ic =>
+      `<button class="ano-icon-btn ${selIcon===ic.icon?'active':''}" data-icon="${ic.icon}" title="${ic.label}">${ic.icon}</button>`
+    ).join('');
+
     pop.innerHTML = `
-      <div style="font-size:.65rem;font-weight:700;color:#059669;text-transform:uppercase;margin-bottom:.3rem;">
+      <div style="font-size:.65rem;font-weight:700;color:#059669;text-transform:uppercase;margin-bottom:.35rem;">
         ${anno ? 'Sửa' : 'Thêm'} Ghi chú
       </div>
-      <input id="ac-pop-inp" type="text" maxlength="30"
-             placeholder="Ghi chú text..." value="${anno ? anno.text : ''}"
+      <div class="ano-color-row">${colorBtns}</div>
+      <div class="ano-icon-row">${iconBtns}
+        <button class="ano-icon-btn ${selIcon===''?'active':''}" data-icon="" title="Không icon">∅</button>
+      </div>
+      <input id="ac-pop-inp" type="text" maxlength="40"
+             placeholder="Ghi chú text..." value="${anno ? _escH(anno.text) : ''}"
              style="width:100%;box-sizing:border-box;border:1px solid #ddd;border-radius:5px;
-                    padding:.3rem .55rem;font-size:.85rem;outline:none;background:#fef3c7;margin-bottom:.4rem;">
+                    padding:.3rem .55rem;font-size:.85rem;outline:none;margin-bottom:.4rem;">
       <div style="display:flex;gap:.35rem;justify-content:flex-end;">
         <button id="ac-pop-save" class="btn btn-primary btn-xs" style="background:#059669;border-color:#059669;">✓ Lưu</button>
         ${anno ? '<button id="ac-pop-del" class="btn btn-danger btn-xs">🗑</button>' : ''}
@@ -219,13 +247,28 @@ const AnnotationCanvas = (() => {
     document.body.appendChild(pop);
     _popup = pop;
 
+    pop.querySelectorAll('.ano-color-btn').forEach(b => {
+      b.addEventListener('click', e => {
+        e.stopPropagation(); selColor = b.dataset.color;
+        pop.querySelectorAll('.ano-color-btn').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+      });
+    });
+    pop.querySelectorAll('.ano-icon-btn').forEach(b => {
+      b.addEventListener('click', e => {
+        e.stopPropagation(); selIcon = b.dataset.icon;
+        pop.querySelectorAll('.ano-icon-btn').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+      });
+    });
+
     const inp = pop.querySelector('#ac-pop-inp');
     setTimeout(() => { inp?.focus(); inp?.select(); }, 20);
 
     const doSave = async () => {
       const val = inp.value.trim();
       _closePopup();
-      if (val) await _saveAnnotation(measureIdx, noteIdx, val);
+      if (val) await _saveAnnotation(measureIdx, noteIdx, val, selColor, selIcon);
       else if (anno) await _deleteAnnotation(measureIdx, noteIdx);
     };
 
@@ -236,8 +279,7 @@ const AnnotationCanvas = (() => {
       if (e.key === 'Enter')  { e.stopPropagation(); doSave(); }
       if (e.key === 'Escape') { e.stopPropagation(); _closePopup(); }
     });
-    
-    // Click outside to close
+
     setTimeout(() => {
       const outside = ev => {
         if (!pop.contains(ev.target) && ev.target !== anchor) {
@@ -248,6 +290,8 @@ const AnnotationCanvas = (() => {
       document.addEventListener('click', outside, true);
     }, 80);
   }
+
+  function _escH(str) { return String(str||'').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
   function _closePopup() { 
       if (_popup) {
@@ -262,11 +306,10 @@ const AnnotationCanvas = (() => {
   }
 
   /* ─── Save / Delete ────────────────────────────────────── */
-  async function _saveAnnotation(measureIdx, noteIdx, text) {
+  async function _saveAnnotation(measureIdx, noteIdx, text, color = 'yellow', icon = '') {
     const songId = window.App?.getCurrentSongId?.();
     if (!songId) return;
-
-    _notes[`${measureIdx}_${noteIdx}`] = { measureIdx, noteIdx, text, color: 'yellow' };
+    _notes[`${measureIdx}_${noteIdx}`] = { measureIdx, noteIdx, text, color, icon };
     await _syncServer();
   }
 

@@ -890,3 +890,151 @@ body.dark-mode .lvi-word-only {
 #osmd-container svg [class*="page"] {
   background: white;
 }
+
+/* =============================================
+   SPRINT A1 — Song Info Strip
+   ============================================= */
+.song-info-strip {
+  display: flex; align-items: center; gap: .5rem;
+  background: linear-gradient(90deg, #f0f4ff 0%, #f8f6ff 100%);
+  border-bottom: 1px solid #e5e7eb;
+  padding: .2rem .75rem;
+  font-size: .75rem; color: #4b5563;
+  min-height: 30px; flex-shrink: 0;
+  transition: all .2s ease;
+}
+.song-info-strip.si-hidden { display: none; }
+.si-inner { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; flex: 1; }
+.si-inner.si-collapsed { display: none; }
+.si-chip {
+  display: inline-flex; align-items: center; gap: 2px;
+  background: white; border: 1px solid #e5e7eb;
+  border-radius: 9px; padding: .08rem .42rem;
+  font-size: .7rem; font-weight: 600;
+  white-space: nowrap;
+}
+.si-key     { border-color: #a78bfa; color: #6d28d9; background: #f5f3ff; }
+.si-time    { border-color: #93c5fd; color: #1d4ed8; background: #eff6ff; }
+.si-tempo   { border-color: #6ee7b7; color: #065f46; background: #ecfdf5; }
+.si-measures{ border-color: #fcd34d; color: #92400e; background: #fffbeb; }
+.si-toggle  { background: none; border: none; cursor: pointer; color: #9ca3af;
+              padding: 0 .3rem; font-size: .8rem; transition: color .15s; }
+.si-toggle:hover { color: #6d28d9; }
+
+/* =============================================
+   SPRINT B — Volume Slider
+   ============================================= */
+.volume-icon { font-size: .9rem; cursor: default; user-select: none; }
+.volume-slider {
+  -webkit-appearance: none; appearance: none;
+  width: 70px; height: 4px;
+  border-radius: 2px; outline: none; cursor: pointer;
+  background: linear-gradient(to right, var(--accent, #7c3aed) 0%, var(--accent, #7c3aed) 80%, #d1d5db 80%);
+  transition: width .2s;
+}
+.volume-slider:disabled { opacity: .4; cursor: not-allowed; }
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 12px; height: 12px;
+  border-radius: 50%; background: var(--accent, #7c3aed); cursor: pointer;
+}
+@media (max-width: 768px) { .volume-slider { width: 50px; } }
+@media (max-width: 480px) { #volume-group { display: none; } }
+
+/* =============================================
+   SPRINT C1 — Annotation Colors
+   ============================================= */
+.ano-color-row {
+  display: flex; gap: 4px; margin-bottom: .4rem; flex-wrap: wrap;
+}
+.ano-color-btn {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid transparent; cursor: pointer;
+  transition: transform .1s, border-color .1s;
+}
+.ano-color-btn.active, .ano-color-btn:hover { transform: scale(1.2); border-color: #4b5563; }
+.ano-icon-row {
+  display: flex; gap: 4px; margin-bottom: .4rem; flex-wrap: wrap;
+}
+.ano-icon-btn {
+  padding: .1rem .35rem; border-radius: 6px; font-size: .8rem;
+  border: 1px solid #e5e7eb; background: white; cursor: pointer;
+  transition: background .1s;
+}
+.ano-icon-btn.active, .ano-icon-btn:hover { background: #ede9fe; border-color: #a78bfa; }
+/* Dynamic annotation dot colors */
+.ano-dot[data-color="blue"]   { background: #dbeafe !important; border-color: #3b82f6 !important; color: #1d4ed8 !important; }
+.ano-dot[data-color="red"]    { background: #fee2e2 !important; border-color: #ef4444 !important; color: #b91c1c !important; }
+.ano-dot[data-color="green"]  { background: #d1fae5 !important; border-color: #10b981 !important; color: #065f46 !important; }
+.ano-dot[data-color="purple"] { background: #ede9fe !important; border-color: #8b5cf6 !important; color: #5b21b6 !important; }
+.ano-dot[data-color="yellow"] { background: #fef3c7 !important; border-color: #d97706 !important; color: #92400e !important; }
+
+/* =============================================
+   SPRINT E1 — Measure Progress Bar
+   ============================================= */
+.measure-progress-bar {
+  position: sticky; bottom: 0;
+  height: 5px; width: 100%;
+  background: rgba(0,0,0,.08);
+  cursor: pointer; flex-shrink: 0;
+  z-index: 40;
+}
+.measure-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #7c3aed, #a78bfa);
+  width: 0%; transition: width .3s ease;
+  border-radius: 0 3px 3px 0;
+}
+
+/* =============================================
+   SPRINT F1 — True Dark Mode
+   ============================================= */
+body.dark-mode {
+  --bg-base:    #0f0f14;
+  --bg-sidebar: #12121a;
+  --bg-surface: #1a1a24;
+  --text-primary:   #e4e4ec;
+  --text-secondary: #9999b0;
+  --border:     #2a2a38;
+  --accent:     #a78bfa;
+}
+body.dark-mode .toolbar,
+body.dark-mode .page-bar,
+body.dark-mode .song-info-strip {
+  background: var(--bg-surface, #1a1a24) !important;
+  border-color: var(--border, #2a2a38) !important;
+  color: var(--text-primary, #e4e4ec) !important;
+}
+body.dark-mode .sheet-viewer-wrapper { background: #0c0c14 !important; }
+body.dark-mode .osmd-container {
+  background: #1a1a24 !important;
+  box-shadow: 0 4px 32px rgba(0,0,0,.5) !important;
+}
+/* Invert sheet lightly for dark mode (không full invert tránh lộn màu hợp âm) */
+body.dark-mode #osmd-container svg {
+  filter: invert(0.88) hue-rotate(185deg) brightness(0.92);
+}
+body.dark-mode .sidebar { background: var(--bg-sidebar, #12121a) !important; }
+body.dark-mode .song-item:hover { background: #1e1e2e !important; }
+body.dark-mode .song-item.active { background: #2d1f52 !important; }
+/* Dark mode toggle button glow khi active */
+#btn-dark-toggle.dark-active {
+  color: #a78bfa !important;
+  background: rgba(167,139,250,.12) !important;
+}
+
+/* Dark mode cho các modal, dropdown */
+body.dark-mode .dropdown-menu,
+body.dark-mode .cc-popup,
+body.dark-mode #perf-notes-panel {
+  background: #1e1e2e !important;
+  border-color: #3a3a50 !important;
+  color: #e4e4ec !important;
+}
+body.dark-mode input, body.dark-mode textarea, body.dark-mode select {
+  background: #2a2a38 !important; color: #e4e4ec !important; border-color: #3a3a50 !important;
+}
+
+/* Print override — restore normal colors when printing */
+@media print {
+  body.dark-mode #osmd-container svg { filter: none !important; }
+}
