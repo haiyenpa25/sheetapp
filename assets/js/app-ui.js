@@ -118,28 +118,25 @@ const AppUI = (() => {
     if (btnDown) btnDown.style.opacity = currentTranspose <= -8 ? '.35' : '';
   }
 
+  /**
+   * updateCapoBadge — Hiển thị gợi ý capo TỐI ƯU (riêng biệt với capo select)
+   * Chỉ quản lý phần tử #capo-badge, KHÔNG đụng vào #capo-hint (do updateTransposeDisplay quản lý)
+   *
+   * Lý thuyết: capoValue ≠ currentTranspose
+   * VD: Transpose +3 (Bb) — capo tối ưu có thể là 1 (đàn A shapes thay vì G shapes)
+   * Nhưng điều này là "gợi ý nâng cao", hiện riêng để tránh nhầm lẫn.
+   */
   function updateCapoBadge(capoValue) {
-    const wrap   = document.getElementById('capo-wrap');
-    const sel    = document.getElementById('capo-select');
-    const badge  = document.getElementById('capo-badge');
-    const hint   = document.getElementById('capo-hint');
-    if (!wrap) return;
-
-    // Capo-wrap luôn visible khi bài đang mở
-    // (showOSMD đã remove hidden, không ẩn lại ở đây)
-
+    const badge = document.getElementById('capo-badge');
+    // KHÔNG ghi đè hint (capo-hint) — hint do updateTransposeDisplay() quản lý
+    // KHÔNG thay đổi capo-select — select do transposeDisplay sync
+    if (!badge) return;
     if (capoValue > 0) {
-      // Hiển thị badge gợi ý capo
-      if (badge) {
-        badge.textContent = `Gợi ý Capo ${capoValue}`;
-        badge.style.display = '';
-        badge.classList.remove('hidden');
-      }
-      // Gợi ý trong select nhưng không tự thay đổi — để user quyết định
-      if (hint) hint.textContent = `(gợi ý ngăn ${capoValue})`;
+      // Chỉ hiện badge nếu gợi ý KHÁC với transpose hiện tại (tránh hiện thừa)
+      // Badge ẩn — tính năng này tạm thời tắt để tránh conflict UX
+      badge.style.display = 'none';
     } else {
-      if (badge) { badge.style.display = 'none'; }
-      if (hint)  hint.textContent = '';
+      badge.style.display = 'none';
     }
   }
 
