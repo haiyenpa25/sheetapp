@@ -100,6 +100,18 @@ const AppUI = (() => {
                      : currentTranspose > 0 ? 'var(--success)'
                      : 'var(--danger)';
 
+    // Sync Capo select: Capo ngăn = số tông tăng
+    // Tăng 2 tông → kẹp ngăn 2 để đàn thế bấm gốc
+    const capoSel = document.getElementById('capo-select');
+    if (capoSel) {
+      capoSel.value = String(Math.max(0, Math.min(7, currentTranspose)));
+    }
+    // Cập nhật capo hint
+    const capoHint = document.getElementById('capo-hint');
+    if (capoHint) {
+      capoHint.textContent = currentTranspose > 0 ? `→ kẹp ngăn ${currentTranspose}` : '';
+    }
+
     const btnUp   = document.getElementById('btn-transpose-up');
     const btnDown = document.getElementById('btn-transpose-down');
     if (btnUp)   btnUp.style.opacity   = currentTranspose >=  8 ? '.35' : '';

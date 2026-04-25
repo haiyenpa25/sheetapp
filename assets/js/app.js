@@ -160,27 +160,14 @@ const App = (() => {
 
     document.getElementById('btn-fullscreen')?.addEventListener('click', AppUI.toggleFullscreen);
 
-    // Capo dropdown → tự động transpose + Sprint A2 chord tooltip
+    // Capo dropdown — Capo ngăn N = tăng N tông so với gốc
+    // Công thức: kẹp ngăn N → đàn thế bấm gốc, âm thanh cao hơn N nửa cung
     document.getElementById('capo-select')?.addEventListener('change', e => {
-      const newCapo = parseInt(e.target.value) || 0;
-      const delta   = _capoLevel - newCapo;
-      _capoLevel    = newCapo;
+      const newCapo        = parseInt(e.target.value) || 0;
+      const delta          = newCapo - currentTranspose; // ← ĐÚNG: cùng chiều tăng tông
+      _capoLevel           = newCapo;
       if (delta !== 0) transposeBy(delta);
-
-      const hint = document.getElementById('capo-hint');
-      if (!hint) return;
-      if (newCapo > 0 && window.TransposeEngine) {
-        // Lấy 3 hợp âm phổ biến trong tông hiện tại và cho biết sẽ nghe như gì
-        const commonRoots = ['C','F','G','Am','Dm'];
-        const mapped = commonRoots.slice(0, 3).map(c => {
-          const transposed = TransposeEngine.transposeChord(c, -newCapo);
-          return `${transposed}→${c}`;
-        }).join(' ');
-        hint.textContent = `ngăn ${newCapo}: ${mapped}...`;
-        hint.title = `Đàn ${mapped} — nghe như không có capo`;
-      } else {
-        hint.textContent = '';
-      }
+      // hint được cập nhật tự động bởi updateTransposeDisplay → không cần set lại ở đây
     });
 
     _bindKeyboard();
