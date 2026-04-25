@@ -8,6 +8,7 @@ const App = (() => {
   let currentTranspose = 0;      // Semitone offset hiện tại
   let currentZoom      = 1.0;    // Zoom level
   let originalXml      = null;   // MusicXML gốc (không bị thay đổi)
+  let _capoLevel       = 0;      // Capo ngăn hiện tại
 
   /* ====================== INIT ====================== */
   function init() {
@@ -139,6 +140,16 @@ const App = (() => {
 
     document.getElementById('btn-fullscreen')?.addEventListener('click', AppUI.toggleFullscreen);
 
+    // Capo dropdown → tự động transpose
+    document.getElementById('capo-select')?.addEventListener('change', e => {
+      const newCapo = parseInt(e.target.value) || 0;
+      const delta   = _capoLevel - newCapo; // capo tăng → giảm tông hiển thị
+      _capoLevel    = newCapo;
+      if (delta !== 0) transposeBy(delta);
+      const hint = document.getElementById('capo-hint');
+      if (hint) hint.textContent = newCapo > 0 ? `→ ngăn ${newCapo}, tông ${newCapo > 0 ? '+' : ''}${-newCapo * 1}` : '';
+    });
+
     _bindKeyboard();
   }
 
@@ -158,6 +169,14 @@ const App = (() => {
 
     currentSong = song;
     currentTranspose = 0;
+    _capoLevel = 0;  // Reset capo về 0 khi load bài mới
+    // Reset capo UI
+    const capoSel  = document.getElementById('capo-select');
+    const capoWrap = document.getElementById('capo-wrap');
+    const capoHint = document.getElementById('capo-hint');
+    if (capoSel)  capoSel.value = '0';
+    if (capoWrap) capoWrap.classList.add('hidden');
+    if (capoHint) capoHint.textContent = '';
     SheetAudioPlayer.stop();
     if (window.AutoScroller) window.AutoScroller.stop();
     
