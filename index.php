@@ -44,6 +44,12 @@ echo cssTag('fab.css');
 <?php require_once __DIR__ . '/includes/modals.php'; ?>
 <?php require_once __DIR__ . '/includes/admin_console.php'; ?>
 
+<!-- Nút thoát Sheet-Only Mode (fixed, luôn ở góc trên phải) -->
+<button id="btn-exit-sheet-only" title="Thoát chế độ toàn màn hình (Esc)" aria-label="Thoát">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+</button>
+
+
 <!-- ===== SCRIPTS ===== -->
 <!-- OSMD from CDN -->
 <script src="https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@1.8.6/build/opensheetmusicdisplay.min.js"></script>

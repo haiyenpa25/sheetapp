@@ -53,93 +53,101 @@
 
   <!-- OSMD PAGE BAR -->
   <div id="page-bar" class="page-bar hidden">
-    <div class="page-bar-left">
-      <!-- TRANSPOSE -->
-      <div class="control-group" style="flex-direction: row; align-items: center;">
-        <label class="control-label" style="display: none;">Transpose</label>
-        <div class="transpose-controls" style="background: var(--bg-overlay); border-radius: var(--radius-sm); border: 1px solid var(--border);">
-          <button id="btn-transpose-down" class="icon-btn transpose-btn" title="Hạ 1 cung" disabled>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <span id="transpose-display" class="transpose-display">0</span>
-          <button id="btn-transpose-up" class="icon-btn transpose-btn" title="Tăng 1 cung" disabled>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
-          </button>
-        </div>
-        <button id="btn-transpose-reset" class="btn btn-ghost btn-xs" disabled style="padding: 0.2rem 0.4rem;">Reset</button>
-        <!-- AI CAPO BADGE -->
-        <span id="capo-badge" class="hidden" style="margin-left:8px; font-size:11px; background:var(--primary); color:white; padding: 2px 6px; border-radius:12px; font-weight:600; cursor:help; white-space:nowrap;" title="Đề xuất kẹp Capo tự động để dễ bấm hợp âm nhất">Capo 0</span>
-      </div>
 
+    <!-- ① Transpose -->
+    <div class="pb-group" role="group" aria-label="Điều chỉnh tông">
+      <div class="transpose-controls">
+        <button id="btn-transpose-down" class="icon-btn transpose-btn" title="Hạ 1 cung (←)" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <span id="transpose-display" class="transpose-display">0</span>
+        <button id="btn-transpose-up" class="icon-btn transpose-btn" title="Tăng 1 cung (→)" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+        </button>
+      </div>
+      <button id="btn-transpose-reset" class="btn btn-ghost btn-xs pb-reset-btn" disabled>Reset</button>
+      <span id="capo-badge" class="capo-badge hidden" title="Đề xuất Capo tự động">Capo 0</span>
     </div>
-    <div class="page-bar-right">
-      <!-- ZOOM -->
-      <div class="control-group" style="flex-direction: row; align-items: center; margin-right: 1rem;">
-        <label class="control-label" style="margin-bottom: 0; margin-right: 0.5rem; display: none;">Zoom <span id="zoom-value-label">100%</span></label>
-        <div class="zoom-slider-wrap" style="background: var(--bg-overlay); padding: 0.2rem 0.5rem; border-radius: var(--radius-sm); border: 1px solid var(--border);">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="zoom-icon-sm"><circle cx="11" cy="11" r="8"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-          <input id="zoom-slider" type="range" min="50" max="250" value="100" step="5" disabled style="width: 80px;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="zoom-icon-sm"><circle cx="11" cy="11" r="8"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-        </div>
-      </div>
 
-      <!-- ── Chord Set Selector ── -->
-      <div class="chord-set-bar" id="chord-set-bar">
-        <label for="chord-set-selector" class="chord-set-label">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
-          Hợp âm:
-        </label>
-        <select id="chord-set-selector" class="chord-set-select" disabled
-                onchange="ChordCanvas.switchSet(this.value)">
-          <option value="default">TLH</option>
+    <!-- ② Zoom -->
+    <div class="pb-group pb-sep" role="group" aria-label="Thu phóng">
+      <div class="zoom-select-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="zoom-icon-sm"><circle cx="11" cy="11" r="8"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+        <select id="zoom-slider" class="zoom-select" disabled title="Chọn mức phóng to">
+          <option value="30">30%</option><option value="40">40%</option>
+          <option value="50">50%</option><option value="60">60%</option>
+          <option value="70">70%</option><option value="80">80%</option>
+          <option value="90">90%</option><option value="100" selected>100%</option>
+          <option value="110">110%</option><option value="120">120%</option>
+          <option value="130">130%</option><option value="140">140%</option>
+          <option value="150">150%</option><option value="160">160%</option>
+          <option value="170">170%</option><option value="180">180%</option>
+          <option value="190">190%</option><option value="200">200%</option>
         </select>
-        <button id="btn-new-chord-set" class="btn btn-xs btn-ghost" style="color: var(--accent); font-weight: 600; padding: 0.2rem 0.4rem;"
-                title="Tạo bộ hợp âm mới theo người"
-                onclick="ChordCanvas.showNewSetModal()">
-          <span class="desktop-only">+ Tạo mới</span>
-          <span class="mobile-only">+ Tạo</span>
-        </button>
-        <button id="btn-delete-chord-set" class="btn btn-xs btn-danger"
-                title="Xóa bộ hợp âm đang chọn"
-                style="display:none"
-                onclick="ChordCanvas.confirmDeleteSet()">
-          🗑
-        </button>
+        <span id="zoom-value-label" style="display:none">100%</span>
       </div>
-
-      <!-- Annotate Mode — nút ẩn, được FAB trigger -->
-      <button id="btn-add-annotate-mode" class="btn btn-sm btn-ghost" title="Bật chế độ ghi chú tự do" style="display:none;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        Nốt Ghi Chú
-      </button>
-      <span id="add-annotate-hint" class="add-chord-hint hidden" style="color:#059669;">
-        Click vào ô trống phía trên nốt để dán ghi chú •
-        <button id="btn-cancel-add-annotate" class="link-btn" style="color:#059669;">Hủy</button>
-      </span>
-
-      <!-- Edit Mode — nút ẩn, được FAB trigger -->
-      <button id="btn-add-chord-mode" class="btn btn-sm btn-ghost" title="Bật chế độ chỉnh hợp âm (phím C)" style="display:none;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-        Thêm Hợp Âm
-      </button>
-      <span id="add-chord-hint" class="add-chord-hint hidden">
-        Click vào ô trên nốt để nhập hợp âm •
-        <button id="btn-clear-all-chords" class="link-btn text-danger hidden" style="margin-right:0.5rem;" onclick="if(confirm('Bạn chắc muốn xoá TOÀN BỘ hợp âm trong hồ sơ này?')) window.ChordCanvas.clearAllChords()">Xoá Toàn Bộ</button>
-        <button id="btn-cancel-add-chord" class="link-btn">Hủy</button>
-      </span>
-
-      <!-- Nút Trang (Đã chuyển sang phải) -->
-      <div class="sheet-nav-right" style="display:flex; align-items:center; gap:0.25rem; margin-left: 0.5rem; padding-left: 0.5rem; border-left: 1px solid var(--border);">
-        <button id="btn-page-prev" class="icon-btn" title="Trang trước (PageUp)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
-        <span id="page-indicator" class="page-indicator">Trang 1 / 1</span>
-        <button id="btn-page-next" class="icon-btn" title="Trang tiếp (PageDown)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-        </button>
-      </div>
-
     </div>
+
+    <!-- ③ Hợp Âm -->
+    <div class="pb-group pb-group--chord pb-sep" id="chord-set-bar" role="group" aria-label="Quản lý hợp âm">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pb-chord-icon" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+      <select id="chord-set-selector" class="chord-set-select" disabled onchange="ChordCanvas.switchSet(this.value)">
+        <option value="default">TLH</option>
+      </select>
+      <button id="btn-new-chord-set" class="btn btn-xs btn-ghost pb-btn-icon-text"
+              title="Tạo bộ hợp âm mới" onclick="ChordCanvas.showNewSetModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span>Tạo</span>
+      </button>
+      <!-- Nút Nhập HÂ — toggle chế độ nhập hợp âm (visible) -->
+      <button id="btn-add-chord-mode-bar" class="btn btn-xs btn-chord-edit" title="Bật/tắt nhập hợp âm (phím C)" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        <span>Nhập HÂ</span>
+      </button>
+      <!-- Xóa set — hiện khi set != default -->
+      <button id="btn-delete-chord-set" class="btn btn-xs btn-danger" title="Xóa bộ hợp âm" style="display:none" onclick="ChordCanvas.confirmDeleteSet()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M9 6V4h6v2"/></svg>
+      </button>
+      <!-- Edit mode controls — hiện khi đang nhập -->
+      <button id="btn-clear-all-chords" class="btn btn-xs btn-danger hidden"
+              title="Xoá toàn bộ hợp âm"
+              onclick="if(confirm('Xoá TOÀN BỘ hợp âm trong hồ sơ này?')) window.ChordCanvas.clearAllChords()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        <span class="desktop-only">Xoá tất</span>
+      </button>
+      <button id="btn-cancel-add-chord" class="btn btn-xs btn-ghost hidden">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <span class="desktop-only">Thoát</span>
+      </button>
+    </div>
+
+    <!-- Spacer đẩy Nav sang phải -->
+    <div class="pb-spacer"></div>
+
+    <!-- ④ Nav Trang -->
+    <div class="pb-group" role="group" aria-label="Điều hướng trang">
+      <button id="btn-page-prev" class="icon-btn pb-nav-btn" title="Trang trước (PageUp)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span id="page-indicator" class="page-indicator">1 / 1</span>
+      <button id="btn-page-next" class="icon-btn pb-nav-btn" title="Trang tiếp (PageDown)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+
+    <!-- Ẩn: backward compat cho FAB / JS cũ -->
+    <button id="btn-add-chord-mode" style="display:none" aria-hidden="true"></button>
+    <span id="add-chord-hint" style="display:none" aria-hidden="true"></span>
+    <button id="btn-add-annotate-mode" style="display:none" aria-hidden="true"></button>
+    <span id="add-annotate-hint" style="display:none" aria-hidden="true"></span>
+
+  </div>
+
+  <!-- Floating Chord Edit Hint (ngoài page-bar) -->
+  <div id="chord-edit-hint" class="chord-edit-hint hidden" role="status">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hint-icon"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+    <span>Chế độ nhập hợp âm — Click vào nốt nhạc để thêm hoặc sửa</span>
+    <button class="hint-close-btn" onclick="window.ChordCanvas?.setAddMode(false)" title="Thoát chế độ nhập">✕</button>
   </div>
 
   <!-- OSMD CONTAINER -->
@@ -148,3 +156,6 @@
     <div id="lyric-view-container" class="lyric-view-container hidden"></div>
   </div>
 </div>
+
+
+

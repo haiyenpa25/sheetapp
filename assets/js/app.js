@@ -88,12 +88,14 @@ const App = (() => {
     }
 
     // Tự động tối ưu giao diện khi xoay ngang dọc thiết bị (iPad / Điện thoại)
+    let _lastInnerWidth = window.innerWidth;
     window.addEventListener('resize', _debounce(() => {
       const sidebar = document.getElementById('sidebar');
       const overlay = document.getElementById('sidebar-overlay');
       if (!sidebar) return;
       
-      if (window.innerWidth <= 900) {
+      const newW = window.innerWidth;
+      if (newW <= 900) {
         // Trạng thái Mobile / iPad đứng
         if (!sidebar.classList.contains('mobile-hidden') && !overlay?.classList.contains('hidden')) {
            // Đang mở sidebar trên mobile thì kệ nó
@@ -107,7 +109,32 @@ const App = (() => {
         sidebar.classList.remove('mobile-hidden');
         if (overlay) overlay.classList.add('hidden');
       }
+
+      // Re-render OSMD nếu chiều rộng thay đổi đáng kể (xoay màn hình)
+      const widthChange = Math.abs(newW - _lastInnerWidth);
+      _lastInnerWidth = newW;
+      if (widthChange > 100 && OSMDRenderer.getIsLoaded()) {
+        setTimeout(async () => {
+          try {
+            await OSMDRenderer.getInstance()?.render?.();
+            if (window.ChordCanvas) window.ChordCanvas.reposition();
+          } catch(e) {}
+        }, 350);
+      }
     }, 250));
+
+    // Xử lý xoay màn hình riêng (orientationchange) cho iOS Safari
+    if ('onorientationchange' in window) {
+      window.addEventListener('orientationchange', () => {
+        setTimeout(async () => {
+          if (!OSMDRenderer.getIsLoaded()) return;
+          try {
+            await OSMDRenderer.getInstance()?.render?.();
+            if (window.ChordCanvas) window.ChordCanvas.reposition();
+          } catch(e) {}
+        }, 500); // 500ms để layout settle sau khi xoay
+      });
+    }
 
     document.getElementById('btn-fullscreen')?.addEventListener('click', AppUI.toggleFullscreen);
 
@@ -178,9 +205,27 @@ const App = (() => {
       OSMDRenderer.setZoomSilent(currentZoom);
       await OSMDRenderer.load(processedXml, currentTranspose);
 
-      // Chỉ update UI zoom, không render lại
-      document.getElementById('zoom-slider').value = Math.round(currentZoom * 100);
-      document.getElementById('zoom-value-label').textContent = Math.round(currentZoom * 100) + '%';
+      // Sync zoom UI — hỗ trợ cả select và input range
+      const zSlider = document.getElementById('zoom-slider');
+      const zoomPercent = Math.round(currentZoom * 100);
+      if (zSlider) {
+        const tagName = zSlider.tagName.toLowerCase();
+        if (tagName === 'select') {
+          // Tìm option gần nhất với zoom hiện tại
+          const opts = Array.from(zSlider.options);
+          const best = opts.reduce((a, b) => Math.abs(parseInt(b.value) - zoomPercent) < Math.abs(parseInt(a.value) - zoomPercent) ? b : a);
+          zSlider.value = best.value;
+        } else {
+          zSlider.value = zoomPercent;
+        }
+      }
+      document.getElementById('zoom-value-label').textContent = zoomPercent + '%';
+
+      // Auto-fit zoom nếu là lần đầu mở (không có zoom đã lưu)
+      if (!settings.zoomLevel) {
+        setTimeout(() => _autoFitZoom(), 100);
+      }
+
 
       // Load for Audio Player
       SheetAudioPlayer.setup(OSMDRenderer.getInstance());
@@ -250,8 +295,9 @@ const App = (() => {
     _transposeTimer = setTimeout(() => _commitTranspose(), 400);
   }
 
-  async function _commitTranspose() {
+  async function _commitTranspose(scrollSnapshot = null) {
     if (!originalXml) return;
+
 
     const disp = document.getElementById('transpose-display');
     if (disp) disp.style.opacity = '0.5';
@@ -295,11 +341,17 @@ const App = (() => {
     }
 
     // ── Sheet View mode ───────────────────────────────────────────────────
-    // Scroll Lock
-    const container  = document.querySelector('.sheet-viewer-wrapper');
-    const scrollY    = window.scrollY;
-    const wrapScroll = container ? container.scrollTop : 0;
-    if (container) container.style.minHeight = container.scrollHeight + 'px';
+    // Scroll Lock — dùng snapshot được truyền từ saveModifiedXML (chính xác hơn)
+    // hoặc tự đo nếu gọi trực tiếp từ transpose
+    const container   = document.querySelector('.sheet-viewer-wrapper');
+    const scrollY     = window.scrollY;
+    const wrapScrollH = scrollSnapshot?.preScrollH ?? (container ? container.scrollHeight : 0);
+    const wrapScrollT = scrollSnapshot?.preScrollT ?? (container ? container.scrollTop   : 0);
+    // Tỉ lệ cuộn (0.0 = đầu, 1.0 = cuối)
+    const scrollRatio = wrapScrollH > 0 ? wrapScrollT / wrapScrollH : 0;
+    // Giữ minHeight (chỉ set nếu chưa set bởi caller)
+    if (container && !scrollSnapshot) container.style.minHeight = wrapScrollH + 'px';
+
 
     try {
       if (window.InstrumentMixer?.preserveState) window.InstrumentMixer.preserveState();
@@ -323,14 +375,21 @@ const App = (() => {
       console.warn('[App] OSMD reload lỗi:', err.message);
     } finally {
       if (disp) disp.style.opacity = '';
-      setTimeout(() => {
-        if (container) {
-          container.style.minHeight = '';
-          container.scrollTo({ left: 0, top: wrapScroll, behavior: 'instant' });
-        }
-        window.scrollTo({ left: 0, top: scrollY, behavior: 'instant' });
-      }, 50);
+      // Restore scroll: dùng rAF để đảm bảo SVG đã layout xong
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (container) {
+            container.style.minHeight = '';
+            const newH = container.scrollHeight;
+            // Tính lại scrollTop theo đúng tỉ lệ đã lưu
+            const targetScrollTop = Math.round(scrollRatio * newH);
+            container.scrollTo({ left: 0, top: targetScrollTop, behavior: 'instant' });
+          }
+          window.scrollTo({ left: 0, top: scrollY, behavior: 'instant' });
+        });
+      });
     }
+
   }
 
 
@@ -348,6 +407,14 @@ const App = (() => {
   /* ====================== XML NATIVE EDITING ====================== */
   async function saveModifiedXML(newXmlString) {
     if (!currentSong || !currentSong.xmlPath) return;
+
+    // Snapshot scroll position NGAY LÚC GỌI (trước khi async fetch làm layout shift)
+    const _scrollContainer = document.querySelector('.sheet-viewer-wrapper');
+    const _preScrollH = _scrollContainer ? _scrollContainer.scrollHeight : 0;
+    const _preScrollT = _scrollContainer ? _scrollContainer.scrollTop  : 0;
+    // Giữ minHeight ngay để layout không co lại trong khi chờ fetch
+    if (_scrollContainer && _preScrollH > 0) _scrollContainer.style.minHeight = _preScrollH + 'px';
+
     try {
       const res = await fetch('api/save_xml.php', {
         method: 'POST',
@@ -359,17 +426,34 @@ const App = (() => {
 
       originalXml = newXmlString;
       AppUI.showToast('Đã lưu hợp âm vào file gốc thành công!', 'success');
-      await _commitTranspose();
+
+      // Truyền scroll snapshot vào _commitTranspose để nó không tự đo lại
+      await _commitTranspose({ preScrollH: _preScrollH, preScrollT: _preScrollT });
       return true;
     } catch (err) {
+      if (_scrollContainer) _scrollContainer.style.minHeight = '';
       AppUI.showToast('Lỗi lưu file: ' + err.message, 'error');
       return false;
     }
   }
 
+
   /* ====================== ZOOM ====================== */
   async function setZoom(percent) {
     currentZoom = percent / 100;
+    // Sync select element
+    const slider = document.getElementById('zoom-slider');
+    if (slider) {
+      const tagName = slider.tagName.toLowerCase();
+      if (tagName === 'select') {
+        // Find closest option
+        const opts = Array.from(slider.options);
+        const best = opts.reduce((a, b) => Math.abs(parseInt(b.value) - percent) < Math.abs(parseInt(a.value) - percent) ? b : a);
+        slider.value = best.value;
+      } else {
+        slider.value = percent;
+      }
+    }
     document.getElementById('zoom-value-label').textContent = percent + '%';
     await OSMDRenderer.setZoom(currentZoom);
     SessionTracker.setZoom(currentZoom);
@@ -377,6 +461,39 @@ const App = (() => {
     
     const lvc = document.getElementById('lyric-view-container');
     if (lvc) lvc.style.fontSize = `${percent}%`;
+  }
+
+  /**
+   * Tính zoom tự động sao cho bản nhạc vừa khung màn hình tối ưu.
+   * Gọi sau khi OSMD render xong lần đầu.
+   */
+  function _autoFitZoom() {
+    const container = document.getElementById('osmd-container');
+    const svg = container?.querySelector('svg');
+    if (!svg) return;
+    
+    const wrapper = document.querySelector('.sheet-viewer-wrapper');
+    if (!wrapper) return;
+    
+    // Chiều rộng vùng hiển thị trừ padding
+    const availableW = wrapper.clientWidth - 40; // 20px padding mỗi bên
+    if (availableW <= 0) return;
+    
+    // Độ rộng hiện tại của SVG ở zoom 1.0
+    const svgW = svg.clientWidth;
+    if (!svgW) return;
+    
+    // Tính zoom ratio để fit vừa
+    const ratio = availableW / svgW;
+    // Clamp trong khoảng hợp lý: 50% - 150%
+    const fittedZoom = Math.max(0.5, Math.min(1.5, ratio));
+    // Làm tròn đến bội số 10%
+    const snapPercent = Math.round(fittedZoom * 10) * 10;
+    
+    // Nếu đã đặt zoom từ session/URL thì không override
+    if (currentZoom !== 1.0) return;
+    
+    setZoom(snapPercent);
   }
 
   /* ====================== RESTORE FROM URL ====================== */
@@ -434,7 +551,12 @@ const App = (() => {
     document.getElementById('btn-transpose-up')?.addEventListener('click', e => { e.currentTarget.blur(); transposeBy(+1); });
     document.getElementById('btn-transpose-down')?.addEventListener('click', e => { e.currentTarget.blur(); transposeBy(-1); });
     document.getElementById('btn-transpose-reset')?.addEventListener('click', e => { e.currentTarget.blur(); resetTranspose(); });
-    document.getElementById('zoom-slider')?.addEventListener('input', e => { setZoom(parseInt(e.target.value, 10)); });
+    // Zoom: hỗ trợ cả <select> và <input type="range">
+    const zoomEl = document.getElementById('zoom-slider');
+    if (zoomEl) {
+      const evtType = zoomEl.tagName.toLowerCase() === 'select' ? 'change' : 'input';
+      zoomEl.addEventListener(evtType, e => { setZoom(parseInt(e.target.value, 10)); });
+    }
     
     document.getElementById('btn-session-panel')?.addEventListener('click', () => {
       document.getElementById('session-panel')?.classList.toggle('hidden');
@@ -497,9 +619,17 @@ const App = (() => {
   function _adjustZoom(delta) {
     const slider = document.getElementById('zoom-slider');
     if (!slider || slider.disabled) return;
-    const newVal = Math.min(250, Math.max(50, parseInt(slider.value) + delta));
-    slider.value = newVal;
-    setZoom(newVal);
+    const cur = parseInt(slider.value) || 100;
+    if (slider.tagName.toLowerCase() === 'select') {
+      const opts = Array.from(slider.options).map(o => parseInt(o.value));
+      const curIdx = opts.indexOf(cur);
+      let nextIdx = curIdx + (delta > 0 ? 1 : -1);
+      nextIdx = Math.max(0, Math.min(opts.length - 1, nextIdx));
+      setZoom(opts[nextIdx]);
+    } else {
+      const newVal = Math.min(200, Math.max(30, cur + delta));
+      setZoom(newVal);
+    }
   }
 
   /* ====================== NAVIGATION ====================== */

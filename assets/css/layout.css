@@ -180,12 +180,40 @@
 .transpose-btn:hover:not(:disabled) { background: var(--bg-raised); }
 .transpose-display { min-width: 36px; text-align: center; font-size: .85rem; font-weight: 600; font-family: var(--font-mono); color: var(--accent); padding: 0 .25rem; }
 
-.zoom-slider-wrap { display: flex; align-items: center; gap: .4rem; }
-.zoom-icon-sm { width: 14px; height: 14px; color: var(--text-muted); }
-#zoom-slider { -webkit-appearance: none; appearance: none; width: 100px; height: 4px; background: var(--bg-raised); border-radius: 2px; outline: none; cursor: pointer; transition: background var(--transition); }
-#zoom-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 8px var(--accent-glow); transition: transform var(--transition); }
-#zoom-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
-#zoom-slider:disabled { opacity: .4; cursor: not-allowed; }
+.zoom-select-wrap {
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+  background: var(--bg-overlay);
+  padding: .15rem .4rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  transition: border-color var(--transition), background var(--transition);
+}
+.zoom-select-wrap:focus-within {
+  border-color: var(--border-active);
+  background: var(--bg-surface);
+}
+.zoom-icon-sm { width: 14px; height: 14px; color: var(--text-muted); flex-shrink: 0; }
+.zoom-select {
+  /* Giữ appearance: auto để hiện mũi tên native dropdown */
+  -webkit-appearance: auto;
+  appearance: auto;
+  border: none;
+  background: transparent;
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--accent);
+  cursor: pointer;
+  outline: none;
+  padding: .1rem .15rem;
+  font-family: var(--font-mono);
+  min-width: 52px;
+  max-width: 70px;
+}
+.zoom-select:disabled { color: var(--text-muted); cursor: default; opacity: 0.55; }
+.zoom-select option { background: var(--bg-surface); color: var(--text-primary); font-weight: 600; }
+
 
 .toggle-switch { display: flex; align-items: center; cursor: pointer; position: relative; }
 .toggle-switch input { position: absolute; opacity: 0; width: 0; }
@@ -198,36 +226,61 @@
 /* Fullscreen */
 .sidebar.fs-hidden { transform: translateX(-100%); width: 0 !important; overflow: hidden; border: none; }
 
-/* Khi bật fullscreen: Thả nổi nút Fullscreen ở góc, ẩn toàn bộ Toolbar và PageBar */
-body.fullscreen-mode .toolbar { 
-  position: absolute; 
-  top: 10px; 
-  right: 15px; 
-  width: auto; 
-  height: auto; 
-  background: transparent; 
-  border: none; 
-  backdrop-filter: none; 
-  padding: 0; 
-  z-index: 9999; 
+
+/* ─── Sheet-Only Mode (chỉ hiện sheet nhạc) ──────────────── */
+body.sheet-only-mode .sidebar,
+body.sheet-only-mode #sidebar,
+body.sheet-only-mode .toolbar,
+body.sheet-only-mode #toolbar,
+body.sheet-only-mode .sidebar-overlay,
+body.sheet-only-mode .page-bar,
+body.sheet-only-mode .chord-edit-hint {
+  display: none !important;
+}
+body.sheet-only-mode .main-content {
+  position: fixed; inset: 0; z-index: 9990;
+  background: var(--bg-base);
+  overflow: hidden;
+}
+body.sheet-only-mode .sheet-viewer-wrapper {
+  position: absolute; inset: 0;
+  overflow-y: auto; overflow-x: hidden;
+  height: 100% !important; max-height: 100% !important;
+}
+body.sheet-only-mode .osmd-container {
+  max-width: 100%; padding: 1.5rem 2rem; margin-top: 0;
+}
+/* Nút thoát nổi góc trên phải */
+#btn-exit-sheet-only {
+  display: none;
+  position: fixed; top: 12px; right: 14px; z-index: 9999;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--bg-surface); border: 1px solid var(--border);
+  box-shadow: 0 3px 14px rgba(0,0,0,.22);
+  align-items: center; justify-content: center;
+  cursor: pointer; transition: background var(--transition), transform .15s;
+}
+#btn-exit-sheet-only:hover { background: var(--bg-raised); transform: scale(1.08); }
+#btn-exit-sheet-only svg { width: 18px; height: 18px; pointer-events: none; }
+body.sheet-only-mode #btn-exit-sheet-only { display: flex; }
+
+/* Giữ lại fullscreen-mode cũ (legacy, cho backward compat với FAB) */
+body.fullscreen-mode .toolbar {
+  position: absolute; top: 10px; right: 15px;
+  width: auto; height: auto; background: transparent;
+  border: none; backdrop-filter: none; padding: 0; z-index: 9999;
 }
 body.fullscreen-mode .toolbar-left,
 body.fullscreen-mode .control-group:not(:last-child),
-body.fullscreen-mode .page-bar {
-  display: none !important;
-}
+body.fullscreen-mode .page-bar { display: none !important; }
 body.fullscreen-mode #btn-fullscreen {
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
+  background: var(--bg-surface); border: 1px solid var(--border);
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
+  width: 44px; height: 44px; border-radius: 50%;
 }
-body.fullscreen-mode #btn-fullscreen svg {
-  width: 20px; height: 20px;
-}
+body.fullscreen-mode #btn-fullscreen svg { width: 20px; height: 20px; }
 body.fullscreen-mode .osmd-container { max-width: 100%; padding: 1rem; margin-top: 0; }
+
 
 /* Dropdown Details Reset */
 .dropdown-details summary::marker,
@@ -314,7 +367,7 @@ body.fullscreen-mode .osmd-container { max-width: 100%; padding: 1rem; margin-to
     flex-shrink: 0;
     flex-wrap: nowrap;
   }
-  #zoom-slider { width: 80px; }
+  .zoom-select { min-width: 46px; font-size: .73rem; }
 }
 
 /* --- iPad / Tablet Portrait (≤ 900px) --- */
@@ -349,7 +402,7 @@ body.fullscreen-mode .osmd-container { max-width: 100%; padding: 1rem; margin-to
   .transpose-btn { width: 32px !important; height: 32px !important; }
   .icon-btn { width: 36px; height: 36px; min-width: 36px; }
   .page-bar { min-height: 48px; }
-  #zoom-slider { width: 80px; }
+  .zoom-select { min-width: 46px; }
 }
 
 /* --- Mobile (≤ 768px) --- */
@@ -420,7 +473,9 @@ body.fullscreen-mode .osmd-container { max-width: 100%; padding: 1rem; margin-to
     flex-wrap: nowrap;
     gap: .4rem;
   }
-  #zoom-slider { width: 60px; }
+  .zoom-select { min-width: 42px; font-size: .7rem; }
+  .zoom-select-wrap { padding: .1rem .3rem; gap: .2rem; }
+  .zoom-icon-sm { width: 12px; height: 12px; }
 
   /* Chord set bar: compact nhưng không bị cắt */
   .chord-set-bar { gap: .25rem; flex-shrink: 0; }
@@ -453,6 +508,36 @@ body.fullscreen-mode .osmd-container { max-width: 100%; padding: 1rem; margin-to
   .chord-set-select { max-width: 75px; }
   #btn-delete-chord-set { display: none !important; }
 }
+
+/* --- Landscape on mobile/tablet (xoay ngang) --- */
+@media (max-width: 900px) and (orientation: landscape) {
+  /* Toolbar gọn hơn khi ngang */
+  .toolbar {
+    min-height: 44px;
+    padding: 0 0.5rem;
+  }
+  /* Page bar thấp hơn khi ngang */
+  .page-bar {
+    min-height: 40px;
+    padding: .15rem .5rem;
+  }
+  /* Bỏ margin trên page indicator */
+  .page-indicator { font-size: .7rem; }
+  /* Icon buttons nhỏ hơn */
+  .icon-btn { width: 32px; height: 32px; }
+}
+
+/* --- Landscape on small phone (≤ 600px landscape) --- */
+@media (max-width: 600px) and (orientation: landscape) {
+  /* Sidebar ẩn hoàn toàn — viewport quá hẹp */
+  .sidebar { width: 240px !important; }
+  .toolbar { min-height: 40px; padding: 0 .35rem; gap: .2rem; }
+  .btn-sm svg { width: 14px; height: 14px; }
+  .zoom-select-wrap { padding: .08rem .25rem; }
+  .chord-set-bar { padding: .1rem .3rem; }
+}
+
+
 
 /* =============================================
    CHẾ ĐỘ IN ẤN (PRINT READINESS)

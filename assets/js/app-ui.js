@@ -73,12 +73,14 @@ const AppUI = (() => {
   function enableControls(enabled) {
     ['btn-transpose-up','btn-transpose-down','btn-transpose-reset',
      'zoom-slider', 'btn-session-panel','btn-print',
-     'btn-fullscreen','btn-prev-song','btn-next-song', 'btn-mixer',
-     'btn-add-annotate-mode','btn-add-chord-mode', 'btn-play-audio',
+     'btn-prev-song','btn-next-song', 'btn-mixer',
+     'btn-add-annotate-mode','btn-add-chord-mode','btn-add-chord-mode-bar',
+     'chord-set-selector', 'btn-play-audio',
      'btn-auto-scroll','scroll-speed','btn-dark-mode'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.disabled = !enabled;
     });
+
     if (!enabled) {
       if (window.SheetAudioPlayer) window.SheetAudioPlayer.stop();
       if (window.AutoScroller) window.AutoScroller.stop();
@@ -146,20 +148,32 @@ const AppUI = (() => {
   }
 
   function toggleFullscreen() {
-    const body    = document.body;
-    const sidebar = document.getElementById('sidebar');
-    const btnFS   = document.getElementById('btn-fullscreen');
-    const isFullscreen = body.classList.toggle('fullscreen-mode');
+    const body  = document.body;
+    const isOn  = body.classList.toggle('sheet-only-mode');
+    const btnFS = document.getElementById('btn-fullscreen');
 
-    if (isFullscreen) {
-      sidebar?.classList.add('fs-hidden');
-      if (btnFS) btnFS.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>`;
-      showToast('Nhấn F hoặc Esc để thoát toàn màn hình', 'info');
-    } else {
-      sidebar?.classList.remove('fs-hidden');
-      if (btnFS) btnFS.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>`;
-    }
+    // Icon: expand (off) ↔ compress (on)
+    const SVG_EXPAND   = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>`;
+    const SVG_COMPRESS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>`;
+
+    if (btnFS) btnFS.innerHTML = isOn ? SVG_COMPRESS : SVG_EXPAND;
+    if (isOn) showToast('Sheet toàn màn hình — nhấn Esc hoặc nút góc để thoát', 'info');
   }
+
+  // Wire exit button + ESC (1 lần khi module load)
+  (function _initSheetOnly() {
+    const _exit = () => {
+      document.body.classList.remove('sheet-only-mode');
+      const btnFS = document.getElementById('btn-fullscreen');
+      if (btnFS) btnFS.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>`;
+    };
+    document.getElementById('btn-exit-sheet-only')?.addEventListener('click', _exit);
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && document.body.classList.contains('sheet-only-mode')) _exit();
+    });
+  })();
+
+
 
   function escapeHtml(str) {
     return String(str||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');

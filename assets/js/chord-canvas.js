@@ -22,7 +22,9 @@ const ChordCanvas = (() => {
 
   /* ─── Init ──────────────────────────────────────────────────── */
   function init() {
+    // Cả 2 nút: hidden compat + visible bar button đều trigger toggleAddMode
     document.getElementById('btn-add-chord-mode')?.addEventListener('click', toggleAddMode);
+    document.getElementById('btn-add-chord-mode-bar')?.addEventListener('click', toggleAddMode);
     document.getElementById('btn-cancel-add-chord')?.addEventListener('click', () => setAddMode(false));
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') { _closePopup(); setAddMode(false); }
@@ -131,18 +133,31 @@ const ChordCanvas = (() => {
   /* ─── Mode ──────────────────────────────────────────────────── */
   function setAddMode(on) {
     _editEnabled = !!on;
+
+    // Sync cả 2 nút toggle (hidden compat + visible bar)
     document.getElementById('btn-add-chord-mode')?.classList.toggle('active', on);
+    document.getElementById('btn-add-chord-mode-bar')?.classList.toggle('active', on);
+
+    // Floating hint banner (mới)
+    document.getElementById('chord-edit-hint')?.classList.toggle('hidden', !on);
+
+    // Inline edit controls trong bar: clear-all và cancel
+    document.getElementById('btn-clear-all-chords')?.classList.toggle('hidden', !on);
+    document.getElementById('btn-cancel-add-chord')?.classList.toggle('hidden', !on);
+
+    // Legacy compat
     document.getElementById('add-chord-hint')?.classList.toggle('hidden', !on);
+
+    // Chord dots
     document.querySelectorAll('.' + BTN_CLASS).forEach(d => { d.style.display = on ? 'flex' : 'none'; });
-    // FIX #1: toggle badge "sửa" trên các ô đã có hợp âm
     document.querySelectorAll('.cc-edit-badge').forEach(d => { d.style.display = on ? 'flex' : 'none'; });
-    
-    // Nếu AnnotateMode đang bật thì tắt
+
+    // Tắt AnnotateMode nếu đang bật
     if (on && window.AnnotationCanvas && document.getElementById('btn-add-annotate-mode')?.classList.contains('active')) {
       window.AnnotationCanvas.setAddMode(false);
     }
 
-    if (on) { if (document.querySelectorAll('.' + DOT_CLASS).length === 0) _build(); } 
+    if (on) { if (document.querySelectorAll('.' + DOT_CLASS).length === 0) _build(); }
     else { _closePopup(); }
   }
 
@@ -196,27 +211,29 @@ const ChordCanvas = (() => {
       : _applyTranspose(_customChords);
 
     const mapped = _mapNotes(notes, rawChordMap);
-    mapped.forEach(m => _placeDot(m));
+
+    // ── Xây dựng map: vị trí chord text SVG → để đặt badge PHÍA TRÊN chữ hợp âm
+    // getBoundingClientRect() trả về viewport px → zoom-safe, luôn đúng sau mỗi re-render
+    const chordTextPositions = _buildChordTextPositions(mapped, container);
+
+    mapped.forEach(m => _placeDot(m, chordTextPositions));
 
   }
 
-  /* ─── Edit Badges on SVG Chord Symbols ──────────────────────── */
+  /* ─── Build chord text position map ────────────────────────── */
   /**
-   * Đặt badge ✎ tại đúng vị trí text SVG của OSMD (G, C, D7...).
-   * Không dùng vị trí nốt (thấp, bị che) mà lấy getBoundingClientRect() của <text> trong SVG.
-   * Match theo thứ tự trái→phải, trên→dưới với danh sách note có chord.
+   * Map từ `${measureIdx}_${noteIdx}` → { bx, by, bw, bh } trong container coords.
+   * Dùng để đặt badge ✎ PHÍA TRÊN văn bản hợp âm thay vì đè lên nó.
+   * @returns {Map<string, {bx:number, by:number, bw:number, bh:number}>}
    */
-  function _buildEditBadgesOnSVG(mapped, rawChordMap) {
-    const container = document.getElementById('osmd-container');
+  function _buildChordTextPositions(mapped, container) {
+    const result = new Map();
     const svg = container?.querySelector('svg');
-    if (!svg) return;
+    if (!svg) return result;
 
     const cRect = container.getBoundingClientRect();
-    const scale = ChordCanvasUI.getScale();
-    const dotSize = ChordCanvasUI.getDotSize(scale);
-    const fSize   = Math.max(10, Math.round(11 * scale));
 
-    // Lấy tất cả chord text SVG, sắp xếp trái→phải, trên→dưới
+    // Lấy tất cả chord text SVG, sort top→bottom, left→right (đúng thứ tự bài nhạc)
     const chordTextEls = Array.from(
       svg.querySelectorAll('text[font-family*="OSMDChordFont"]')
     ).sort((a, b) => {
@@ -224,46 +241,30 @@ const ChordCanvas = (() => {
       if (Math.abs(ra.top - rb.top) > 15) return ra.top - rb.top;
       return ra.left - rb.left;
     });
-    if (!chordTextEls.length) return;
+    if (!chordTextEls.length) return result;
 
-    // Lấy mapped notes có hợp âm, sắp xếp theo measureIdx → noteIdx
+    // Mapped notes có hợp âm, cùng thứ tự OSMD render
     const chordNotes = mapped
       .filter(m => m.chord && m.measureIdx >= 0)
       .sort((a, b) => a.measureIdx - b.measureIdx || a.noteIdx - b.noteIdx);
-    if (!chordNotes.length) return;
+    if (!chordNotes.length) return result;
 
-    // Match 1-1 theo thứ tự (OSMD render theo đúng thứ tự bài nhạc)
+    // Match 1-1: chordNote[i] ↔ chordTextEl[i]
     const count = Math.min(chordTextEls.length, chordNotes.length);
     for (let i = 0; i < count; i++) {
-      const textEl = chordTextEls[i];
-      const m      = chordNotes[i];
-      const rect   = textEl.getBoundingClientRect();
-
-      // Tâm của badge = tâm của chord text SVG element
-      const bx = (rect.left - cRect.left) + rect.width  / 2 - dotSize / 2;
-      const by = (rect.top  - cRect.top)  + rect.height / 2 - dotSize / 2;
-
-      const badge = document.createElement('div');
-      badge.className = DOT_CLASS + ' cc-edit-badge';
-      badge.textContent = '✎';
-      badge.title = `Sửa: ${m.chord}`;
-      ChordCanvasUI.applyAbsolute(badge, bx, by, [
-        'display:flex',
-        'align-items:center', 'justify-content:center',
-        `width:${dotSize}px`, `height:${dotSize}px`, 'border-radius:50%',
-        'background:rgba(109,40,217,0.85)',
-        'border:2px solid rgba(255,255,255,0.75)',
-        'color:#fff', `font-size:${fSize}px`, 'line-height:1',
-        'box-shadow:0 2px 6px rgba(109,40,217,0.5)',
-        'pointer-events:auto', 'cursor:pointer', 'user-select:none', 'z-index:12'
-      ]);
-      badge.addEventListener('click', e => {
-        e.stopPropagation();
-        _showPopup(badge, m.measureIdx, m.noteIdx, m.chord);
+      const rect = chordTextEls[i].getBoundingClientRect();
+      const key  = `${chordNotes[i].measureIdx}_${chordNotes[i].noteIdx}`;
+      result.set(key, {
+        bx: rect.left - cRect.left,
+        by: rect.top  - cRect.top,
+        bw: rect.width,
+        bh: rect.height,
       });
-      container.appendChild(badge);
     }
+    return result;
   }
+
+
 
   /* ─── Map notes ─────────────────────────────────────────────── */
   function _mapNotes(noteEls, chordMap) {
@@ -315,27 +316,44 @@ const ChordCanvas = (() => {
   }
 
   /* ─── Place dots ────────────────────────────────────────────── */
-  function _placeDot({ el, rect, measureIdx, noteIdx, chord }) {
+  function _placeDot({ el, rect, measureIdx, noteIdx, chord }, chordTextPositions = new Map()) {
     if (!rect || rect.width === 0 || rect.height === 0) return;
     const container = document.getElementById('osmd-container');
     const cRect = container.getBoundingClientRect();
-    
-    // Tính toạ độ tuyệt đối so sánh với #osmd-container
-    const cx = (rect.left - cRect.left) + rect.width / 2;
-    const cy = (rect.top - cRect.top) - 20;
 
-    const scale = ChordCanvasUI.getScale();
+    // Vị trí fallback dựa vào nốt nhạc (dùng khi chưa có SVG chord text)
+    const cx = (rect.left - cRect.left) + rect.width / 2;
+    const cy = (rect.top  - cRect.top)  - 20;
+
+    const scale   = ChordCanvasUI.getScale();
     const dotSize = ChordCanvasUI.getDotSize(scale);
     const fSize   = Math.max(10, Math.round(11 * scale));
+
     if (chord) {
       if (!_editEnabled && _currentSet === 'default') return;
 
-      // Badge ✎ tím — cùng size và CX/CY với nút +, đặt trên đúng vùng hợp âm
+      // Tìm vị trí chord text SVG (nếu OSMD đã render)
+      const textPos = chordTextPositions.get(`${measureIdx}_${noteIdx}`);
+
+      let badgeX, badgeY;
+      if (textPos) {
+        // ✅ Đặt badge PHÍA TRÊN chữ hợp âm (không đè lên)
+        // Center X = center của chord text; Y = bên trên chord text (gap 2px)
+        badgeX = textPos.bx + textPos.bw / 2 - dotSize / 2;
+        badgeY = textPos.by - dotSize - 6;  // 6px gap để không đè lên chữ
+
+      } else {
+        // Fallback: vị trí ước tính phía trên nốt (custom set chưa reload)
+        badgeX = cx - dotSize / 2;
+        badgeY = cy - dotSize / 2;
+      }
+
+      // Badge ✎ — hiện phía TRÊN văn bản hợp âm
       const badge = document.createElement('div');
       badge.className = DOT_CLASS + ' cc-edit-badge';
       badge.textContent = '\u270e'; // ✎
       badge.title = 'S\u1eeda h\u1ee3p \u00e2m: ' + chord;
-      ChordCanvasUI.applyAbsolute(badge, cx - dotSize / 2, cy - dotSize / 2, [
+      ChordCanvasUI.applyAbsolute(badge, badgeX, badgeY, [
         'display:' + (_editEnabled ? 'flex' : 'none'),
         'align-items:center', 'justify-content:center',
         'width:' + dotSize + 'px', 'height:' + dotSize + 'px', 'border-radius:50%',
@@ -351,11 +369,13 @@ const ChordCanvas = (() => {
       });
       container.appendChild(badge);
 
-      // Invisible wider click zone phía dưới badge (dễ bấm hơn trên mobile)
+      // Invisible click zone tại vị trí chord text (để dễ click vào chữ hợp âm)
       const span = document.createElement('span');
       span.className = DOT_CLASS + ' cc-chord-text';
       span.title = chord;
-      ChordCanvasUI.applyAbsolute(span, cx - 30, cy, [
+      const spanX = textPos ? textPos.bx + textPos.bw / 2 - 30 : cx - 30;
+      const spanY = textPos ? textPos.by                       : cy;
+      ChordCanvasUI.applyAbsolute(span, spanX, spanY, [
         'white-space:nowrap', 'user-select:none',
         'opacity:0', 'width:60px', 'height:22px',
         'pointer-events:' + (_editEnabled ? 'auto' : 'none'),
@@ -433,11 +453,17 @@ const ChordCanvas = (() => {
     window.OSMDRenderer?.refreshRules?.();
 
     if (_currentSet === 'default') {
+      // Default set: cần inject vào XML gốc → full reload OSMD (có scroll-lock)
       await ChordCanvasXML.injectXml(measureIdx, noteIdx, chordOriginalKey, refreshLayout);
     } else {
+      // Custom set (HD, ...): chỉ cần update bộ nhớ + lưu server + rebuild dots
+      // KHÔNG cần full OSMD reload → scroll không bị nhảy
       _customChords[`${measureIdx}_${noteIdx}`] = chordOriginalKey;
       await _saveCustomSet();
-      if (refreshLayout && window.App?.reloadCurrentXML) await window.App.reloadCurrentXML();
+      // Rebuild dots tại chỗ (không reload OSMD SVG)
+      if (refreshLayout) {
+        setTimeout(() => requestAnimationFrame(_build), 80);
+      }
     }
   }
 
@@ -447,9 +473,11 @@ const ChordCanvas = (() => {
     } else {
       delete _customChords[`${measureIdx}_${noteIdx}`];
       await _saveCustomSet();
-      if (window.App?.reloadCurrentXML) await window.App.reloadCurrentXML();
+      // Rebuild dots tại chỗ — không reload OSMD
+      setTimeout(() => requestAnimationFrame(_build), 80);
     }
   }
+
 
   async function _saveCustomSet() {
     const songId = window.App?.getCurrentSongId?.();

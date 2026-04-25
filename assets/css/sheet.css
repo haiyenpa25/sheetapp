@@ -38,34 +38,169 @@
 .sheet-area { position: relative; }
 
 /* ---- PAGE BAR ---- */
-.page-bar { display: flex; align-items: center; justify-content: space-between; padding: .4rem 1.25rem; background: rgba(255,255,255,.9); border-bottom: 1px solid var(--border); backdrop-filter: blur(8px); position: sticky; top: 0; z-index: 40; flex-shrink: 0; gap: 1rem; }
-.page-bar-left  { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
-.page-bar-right { display: flex; align-items: center; gap: .6rem; flex-shrink: 0; }
-.page-indicator { font-size: .75rem; font-weight: 600; color: var(--text-secondary); font-family: var(--font-mono); min-width: 80px; text-align: center; }
-.add-chord-hint { font-size: .78rem; color: var(--accent); font-weight: 500; animation: fadeIn .25s ease; white-space: nowrap; }
-.link-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: .78rem; font-weight: 600; text-decoration: underline; padding: 0; white-space: nowrap; }
-#btn-add-chord-mode.active { background: rgba(109,40,217,.1); border-color: rgba(109,40,217,.4); color: var(--accent); }
+.page-bar {
+  display: flex; align-items: center;
+  padding: .35rem 1rem;
+  background: rgba(255,255,255,.96);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  position: sticky; top: 0; z-index: 40;
+  flex-shrink: 0; gap: .35rem;
+  min-height: 44px;
+}
 
+/* Nhóm controls trong page-bar */
+.pb-group {
+  display: flex; align-items: center; gap: .35rem;
+  flex-shrink: 0;
+}
+/* Separator trái — tạo đường phân cách giữa nhóm */
+.pb-sep {
+  padding-left: .65rem;
+  margin-left: .25rem;
+  border-left: 1px solid var(--border);
+}
+/* Spacer đẩy Nav sang phải */
+.pb-spacer { flex: 1; min-width: .25rem; }
+
+/* Nav buttons nhỏ gọn */
+.pb-nav-btn { width: 28px; height: 28px; }
+.page-indicator { font-size: .75rem; font-weight: 600; color: var(--text-secondary); font-family: var(--font-mono); min-width: 48px; text-align: center; }
+
+/* Reset button nhỏ hơn */
+.pb-reset-btn { padding: .18rem .42rem !important; font-size: .73rem !important; }
+
+/* Capo badge */
+.capo-badge {
+  font-size: .68rem; background: var(--accent); color: #fff;
+  padding: .12rem .45rem; border-radius: 99px; font-weight: 700;
+  cursor: help; white-space: nowrap; letter-spacing: .3px;
+}
+
+/* Guitar icon trong chord group */
+.pb-chord-icon { width: 14px; height: 14px; color: var(--text-muted); flex-shrink: 0; }
+
+/* Nút icon + text nhỏ */
+.pb-btn-icon-text {
+  display: inline-flex; align-items: center; gap: .25rem;
+  color: var(--accent) !important; font-weight: 600 !important;
+}
+.pb-btn-icon-text svg { width: 12px; height: 12px; }
+
+/* ── Nút Nhập HÂ (toggle chord edit mode) ── */
+.btn-chord-edit {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .22rem .55rem;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: .775rem; font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.btn-chord-edit svg { width: 12px; height: 12px; flex-shrink: 0; }
+.btn-chord-edit:hover:not(:disabled) {
+  border-color: var(--accent); color: var(--accent);
+  background: rgba(109,40,217,.06);
+}
+.btn-chord-edit.active {
+  background: rgba(109,40,217,.12);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(109,40,217,.15);
+}
+.btn-chord-edit:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── Floating Chord Edit Hint ── */
+.chord-edit-hint {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .38rem 1.25rem;
+  background: linear-gradient(90deg, rgba(109,40,217,.06) 0%, rgba(109,40,217,.03) 100%);
+  border-bottom: 1px solid rgba(109,40,217,.18);
+  font-size: .78rem; color: var(--accent); font-weight: 500;
+  flex-shrink: 0; position: sticky; top: 44px; z-index: 39;
+  animation: hintSlideDown .2s ease;
+}
+.chord-edit-hint.hidden { display: none; }
+.hint-icon { width: 13px; height: 13px; flex-shrink: 0; }
+.hint-close-btn {
+  margin-left: auto; background: none; border: none;
+  color: var(--accent); cursor: pointer; font-size: .8rem;
+  padding: .1rem .3rem; border-radius: var(--radius-xs);
+  opacity: .65; transition: opacity var(--transition), background var(--transition);
+}
+.hint-close-btn:hover { opacity: 1; background: rgba(109,40,217,.1); }
+@keyframes hintSlideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Legacy — giữ cho link-btn và add-chord-hint JS compat */
+.link-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: .78rem; font-weight: 600; text-decoration: underline; padding: 0; white-space: nowrap; }
+.add-chord-hint { font-size: .78rem; color: var(--accent); font-weight: 500; }
+
+
+/* ---- OSMD CONTAINER ---- */
+.osmd-container {
+  position: relative;
+  padding: 2rem 2rem;
+  /* Không cố định max-width — để OSMD tự căn chỉnh theo zoom */
+  max-width: 980px;
+  margin: 1.5rem auto;
+  background: #ffffff;
+  border-radius: var(--radius);
+  box-shadow: 0 2px 20px rgba(109,40,217,.10), 0 1px 4px rgba(0,0,0,.06);
+  min-height: 400px;
+}
+.osmd-container svg { width: 100%; height: auto; display: block; }
+
+/* ---- Tablet ---- */
 @media (max-width: 900px) {
-  /* iPad/Tablet — osmd-container phải full width để tránh overflow khi compact mode */
+  /* iPad/Tablet — osmd-container phải full width để tránh overflow */
   .osmd-container {
     max-width: 100%;
-    margin: 1rem 0;
-    padding: 1.5rem 1rem;
+    margin: 0.75rem 0.5rem;
+    padding: 1.25rem 1rem;
     border-radius: 8px;
   }
 }
 
+/* ---- Mobile ---- */
 @media (max-width: 768px) {
   .page-bar { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
   .page-bar::-webkit-scrollbar { display: none; }
-  .osmd-container { padding: 1rem 0.5rem; margin: 0.5rem 0; }
+  .osmd-container {
+    padding: 1rem 0.5rem;
+    margin: 0.25rem;
+    border-radius: 6px;
+    min-height: 300px;
+  }
   .welcome-screen { padding: 1.5rem 1rem; }
 }
 
-/* ---- OSMD CONTAINER ---- */
-.osmd-container { position: relative; padding: 2.5rem 2rem; max-width: 860px; margin: 2rem auto; background: #ffffff; border-radius: var(--radius); box-shadow: 0 2px 20px rgba(109,40,217,.10), 0 1px 4px rgba(0,0,0,.06); min-height: 400px; }
-.osmd-container svg { width: 100%; height: auto; display: block; }
+/* ---- Small phone ---- */
+@media (max-width: 480px) {
+  .osmd-container {
+    padding: 0.75rem 0.25rem;
+    margin: 0.15rem;
+    border-radius: 4px;
+  }
+}
+
+/* ---- Landscape (Xoay ngang) trên mobile/tablet ---- */
+@media (max-width: 900px) and (orientation: landscape) {
+  .osmd-container {
+    max-width: 100%;
+    margin: 0.25rem 0.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+  }
+  .page-bar {
+    min-height: 40px;
+    padding: .2rem .5rem;
+  }
+}
 
 /* ---- THU NHỎ TIÊU ĐỀ BÀI HÁT TRONG OSMD ----
    OSMD render title rất to. CSS target tất cả text SVG có font-size > 18px.
@@ -142,33 +277,76 @@
 
 
 /* ---- CHORD DOT LAYER ---- */
-.osmd-wrapper { position: relative; }
+/* osmd-container là stacking context gốc cho tất cả chord overlays */
+.osmd-container { position: relative; isolation: isolate; }
 
+/* Layer thứ tự từ dưới lên:
+   1. SVG bản nhạc (z-index: auto)
+   2. Chord text custom (cc-dot, z-index: 80) — hiển thị hợp âm
+   3. Edit badge ✎ (z-index: 82) — chỉ khi edit mode
+   4. Popup nhập hợp âm (z-index: 99999) — trên cùng
+*/
+
+.osmd-wrapper { position: relative; }
 .chord-dot-layer { position: absolute; inset: 0; pointer-events: none; z-index: 60; overflow: visible; }
 
-/* Nút tròn "+" — chỉ hiện khi .dots-visible */
-.chord-dot-btn {
+/* cc-dot: absolute element được đặt trực tiếp vào osmd-container bởi JS */
+/* z-index: 80 được set inline trong JS */
+.cc-dot { position: absolute !important; }
+
+/* Nút tròn "+" — chỉ hiện khi edit mode */
+.cc-dot-btn {
   display: none;
-  width: 18px; height: 18px;
+  width: 20px; height: 20px;
   border-radius: 50%;
-  background: rgba(109, 40, 217, 0.75);
+  background: rgba(109, 40, 217, 0.80);
   border: none;
   color: #fff;
-  font-size: 15px; line-height: 17px;
+  font-size: 16px; line-height: 18px;
   text-align: center;
   transition: background .15s, transform .15s;
-  box-shadow: 0 1px 4px rgba(109,40,217,.4);
+  box-shadow: 0 1px 5px rgba(109,40,217,.45);
+  /* Tăng touch target trên mobile */
+  cursor: pointer;
 }
-.chord-dot-btn span { display:block; }
-.chord-dot-btn:hover {
+.cc-dot-btn:hover {
   background: rgba(109, 40, 217, 1);
-  transform: translateX(-50%) scale(1.3) !important;
+  transform: translateX(-50%) scale(1.25) !important;
 }
 
-/* Chỉ hiện nút khi layer có class dots-visible */
+/* Edit badge ✎ */
+.cc-edit-badge {
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform .12s, background .12s;
+}
+.cc-edit-badge:hover {
+  transform: translateX(-50%) scale(1.2) !important;
+  background: rgba(109, 40, 217, 1) !important;
+}
+
+/* Chord text hiển thị */
+.cc-chord-text {
+  font-size: .72rem;
+  font-weight: 800;
+  font-family: var(--font-mono, monospace);
+  color: #c00;
+  white-space: nowrap;
+  padding: 0 2px;
+  border-radius: 3px;
+  transition: background .12s;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.cc-chord-text:hover { background: rgba(200,0,0,.1); }
+
+/* Legacy class names still used in older CSS refs */
+.chord-dot-btn { display: none; width: 18px; height: 18px; border-radius: 50%; background: rgba(109,40,217,0.75); border: none; color: #fff; font-size: 15px; line-height: 17px; text-align: center; transition: background .15s, transform .15s; box-shadow: 0 1px 4px rgba(109,40,217,.4); }
+.chord-dot-btn span { display:block; }
+.chord-dot-btn:hover { background: rgba(109,40,217,1); transform: translateX(-50%) scale(1.3) !important; }
 .dots-visible .chord-dot-btn { display: block; }
 
-/* Chữ hợp âm — LUÔN hiện */
+/* Chữ hợp âm — LUÔN hiện (legacy) */
 .chord-dot-text {
   font-size: .72rem;
   font-weight: 800;
@@ -178,6 +356,7 @@
   padding: 0 2px;
   border-radius: 3px;
   transition: background .12s;
+
 }
 .chord-dot-text:hover { background: rgba(200,0,0,.1); }
 
@@ -221,17 +400,26 @@ body.dark-mode .osmd-container {
   box-shadow: 0 4px 25px rgba(0,0,0,0.6);
 }
 body.dark-mode .page-bar {
-  background: rgba(17, 24, 39, 0.9);
+  background: rgba(17, 24, 39, 0.95);
   border-bottom-color: #374151;
 }
-body.dark-mode .page-indicator,
-body.dark-mode .chord-set-label {
-  color: #9ca3af;
+body.dark-mode .pb-sep { border-left-color: #374151; }
+body.dark-mode .page-indicator { color: #9ca3af; }
+body.dark-mode .pb-chord-icon { color: #6b7280; }
+body.dark-mode .btn-chord-edit {
+  background: rgba(255,255,255,.05); border-color: #374151; color: #9ca3af;
 }
-body.dark-mode .chord-set-bar {
-  background: rgba(109,40,217,.2);
-  border-color: rgba(109,40,217,.4);
+body.dark-mode .btn-chord-edit:hover:not(:disabled) {
+  border-color: var(--accent); color: var(--accent);
 }
+body.dark-mode .btn-chord-edit.active {
+  background: rgba(109,40,217,.2); border-color: var(--accent); color: var(--accent);
+}
+body.dark-mode .chord-edit-hint {
+  background: linear-gradient(90deg, rgba(109,40,217,.12) 0%, rgba(109,40,217,.06) 100%);
+  border-bottom-color: rgba(109,40,217,.3);
+}
+
 
 /* ---- PRINT STYLES ---- */
 @media print {
