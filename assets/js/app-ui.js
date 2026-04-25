@@ -160,16 +160,11 @@ const AppUI = (() => {
     if (isOn) showToast('Sheet toàn màn hình — nhấn Esc hoặc nút góc để thoát', 'info');
   }
 
-  // Wire exit button + ESC (1 lần khi module load)
+  // Wire exit button (Esc xử lý tập trung trong _bindKeyboard của app.js)
   (function _initSheetOnly() {
-    const _exit = () => {
-      document.body.classList.remove('sheet-only-mode');
-      const btnFS = document.getElementById('btn-fullscreen');
-      if (btnFS) btnFS.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>`;
-    };
-    document.getElementById('btn-exit-sheet-only')?.addEventListener('click', _exit);
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && document.body.classList.contains('sheet-only-mode')) _exit();
+    document.getElementById('btn-exit-sheet-only')?.addEventListener('click', () => {
+      // Gọi toggleFullscreen để reset icon nút + xóa class
+      if (document.body.classList.contains('sheet-only-mode')) toggleFullscreen();
     });
   })();
 

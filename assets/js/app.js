@@ -608,7 +608,7 @@ const App = (() => {
         case 'Escape':
           document.getElementById('import-modal')?.classList.add('hidden');
           document.getElementById('session-panel')?.classList.add('hidden');
-          if (document.body.classList.contains('fullscreen-mode')) AppUI.toggleFullscreen();
+          if (document.body.classList.contains('sheet-only-mode')) AppUI.toggleFullscreen();
           break;
         case '+': case '=': if (e.ctrlKey) { e.preventDefault(); _adjustZoom(+10); } break;
         case '-': if (e.ctrlKey) { e.preventDefault(); _adjustZoom(-10); } break;
