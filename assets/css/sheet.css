@@ -917,9 +917,13 @@ body.dark-mode .lvi-word-only {
 .si-time    { border-color: #93c5fd; color: #1d4ed8; background: #eff6ff; }
 .si-tempo   { border-color: #6ee7b7; color: #065f46; background: #ecfdf5; }
 .si-measures{ border-color: #fcd34d; color: #92400e; background: #fffbeb; }
+.si-chord-set     { border-color: #d1d5db; color: #6b7280; background: #f9fafb; }
+.si-chord-has     { border-color: #86efac; color: #15803d; background: #f0fdf4; }
+.si-chord-empty   { border-color: #d1d5db; color: #9ca3af; background: #f9fafb; font-style: italic; }
 .si-toggle  { background: none; border: none; cursor: pointer; color: #9ca3af;
               padding: 0 .3rem; font-size: .8rem; transition: color .15s; }
 .si-toggle:hover { color: #6d28d9; }
+
 
 /* =============================================
    SPRINT B — Volume Slider

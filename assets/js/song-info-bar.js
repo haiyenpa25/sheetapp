@@ -93,18 +93,34 @@ const SongInfoBar = (() => {
     return key;
   }
 
-  /* ─── Render strip ──────────────────────────────────────── */
+  /* ─── Render strip ─────────────────────────────────────── */
   function _render(info) {
     const inner = document.getElementById('si-inner');
     if (!inner) return;
 
     const chips = [];
-    if (info.key)          chips.push(`<span class="si-chip si-key">🎵 ${info.key} ${info.mode}</span>`);
-    if (info.timeBeats)    chips.push(`<span class="si-chip si-time">♩ ${info.timeBeats}/${info.timeBeatType}</span>`);
+    if (info.key)          chips.push(`<span class="si-chip si-key">\uD83C\uDFB5 ${info.key} ${info.mode}</span>`);
+    if (info.timeBeats)    chips.push(`<span class="si-chip si-time">\u2669 ${info.timeBeats}/${info.timeBeatType}</span>`);
     if (info.tempo)        chips.push(`<span class="si-chip si-tempo">= ${info.tempo} bpm</span>`);
-    if (info.measureCount) chips.push(`<span class="si-chip si-measures">${info.measureCount} nhịp</span>`);
+    if (info.measureCount) chips.push(`<span class="si-chip si-measures">${info.measureCount} nh\u1ECBp</span>`);
+
+    // Chord set chip — c\u1EADp nh\u1EADt sau khi ChordCanvas load xong (delay nh\u1ECF)
+    const currentSet   = window.ChordCanvas?.getCurrentSet?.();
+    const chordCount   = Object.keys(window.ChordCanvas?.getCustomChords?.() ?? {}).length;
+    if (currentSet && currentSet !== 'default') {
+      const countLabel = chordCount > 0 ? `\u25CF ${chordCount} h\u1EE3p \u00E2m` : '\u25CB Ch\u01B0a c\u00F3';
+      const chipClass  = chordCount > 0 ? 'si-chip si-chord-set si-chord-has' : 'si-chip si-chord-set si-chord-empty';
+      chips.push(`<span class="${chipClass}" title="B\u1ED9 h\u1EE3p \u00E2m: ${currentSet}">\uD83C\uDFB8 ${currentSet} \u00B7 ${countLabel}</span>`);
+    } else if (currentSet === 'default') {
+      chips.push(`<span class="si-chip si-chord-set" title="H\u1EE3p \u00E2m t\u1EEB TLH (g\u1ED1c)">\uD83C\uDFB8 TLH (g\u1ED1c)</span>`);
+    }
 
     inner.innerHTML = chips.join('');
+  }
+
+  /* G\u1ECDi l\u1EA1i _render \u0111\u1EC3 c\u1EADp nh\u1EADt chord chip sau khi set switch */
+  function refreshChordChip() {
+    if (_songData) _render(_songData);
   }
 
   function _toggle() {
@@ -116,10 +132,13 @@ const SongInfoBar = (() => {
     if (btn) btn.textContent = collapsed ? '▶' : '▼';
   }
 
-  /* Trả về info đã parse để các module khác dùng (e.g. PerformanceNotes) */
+  /* Tr\u1EA3 v\u1EC1 info \u0111\u00E3 parse \u0111\u1EC3 c\u00E1c module kh\u00E1c d\u00F9ng */
   function getSongInfo() { return _songData; }
 
-  return { init, loadSong, clearSong, getSongInfo };
+  /* Tr\u1EA3 v\u1EC1 t\u00EAn t\u00F4ng g\u1ED1c (e.g. "G", "Bb", "Am") */
+  function getSongKey()  { return _songData?.key || ''; }
+
+  return { init, loadSong, clearSong, getSongInfo, getSongKey, refreshChordChip };
 })();
 
 window.SongInfoBar = SongInfoBar;

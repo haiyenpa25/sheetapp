@@ -587,6 +587,11 @@ const ChordCanvas = (() => {
   }
 
   async function deleteSet(name) {
+    // RULE: TLH (default) và HD đều bị lock — không cho xóa
+    if (!name || name === 'default' || name === 'HD') {
+      window.App?.showToast?.('Bộ này được bảo vệ, không thể xóa!', 'error');
+      return;
+    }
     const songId = window.App?.getCurrentSongId?.();
     if (!songId) return;
     try {
@@ -595,19 +600,20 @@ const ChordCanvas = (() => {
         body: JSON.stringify({ action: 'delete', songId, name })
       });
     } catch(e) {}
-    if (_currentSet === name) await switchSet('default');
+    if (_currentSet === name) await switchSet('HD'); // fallback về HD thay vì default
     _refreshSetDropdown();
   }
 
   /* ─── Set dropdown UI ───────────────────────────────────────── */
   async function _refreshSetDropdown() {
-    const selector = document.getElementById('chord-set-selector');
+    const selector  = document.getElementById('chord-set-selector');
     const deleteBtn = document.getElementById('btn-delete-chord-set');
+    const countBadge = document.getElementById('chord-set-count');
     if (!selector) return;
 
     const songId = window.App?.getCurrentSongId?.();
     if (!songId) {
-      selector.innerHTML = '<option value="default">Hợp âm mặc định</option>';
+      selector.innerHTML = '<option value="default">TLH (gốc)</option>';
       selector.disabled = true; return;
     }
 
@@ -616,18 +622,36 @@ const ChordCanvas = (() => {
     try {
       const res = await fetch(`api/chord_sets.php?action=list&songId=${encodeURIComponent(songId)}`);
       const r   = await res.json();
-      if (r.success) sets = ['default', ...r.sets];
+      if (r.success) {
+        // Đảm bảo HD luôn trong danh sách (dù rỗng)
+        const hdInList = r.sets.some(s => s === 'HD');
+        sets = ['default', ...(hdInList ? r.sets : ['HD', ...r.sets])];
+      }
     } catch(e) {}
 
-    selector.innerHTML = sets.map(s => `<option value="${s}" ${s === _currentSet ? 'selected' : ''}>${s === 'default' ? 'TLH' : s}</option>`).join('');
-    
-    const isAdmin   = window.Auth?.isAdmin?.()   ?? false;
+    // Hiện số hợp âm trong set hiện tại
+    const chordCount = Object.keys(_customChords).length;
+    const countText  = _currentSet !== 'default'
+      ? (chordCount > 0 ? `● ${chordCount} hợp âm` : '○ Chưa có')
+      : '';
+    if (countBadge) {
+      countBadge.textContent = countText;
+      countBadge.style.color = chordCount > 0 ? 'var(--success,#16a34a)' : 'var(--text-muted,#9ca3af)';
+    }
+
+    selector.innerHTML = sets.map(s =>
+      `<option value="${s}" ${s === _currentSet ? 'selected' : ''}>${
+        s === 'default' ? 'TLH (gốc)' : s
+      }</option>`
+    ).join('');
+
+    const isAdmin    = window.Auth?.isAdmin?.()   ?? false;
     const isLoggedIn = window.Auth?.isLoggedIn?.() ?? false;
-    if (deleteBtn) deleteBtn.style.display = (_currentSet !== 'default' && isAdmin) ? 'inline-flex' : 'none';
+    // RULE: TLH và HD đều lock — nút xóa chỉ hiện khi set khác default + HD
+    const isDeletable = _currentSet !== 'default' && _currentSet !== 'HD' && isAdmin;
+    if (deleteBtn) deleteBtn.style.display = isDeletable ? 'inline-flex' : 'none';
     const newBtn = document.getElementById('btn-new-chord-set');
     if (newBtn) newBtn.classList.toggle('hidden', !isLoggedIn);
-    
-    // Disable selector if user is not admin and wants to switch to add mode wait, actually guests can switch sets to VIEW them.
   }
 
   function _updateSetUI() {
@@ -667,7 +691,11 @@ const ChordCanvas = (() => {
     confirmDeleteSet: async () => {
       const sel  = document.getElementById('chord-set-selector');
       const name = sel?.value;
-      if (!name || name === 'default') return;
+      // RULE: TLH (default) và HD đều bị lock
+      if (!name || name === 'default' || name === 'HD') {
+        window.App?.showToast?.('Bộ TLH và HD được bảo vệ, không thể xóa!', 'error');
+        return;
+      }
       ChordCanvasUI.showDeleteConfirmModal(name, {
         onConfirm: async () => await deleteSet(name)
       });

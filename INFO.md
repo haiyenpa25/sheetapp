@@ -1,4 +1,4 @@
-﻿# 🎵 SheetApp — Tai Lieu He Thong & Ke Hoach Nang Cap
+# 🎵 SheetApp — Tai Lieu He Thong & Ke Hoach Nang Cap
 
 > Version: 2.0-dev | Stack: PHP + SQLite + OSMD + Vanilla JS
 > Cap nhat: 2026-04-25
@@ -13,6 +13,31 @@ SheetApp la ung dung DOC VA BIEU DIEN BAN NHAC chuyen nghiep cho:
 - Nguoi tap nhac annotate ghi chu tren ban nhac
 
 Nguon du lieu: MusicXML (.xml) render qua OSMD — chuan quoc te cho sheet nhac.
+
+---
+
+## 1b. CORE RULES — Bat Buoc Giu Nguyen
+
+> Day la cac quy tac KHONG thay doi. Moi developer phai doc va tuan thu.
+
+### RULE 1: Bo Hop Am HD la Mac Dinh
+- Moi bai hat LUON co bo "HD" (du rong) — tao tu dong qua tools/init_hd_sets.php
+- Khi load bai: ChordCanvas tu dong chon set "HD"
+- Neu HD co hop am (>0): render HD, an TLH goc
+- Neu HD rong: fallback hien TLH goc (khong inject empty map — tranh mat hop am)
+- File: chord-canvas.js (loadSong), app.js (hasCustomChords guard)
+
+### RULE 2: Tong Goc = 0 Luon Luon
+- Khi load bai moi: currentTranspose LUON = 0
+- KHONG restore session truoc (settings.lastTranspose bi loai bo)
+- Ngoai le duy nhat: Setlist da co transposeOverride rieng cho bai do
+- File: app.js (loadSong line ~231)
+
+### RULE 3: Lock TLH va HD
+- Bo "default" (TLH) va bo "HD" deu khong the xoa
+- Nut xoa chi hien khi set != 'default' va != 'HD' va la Admin
+- Khi xoa set khac va dang chon no: fallback ve "HD" (khong phai default)
+- File: chord-canvas.js (deleteSet, confirmDeleteSet, _refreshSetDropdown)
 
 ---
 
@@ -60,12 +85,13 @@ Database (SQLite): songs | annotations | chord_sets | users | sessions
 [x] Search chord trong library
 [x] Undo/Redo Ctrl+Z/Y — 20 buoc
 [x] Tab/Space → not tiep (fast entry)
+[x] Chord count badge (so hop am trong set hien tai)
 [ ] Undo cho Default XML set — CHUA CO
 
 ### 3.4 Transpose & Capo
 [x] Transpose +/- semitone (nut + phim mui ten)
-[x] Capo dropdown 0-7 (apply transpose)
-[x] Capo auto-suggest (scoring)
+[x] Capo dropdown 0-7 (sync voi transpose)
+[x] Capo hint voi ten tong goc ("→ ngan 2, dan the G goc")
 [x] Enharmonic #/b tu dong
 [ ] Tooltip chord sau capo — CHUA CO
 

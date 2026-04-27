@@ -226,21 +226,24 @@ const App = (() => {
 
       const settings = await SessionTracker.loadSong(song.id);
       
-      // Ưu tiên: 1) transposeOverride (Setlist) 2) URL param t 3) SessionTracker 4) 0
-      const _urlT = window.URLState?.get?.()?.t ?? 0;
-      currentTranspose = transposeOverride !== null ? transposeOverride
-                       : (_urlT !== 0 ? _urlT : (settings.lastTranspose || 0));
-      currentZoom      = settings.zoomLevel     || 1.0;
+      // RULE: Tông gốc luôn = 0 khi load bài mới
+      // Ngoại lệ duy nhất: Setlist đã set transposeOverride cho bài này
+      currentTranspose = transposeOverride ?? 0;
+      currentZoom      = settings.zoomLevel || 1.0;
+
 
       AppUI.setLoadingText('Đang xử lý dữ liệu hồ sơ...');
       let processedXml = originalXml;
-      
-      // Inject Custom Chords (ẩn Mặc định)
-      const currentSet = window.ChordCanvas?.getCurrentSet?.() || 'default';
-      if (currentSet !== 'default') {
-        const customChordsMap = window.ChordCanvas?.getCustomChords?.();
+
+      // RULE: Chỉ inject HD chords khi HD có dữ liệu (>0 hợp âm)
+      // Nếu HD rỗng → giữ TLH gốc (không inject empty map, tránh xóa mất TLH)
+      const currentSet      = window.ChordCanvas?.getCurrentSet?.() || 'default';
+      const customChordsMap = window.ChordCanvas?.getCustomChords?.() ?? {};
+      const hasCustomChords = currentSet !== 'default' && Object.keys(customChordsMap).length > 0;
+      if (hasCustomChords) {
         processedXml = window.ChordCanvasXML?.cloneAndInjectChords?.(processedXml, customChordsMap) || processedXml;
       }
+
 
       AppUI.setLoadingText('Đang vẽ bản nhạc...');
       // Set zoom level TRƯỚC khi load để tránh render 2 lần (load render + setZoom render)
@@ -299,10 +302,24 @@ const App = (() => {
 
       if (window.ChordCanvas?.onOSMDRendered) window.ChordCanvas.onOSMDRendered();
       if (window.AnnotationCanvas?.onOSMDRendered) window.AnnotationCanvas.onOSMDRendered();
-      if (window.ChordCanvas?.refreshSetDropdown) setTimeout(() => window.ChordCanvas.refreshSetDropdown(), 200);
+      if (window.ChordCanvas?.refreshSetDropdown) {
+        setTimeout(() => {
+          window.ChordCanvas.refreshSetDropdown();
+          // P3: cập nhật chord chip sau khi dropdown load xong
+          setTimeout(() => window.SongInfoBar?.refreshChordChip?.(), 150);
+        }, 200);
+      }
 
       AppUI.updateSessionPanel(currentTranspose, SessionTracker.getHistory());
-      AppUI.showToast(`Đã mở: ${song.title}`, 'info');
+
+      // P4 — Toast thông minh: tông + bộ chord + số hợp âm
+      const _key        = window.SongInfoBar?.getSongKey?.() || '';
+      const _set        = window.ChordCanvas?.getCurrentSet?.() || 'HD';
+      const _cnt        = Object.keys(window.ChordCanvas?.getCustomChords?.() ?? {}).length;
+      const _keyLabel   = _key ? ` · ${_key}` : '';
+      const _setLabel   = _set === 'default' ? 'TLH (gốc)' : _set;
+      const _cntLabel   = _set !== 'default' ? ` (${_cnt > 0 ? _cnt + ' hợp âm' : 'chưa có hợp âm'})` : '';
+      AppUI.showToast(`🎵 ${song.title}${_keyLabel} · ${_setLabel}${_cntLabel}`, 'info');
 
       // Restore trạng thái từ URL sau khi load xong (AWAIT để chord set load xong trước khi enable controls)
       await _restoreFromURL();

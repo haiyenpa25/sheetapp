@@ -106,10 +106,18 @@ const AppUI = (() => {
     if (capoSel) {
       capoSel.value = String(Math.max(0, Math.min(7, currentTranspose)));
     }
-    // Cập nhật capo hint
+    // Cập nhật capo hint với tên tông gốc
     const capoHint = document.getElementById('capo-hint');
     if (capoHint) {
-      capoHint.textContent = currentTranspose > 0 ? `→ kẹp ngăn ${currentTranspose}` : '';
+      if (currentTranspose > 0) {
+        const origKey = window.SongInfoBar?.getSongKey?.() || '';
+        // VD: "→ ngăn 2, đàn thế G gốc" hoặc "→ kẹp ngăn 2" nếu chưa biết key
+        capoHint.textContent = origKey
+          ? `→ ngăn ${currentTranspose}, đàn thế ${origKey} gốc`
+          : `→ kẹp ngăn ${currentTranspose}`;
+      } else {
+        capoHint.textContent = '';
+      }
     }
 
     const btnUp   = document.getElementById('btn-transpose-up');

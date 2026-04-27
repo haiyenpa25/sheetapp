@@ -65,7 +65,8 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
         </button>
       </div>
-      <button id="btn-transpose-reset" class="btn btn-ghost btn-xs pb-reset-btn" disabled>Reset</button>
+      <button id="btn-transpose-reset" class="btn btn-ghost btn-xs pb-reset-btn"
+              title="Về tông gốc của bài (phím 0)" disabled>↺ Gốc</button>
       <!-- Capo dropdown -->
       <div id="capo-wrap" class="capo-wrap hidden">
         <label for="capo-select" class="capo-label">Capo</label>
@@ -107,8 +108,9 @@
     <div class="pb-group pb-group--chord pb-sep" id="chord-set-bar" role="group" aria-label="Quản lý hợp âm">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pb-chord-icon" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
       <select id="chord-set-selector" class="chord-set-select" disabled onchange="ChordCanvas.switchSet(this.value)">
-        <option value="default">TLH</option>
+        <option value="default">TLH (gốc)</option>
       </select>
+      <span id="chord-set-count" class="chord-set-count" style="font-size:.7rem;color:var(--text-muted,#9ca3af);white-space:nowrap;"></span>
       <button id="btn-new-chord-set" class="btn btn-xs btn-ghost pb-btn-icon-text"
               title="Tạo bộ hợp âm mới" onclick="ChordCanvas.showNewSetModal()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
