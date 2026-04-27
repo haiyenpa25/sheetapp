@@ -111,6 +111,11 @@ const SheetAudioPlayer = (() => {
   /* ─── Stop ─── */
   function stop() {
     if (_player && _isPlaying) {
+      // Restore schedule gốc nếu đang bị patch
+      if (_origSchedule && _player.instrumentPlayer) {
+        _player.instrumentPlayer.schedule = _origSchedule;
+        _origSchedule = null;
+      }
       _player.stop();
       _isPlaying = false;
       if (_osmd?.cursor) {
@@ -129,69 +134,91 @@ const SheetAudioPlayer = (() => {
     else if (_player.playbackRate !== undefined)        _player.playbackRate = rate;
   }
 
-  /* ─── Apply voice mode — dùng đúng API Voice.Volume ─── */
+  /* ─── Pitch ranges cho từng bè (SATB, halfTone tuyệt đối) ───
+   *
+   * XML này là piano-style: S+A cùng Part/Voice (P1), T+B cùng Part/Voice (P2)
+   * → Không thể tách bằng VoiceId
+   * → Tách bằng PITCH RANGE (halfTone từ C0=0):
+   *
+   *   Soprano: G4(67)  → C6(84)   stem=down trong P1
+   *   Alto:    C4(60)  → F#4(66)  stem=up   trong P1
+   *   Tenor:   G2(43)  → B4(71)   stem=down trong P2 (nốt trên)
+   *   Bass:    C2(36)  → F3(53)   stem=down trong P2 (nốt dưới)
+   *
+   * Thực tế XML bài này:
+   *   P1 notes: G4(67),D5(74) = Soprano; D4(62),B4(71) = Alto
+   *   P2 notes: G3(55),B3(59) = Tenor;   B2(47),G2(43) = Bass
+   *
+   * Cutoff đơn giản: P1 midpoint ≈ 67 (G4), P2 midpoint ≈ 55 (G3)
+   * ─────────────────────────────────────────────────────────── */
+
+  let _origSchedule = null;  // lưu schedule gốc để restore
+
+  function _halfTone(midiNote) { return midiNote; } // halfTone = midi note number
+
+  function _shouldPlay(halfTone, partIndex, mode) {
+    if (mode === 'satb') return true;
+    // P1 (partIndex=0, Treble): note >= 67 → Soprano, < 67 → Alto
+    // P2 (partIndex=1, Bass):   note >= 55 → Tenor,   < 55 → Bass
+    if (partIndex === 0) {
+      if (mode === 'soprano') return halfTone >= 67;
+      if (mode === 'alto')    return halfTone < 67;
+      return false; // tenor/bass từ P1 không cần
+    }
+    if (partIndex === 1) {
+      if (mode === 'tenor') return halfTone >= 53;
+      if (mode === 'bass')  return halfTone < 53;
+      return false;
+    }
+    return true;
+  }
+
   function applyPlaybackMode() {
     if (!_player || !_osmd) return;
     const mode = _currentVoice;
+    const instrPlayer = _player.instrumentPlayer;
+    if (!instrPlayer) return;
 
-    // scoreInstruments = _player.sheet.Instruments (OSMD Instrument objects)
-    // Mỗi Instrument có .Voices[] — mỗi Voice là S, A, T hoặc B
-    // notePlaybackCallback đọc Voice.Volume làm gain → set 0 = im lặng
+    // Restore schedule gốc trước
+    if (_origSchedule) {
+      instrPlayer.schedule = _origSchedule;
+      _origSchedule = null;
+    }
+
+    if (mode === 'satb') return; // không filter gì
+
+    // Xác định midiId của P1 và P2 từ sheet
     const instruments = _player.sheet?.Instruments;
-    if (!instruments?.length) {
-      console.warn('[Audio] sheet.Instruments không khả dụng, thử fallback...');
-      return;
-    }
+    const p1MidiId = instruments?.[0]?.MidiInstrumentId ?? 0;
+    const p2MidiId = instruments?.[1]?.MidiInstrumentId ?? 0;
 
-    // Phân tích cấu trúc: log để debug nếu cần
-    console.log(`[Audio] Voice mode: ${mode}, Instruments: ${instruments.length}`);
-    instruments.forEach((inst, ii) => {
-      console.log(`  Inst[${ii}] "${inst.Name}" Voices: ${inst.Voices?.length}`);
-      inst.Voices?.forEach((v, vi) => {
-        console.log(`    Voice[${vi}] VoiceId=${v.VoiceId} midiId=${v.midiInstrumentId}`);
+    console.log(`[Audio] Filter mode="${mode}" P1_midiId=${p1MidiId} P2_midiId=${p2MidiId}`);
+
+    // Monkey-patch schedule để lọc notes theo pitch range
+    _origSchedule = instrPlayer.schedule.bind(instrPlayer);
+    instrPlayer.schedule = function(midiId, time, notes) {
+      // Xác định Part từ midiId
+      let partIndex = -1;
+      if (midiId === p1MidiId) partIndex = 0;
+      else if (midiId === p2MidiId) partIndex = 1;
+
+      // Nếu S hoặc A: chỉ giữ P1 notes; nếu T hoặc B: chỉ giữ P2 notes
+      if (mode === 'soprano' || mode === 'alto') {
+        if (partIndex !== 0) return; // drop P2 hoàn toàn
+      } else { // tenor, bass
+        if (partIndex !== 1) return; // drop P1 hoàn toàn
+      }
+
+      // Filter notes theo pitch range trong cùng Part
+      const filtered = notes.filter(n => {
+        const ht = (n.note ?? n.halfTone ?? 60) + 12; // osmd halfTone offset +12
+        return _shouldPlay(ht, partIndex, mode);
       });
-    });
 
-    if (mode === 'satb') {
-      // Phát tất cả — restore Volume = 1
-      instruments.forEach(inst =>
-        inst.Voices?.forEach(v => { v.Volume = 1; })
-      );
-      return;
-    }
-
-    // SATB mapping theo cấu trúc XML:
-    // ─ 2 Parts (phổ biến HTTLVN):
-    //   Part 0 (Treble): Voice[0]=Soprano (VoiceId=1), Voice[1]=Alto (VoiceId=2)
-    //   Part 1 (Bass):   Voice[0]=Tenor  (VoiceId=1), Voice[1]=Bass  (VoiceId=2)
-    // ─ 4 Parts:
-    //   Part 0=S, Part 1=A, Part 2=T, Part 3=B (mỗi Part chỉ có 1 Voice)
-
-    const numParts = instruments.length;
-
-    instruments.forEach((inst, pi) => {
-      inst.Voices?.forEach((voice, vi) => {
-        let audible = false;
-
-        if (numParts >= 4) {
-          // 4-Part: mỗi Part = 1 bè
-          audible = (mode === 'soprano' && pi === 0)
-                 || (mode === 'alto'    && pi === 1)
-                 || (mode === 'tenor'   && pi === 2)
-                 || (mode === 'bass'    && pi === 3);
-        } else {
-          // 2-Part: Part 0 = Treble (S+A), Part 1 = Bass (T+B)
-          // VoiceId=1 → bè trên (S hoặc T), VoiceId=2 → bè dưới (A hoặc B)
-          const voiceId = voice.VoiceId ?? (vi + 1);
-          if (mode === 'soprano') audible = (pi === 0 && voiceId === 1);
-          else if (mode === 'alto')    audible = (pi === 0 && voiceId === 2);
-          else if (mode === 'tenor')   audible = (pi === 1 && voiceId === 1);
-          else if (mode === 'bass')    audible = (pi === 1 && voiceId === 2);
-        }
-
-        voice.Volume = audible ? 1 : 0;
-      });
-    });
+      if (filtered.length > 0) {
+        _origSchedule(midiId, time, filtered);
+      }
+    };
   }
 
   /* ─── Enable / Disable controls ─── */
