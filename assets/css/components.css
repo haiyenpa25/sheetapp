@@ -59,6 +59,55 @@
 .select-toolbar:focus { border-color: var(--border-active); color: var(--text-primary); }
 .select-toolbar:disabled { opacity: .4; cursor: not-allowed; }
 
+/* ─── Voice Selector: S · A · T · B · ♪ ─── */
+.voice-selector {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-overlay, #f3f4f6);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.voice-btn {
+  width: 26px;
+  height: 22px;
+  border: none;
+  border-radius: 6px;
+  font-size: .72rem;
+  font-weight: 800;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-muted, #9ca3af);
+  letter-spacing: .2px;
+  transition: background .15s ease, color .15s ease, transform .1s ease;
+  line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.voice-btn:not(:disabled):hover {
+  background: var(--bg-raised, #e9eaec);
+  color: var(--text-primary, #111827);
+  transform: scale(1.08);
+}
+.voice-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+/* Active state — mỗi bè 1 màu riêng */
+.voice-btn.voice-s.active  { background: #7c3aed; color: #fff; }  /* Soprano — tím */
+.voice-btn.voice-a.active  { background: #2563eb; color: #fff; }  /* Alto    — xanh */
+.voice-btn.voice-t.active  { background: #d97706; color: #fff; }  /* Tenor   — cam */
+.voice-btn.voice-b.active  { background: #dc2626; color: #fff; }  /* Bass    — đỏ */
+.voice-btn.voice-all.active {
+  background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%);
+  color: #fff;
+  font-size: .8rem;
+}  /* SATB — gradient tím→xanh */
+
+/* Dark mode */
+body.dark-mode .voice-selector {
+  background: var(--bg-raised, #1e1e2e);
+  border-color: var(--border, #374151);
+}
 /* ---- MODAL ---- */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.7); backdrop-filter: blur(4px); z-index: 500; display: flex; align-items: center; justify-content: center; padding: 1.5rem; animation: fadeIn .15s ease; }
 .modal-overlay.hidden { display: none; }

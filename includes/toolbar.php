@@ -35,13 +35,26 @@
         <option value="1.25">1.25×</option>
         <option value="1.5">1.5×</option>
       </select>
-      <!-- Phát nhạc bổng/trầm (SATB) -->
-      <select id="audio-playback-mode" class="select-toolbar" disabled title="Chế độ phát bè">
-        <option value="satb" selected>Tất cả</option>
-        <option value="soprano">Soprano (Nữ Cao)</option>
-        <option value="alto">Alto (Nữ Trầm)</option>
-        <option value="tenor">Tenor (Nam Cao)</option>
-        <option value="bass">Bass (Nam Trầm)</option>
+      <!-- Voice Selector: 5 chế độ phát bè SATB -->
+      <div class="voice-selector" id="voice-selector" role="group" aria-label="Chọn bè phát">
+        <button class="voice-btn voice-s" data-voice="soprano"
+                title="Soprano — Nữ Cao&#10;Giai điệu chính (Khóa Sol, nốt trên)" disabled>S</button>
+        <button class="voice-btn voice-a" data-voice="alto"
+                title="Alto — Nữ Trầm&#10;Hòa âm (Khóa Sol, nốt dưới)" disabled>A</button>
+        <button class="voice-btn voice-t" data-voice="tenor"
+                title="Tenor — Nam Cao&#10;Dẫn âm (Khóa Fa, nốt trên)" disabled>T</button>
+        <button class="voice-btn voice-b" data-voice="bass"
+                title="Bass — Nam Trầm&#10;Nền hòa âm (Khóa Fa, nốt dưới)" disabled>B</button>
+        <button class="voice-btn voice-all active" data-voice="satb"
+                title="Hòa âm — Phát cả 4 bè cùng lúc" disabled>♪</button>
+      </div>
+      <!-- Hidden select giữ lại để JS legacy đọc được -->
+      <select id="audio-playback-mode" style="display:none" aria-hidden="true">
+        <option value="satb" selected>SATB</option>
+        <option value="soprano">Soprano</option>
+        <option value="alto">Alto</option>
+        <option value="tenor">Tenor</option>
+        <option value="bass">Bass</option>
       </select>
     </div>
 
