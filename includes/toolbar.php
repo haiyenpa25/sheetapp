@@ -45,17 +45,17 @@
       </select>
     </div>
 
-    <!-- AUTO SCROLL -->
-    <div class="control-group">
+    <!-- AUTO SCROLL — Gộp nút + tốc độ thành 1 control -->
+    <div class="control-group scroll-control-group">
       <button id="btn-auto-scroll" class="btn btn-ghost btn-sm" disabled title="Tự động cuộn bản nhạc">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
         <span class="btn-text">Cuộn</span>
       </button>
-      <select id="scroll-speed" class="select-toolbar" disabled title="Tốc độ cuộn">
-        <option value="1">Rùa</option>
-        <option value="2" selected>Chậm</option>
-        <option value="3">Vừa</option>
-        <option value="4">Nhanh</option>
+      <select id="scroll-speed" class="select-toolbar select-scroll-speed" disabled title="Tốc độ cuộn">
+        <option value="1">🐢</option>
+        <option value="2" selected>🚶</option>
+        <option value="3">🚴</option>
+        <option value="4">⚡</option>
       </select>
     </div>
 
