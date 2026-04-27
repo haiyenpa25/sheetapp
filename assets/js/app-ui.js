@@ -84,6 +84,9 @@ const AppUI = (() => {
       if (el) el.disabled = !enabled;
     });
 
+    // Voice buttons S/A/T/B/♪ — enable/disable cùng lúc với các control khác
+    document.querySelectorAll('.voice-btn').forEach(b => { b.disabled = !enabled; });
+
     if (!enabled) {
       if (window.SheetAudioPlayer) window.SheetAudioPlayer.stop();
       if (window.AutoScroller) window.AutoScroller.stop();

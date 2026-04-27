@@ -298,6 +298,9 @@ const App = (() => {
       const volSlider2 = document.getElementById('volume-slider');
       if (volSlider2) { volSlider2.disabled = false; _updateVolumeTrack(volSlider2); }
 
+      // Enable audio controls (Phát + S/A/T/B/♪ voice buttons)
+      SheetAudioPlayer.enableBtn(true);
+
       AppUI.showOSMD();
 
       if (window.ChordCanvas?.onOSMDRendered) window.ChordCanvas.onOSMDRendered();
