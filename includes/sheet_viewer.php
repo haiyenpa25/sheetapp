@@ -141,7 +141,7 @@
     <!-- Spacer đẩy Nav sang phải -->
     <!-- ⑤ Nhật Ký Biểu Diễn -->
     <button id="btn-perf-notes" class="btn btn-xs btn-ghost pb-btn-icon-text"
-            title="Nhật ký biểu diễn (tông, BPM, ghi chú)" disabled>
+            title="Nhật ký — tông, BPM, ghi chú biểu diễn" disabled>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
         <polyline points="14 2 14 8 20 8"/>
@@ -181,8 +181,12 @@
 
   <!-- Song Info Strip — Sprint A1 -->
   <div id="song-info-strip" class="song-info-strip si-hidden">
-    <div id="si-inner" class="si-inner"></div>
-    <button id="btn-song-info-toggle" class="si-toggle" title="Thu gọn">▼</button>
+    <div class="si-top-row">
+      <div id="si-inner" class="si-inner"></div>
+      <button id="btn-song-info-toggle" class="si-toggle" title="Thu gọn">▼</button>
+    </div>
+    <!-- Nội dung Nhật ký hiển thị inline -->
+    <div id="si-notes-inline" class="si-notes-inline si-notes-hidden"></div>
   </div>
 
   <!-- OSMD CONTAINER -->

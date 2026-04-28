@@ -57,12 +57,31 @@ try {
             $stmt = $pdo->prepare("INSERT INTO omr_workspace (id, original_filename, status) VALUES (?, ?, 'waiting')");
             $stmt->execute([$id, $originalName]);
 
-            // Gọi OMR tiến trình ngầm
-            // Trong môi trường Windows XAMPP:
+            // Kiểm tra OMR Engine (Docker) có sống không
+            $engineUrl = 'http://localhost:5555/health';
+            $engineOk  = false;
+            $ctx = stream_context_create(['http' => ['timeout' => 3, 'ignore_errors' => true]]);
+            $healthRes = @file_get_contents($engineUrl, false, $ctx);
+            if ($healthRes) {
+                $healthData = json_decode($healthRes, true);
+                $engineOk = ($healthData['status'] ?? '') === 'ok';
+            }
+
+            if (!$engineOk) {
+                $pdo->prepare("UPDATE omr_workspace SET status = 'error' WHERE id = ?")
+                    ->execute([$id]);
+                http_response_code(503);
+                echo json_encode(['error' => 'OMR Engine chưa sẵn sàng. Kiểm tra Docker container sheetapp-omr.']);
+                exit;
+            }
+
+            // Gọi OMR Worker ngầm (PHP CLI)
             $workerPath = realpath(__DIR__ . '/omr_worker.php');
-            $phpBin = PHP_BINARY;
-            $command = "start /b \"\" \"$phpBin\" \"$workerPath\" $id";
-            pclose(popen($command, "r"));
+            $phpBin     = PHP_BINARY;
+            // Escape paths đúng cho Windows (dùng double quotes trong cmd)
+            $logFile    = WORKSPACE_DIR . $id . '_worker.log';
+            $command    = "start /b \"\" \"{$phpBin}\" \"{$workerPath}\" {$id} > \"{$logFile}\" 2>&1";
+            pclose(popen($command, 'r'));
 
             echo json_encode(['success' => true, 'id' => $id]);
             break;

@@ -2,17 +2,48 @@
  * audio-player.js — Hệ thống phát audio SATB 5 chế độ
  * Soprano (S) · Alto (A) · Tenor (T) · Bass (B) · Hòa âm (♪)
  *
- * Mỗi bè có màu riêng, click để bật/tắt — chỉ 1 chế độ active tại một thời điểm.
+ * ══════════════════════════════════════════════════════════════
+ * NGUYÊN LÝ FILTER BÈ (Pitch-Rank):
+ *
+ *  OSMD AudioPlayer gọi schedule(midiId, time, notes) với notes là
+ *  TẤT CẢ các nốt vang cùng lúc — có thể là 2, 3, hoặc 4 nốt.
+ *
+ *  Trong nhạc SATB chuẩn, thứ tự pitch LUÔN tương ứng với bè:
+ *    sorted ascending → [Bass, Tenor, Alto, Soprano]
+ *    sorted[0]   = Bass     (thấp nhất)
+ *    sorted[1]   = Tenor    (thứ hai từ thấp)
+ *    sorted[n-2] = Alto     (thứ hai từ cao)
+ *    sorted[n-1] = Soprano  (cao nhất)
+ *
+ *  Cách này hoạt động đúng bất kể OSMD gọi schedule:
+ *    • Một lần với tất cả 4 nốt (merged)
+ *    • Hoặc riêng từng Part (2 nốt mỗi lần)
+ * ══════════════════════════════════════════════════════════════
  */
+
 const SheetAudioPlayer = (() => {
   'use strict';
 
-  let _player      = null;
-  let _isPlaying   = false;
-  let _osmd        = null;
+  /* ── State ── */
+  let _player       = null;
+  let _isPlaying    = false;
+  let _osmd         = null;
   let _currentVoice = 'satb'; // 'soprano' | 'alto' | 'tenor' | 'bass' | 'satb'
+  let _origSchedule = null;   // backup để restore khi stop / đổi mode
+  let _volumeDb     = 12;     // mức boost mặc định (dB, 0 = gốc, +12 ≈ 4× louder)
 
-  /* ─── Voice labels ─── */
+  /**
+   * Ngưỡng phân biệt cặp nốt Treble (Soprano+Alto) vs Bass (Tenor+Bass)
+   * khi schedule chỉ nhận 2 nốt (1 Part riêng).
+   *
+   * Từ XML bài này (G major SATB):
+   *   P1 max note: luôn >= F#4(66) — Soprano cao nhất
+   *   P2 max note: luôn <= D4(62)  — Tenor cao nhất khoá Fa
+   *   → Khoảng trống 63-65 → threshold=64 an toàn cho mọi beat.
+   */
+  const TREBLE_THRESHOLD = 64; // E4
+
+  /* ── Nhãn hiển thị ── */
   const VOICE_LABELS = {
     soprano : 'Soprano (Nữ Cao)',
     alto    : 'Alto (Nữ Trầm)',
@@ -21,7 +52,132 @@ const SheetAudioPlayer = (() => {
     satb    : 'Hòa âm 4 bè',
   };
 
-  /* ─── Init ─── */
+  /* ══════════════════════════════════════
+   *  MIDI pitch helper
+   * ══════════════════════════════════════ */
+
+  /**
+   * Trích MIDI note number (C4=60) từ note object của OSMD AudioPlayer.
+   * OSMD dùng `halfTone` = MIDI standard. Fallback `note` cho phiên bản cũ.
+   */
+  function _getMidi(n) {
+    return (typeof n.halfTone === 'number') ? n.halfTone
+         : (typeof n.note    === 'number') ? n.note
+         : 60;
+  }
+
+  /* ══════════════════════════════════════
+   *  Core filter — Pitch-Rank
+   * ══════════════════════════════════════ */
+
+  /**
+   * Chọn note(s) cần phát từ danh sách notes vang cùng lúc.
+   *
+   * @param {object[]} notes - notes từ schedule callback (đã grouped theo time)
+   * @param {string}   mode  - 'soprano' | 'alto' | 'tenor' | 'bass'
+   * @returns {object[]}
+   */
+  function _pickByVoice(notes, mode) {
+    if (!notes || notes.length === 0) return [];
+
+    /* Sort ascending: thấp → cao */
+    const s = [...notes].sort((a, b) => _getMidi(a) - _getMidi(b));
+    const n = s.length;
+
+    /* ── 1 nốt ── */
+    if (n === 1) {
+      /* Nốt đơn: không xác định bè → phát để không bị đứt quãng */
+      return s;
+    }
+
+    /* ── 2 nốt ── */
+    if (n === 2) {
+      /*
+       * OSMD có thể gọi riêng từng Part:
+       *   Call với P1 (Treble): [Alto_note, Soprano_note]  → max >= TREBLE_THRESHOLD
+       *   Call với P2 (Bass):   [Bass_note, Tenor_note]    → max <  TREBLE_THRESHOLD
+       *
+       * Dùng max pitch để xác định cặp này thuộc Part nào, rồi chọn đúng bè.
+       */
+      const maxMidi  = _getMidi(s[1]);
+      const isTreble = maxMidi >= TREBLE_THRESHOLD;
+
+      if (isTreble) {
+        /* P1 (khoá Sol): s[0]=Alto, s[1]=Soprano */
+        if (mode === 'soprano') return [s[1]];
+        if (mode === 'alto')    return [s[0]];
+        return []; /* Tenor/Bass không phát P1 */
+      } else {
+        /* P2 (khoá Fa): s[0]=Bass, s[1]=Tenor */
+        if (mode === 'tenor') return [s[1]];
+        if (mode === 'bass')  return [s[0]];
+        return []; /* Soprano/Alto không phát P2 */
+      }
+    }
+
+    /* ── 3-4 nốt (merged từ cả 2 Part) ── */
+    /*
+     * Thứ tự pitch rank trong SATB chuẩn:
+     *   s[0]   = Bass     (thấp nhất)
+     *   s[1]   = Tenor    (thứ hai)
+     *   s[n-2] = Alto     (thứ hai từ trên)
+     *   s[n-1] = Soprano  (cao nhất)
+     */
+    switch (mode) {
+      case 'bass':    return [s[0]];
+      case 'tenor':   return [s[Math.min(1, n - 1)]];
+      case 'alto':    return [s[Math.max(n - 2, 0)]];
+      case 'soprano': return [s[n - 1]];
+      default:        return notes;
+    }
+  }
+
+  /* ══════════════════════════════════════
+   *  applyPlaybackMode
+   * ══════════════════════════════════════ */
+
+  function applyPlaybackMode() {
+    if (!_player || !_osmd) return;
+
+    const instrPlayer = _player.instrumentPlayer;
+    if (!instrPlayer) {
+      console.warn('[Audio] instrumentPlayer không tồn tại.');
+      return;
+    }
+
+    /* Luôn restore trước khi re-patch (tránh patch chồng) */
+    _restoreSchedule(instrPlayer);
+
+    const mode = _currentVoice;
+
+    if (mode === 'satb') {
+      console.log('[Audio] Mode=SATB — phát toàn bộ.');
+      return;
+    }
+
+    console.log(`[Audio] Mode="${mode}" — áp dụng pitch-rank filter.`);
+    _origSchedule = instrPlayer.schedule.bind(instrPlayer);
+
+    instrPlayer.schedule = function satbSchedule(midiId, time, notes) {
+      const filtered = _pickByVoice(notes, mode);
+      if (filtered.length > 0) {
+        _origSchedule(midiId, time, filtered);
+      }
+    };
+  }
+
+  function _restoreSchedule(instrPlayer) {
+    if (_origSchedule && instrPlayer) {
+      instrPlayer.schedule = _origSchedule;
+      _origSchedule = null;
+      console.log('[Audio] Schedule restored.');
+    }
+  }
+
+  /* ══════════════════════════════════════
+   *  Public API
+   * ══════════════════════════════════════ */
+
   function init() {
     document.getElementById('btn-play-audio')?.addEventListener('click', play);
     document.getElementById('btn-stop-audio')?.addEventListener('click', stop);
@@ -30,7 +186,11 @@ const SheetAudioPlayer = (() => {
       setSpeed(parseFloat(e.target.value))
     );
 
-    // Voice buttons — event delegation trên toolbar
+    /* Slider âm lượng (nếu có trong UI) */
+    document.getElementById('audio-volume')?.addEventListener('input', e => {
+      setVolume(parseFloat(e.target.value));
+    });
+
     document.addEventListener('click', e => {
       const btn = e.target.closest('.voice-btn');
       if (!btn || btn.disabled) return;
@@ -42,54 +202,41 @@ const SheetAudioPlayer = (() => {
     });
   }
 
-  /* ─── Set active voice ─── */
-  function _setVoice(voice) {
-    _currentVoice = voice;
-
-    // Cập nhật active class trên từng nút
-    document.querySelectorAll('.voice-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.voice === voice);
-    });
-
-    // Sync hidden select (backward compat)
-    const sel = document.getElementById('audio-playback-mode');
-    if (sel) sel.value = voice;
-  }
-
-  /* ─── Setup (gọi sau khi OSMD render) ─── */
   function setup(osmd) {
     _osmd = osmd;
+    if (_player && _isPlaying) stop();
+    _player = null;
     if (typeof OsmdAudioPlayer === 'undefined') {
-      console.warn('[Audio] OsmdAudioPlayer chưa được load!');
+      console.warn('[Audio] OsmdAudioPlayer chưa load — kiểm tra CDN.');
     }
   }
 
-  /* ─── Play ─── */
   async function play() {
     if (!_osmd) return;
     try {
+      await window.Tone?.start?.();
+
+      /* ── Boost master volume qua Tone.js Destination ── */
+      _applyVolume();
+
       if (!_player) {
-        await window.Tone?.start?.();
         _player = new OsmdAudioPlayer();
       }
-      window.App?.showToast?.('🎵 Đang nạp âm thanh...', 'info');
 
+      window.App?.showToast?.('🎵 Đang nạp âm thanh…', 'info');
       await _player.loadScore(_osmd);
       applyPlaybackMode();
 
-      // Auto-scroll theo cursor
-      _player.on('iteration', notes => {
-        if (!notes?.length) return;
-        if (_osmd.cursor?.cursorElement) {
-          const cRect = _osmd.cursor.cursorElement.getBoundingClientRect();
-          const wrapper = document.querySelector('.sheet-viewer-wrapper');
-          if (!wrapper) return;
-          const vRect = wrapper.getBoundingClientRect();
-          if (cRect.bottom > vRect.bottom - 50)
-            wrapper.scrollBy({ top: cRect.height * 2, behavior: 'smooth' });
-          else if (cRect.top < vRect.top)
-            wrapper.scrollBy({ top: -cRect.height * 2, behavior: 'smooth' });
-        }
+      /* Auto-scroll theo cursor */
+      _player.on('iteration', () => {
+        const cursorEl = _osmd.cursor?.cursorElement;
+        if (!cursorEl) return;
+        const wrapper = document.querySelector('.sheet-viewer-wrapper');
+        if (!wrapper) return;
+        const cRect = cursorEl.getBoundingClientRect();
+        const vRect = wrapper.getBoundingClientRect();
+        if      (cRect.bottom > vRect.bottom - 50) wrapper.scrollBy({ top:  cRect.height * 2, behavior: 'smooth' });
+        else if (cRect.top    < vRect.top)          wrapper.scrollBy({ top: -cRect.height * 2, behavior: 'smooth' });
       });
 
       _player.play();
@@ -97,147 +244,78 @@ const SheetAudioPlayer = (() => {
 
       document.getElementById('btn-play-audio')?.classList.add('hidden');
       document.getElementById('btn-stop-audio')?.classList.remove('hidden');
+      window.App?.showToast?.(`▶ Đang phát — ${VOICE_LABELS[_currentVoice] ?? _currentVoice}`, 'success');
 
-      const label = VOICE_LABELS[_currentVoice] || _currentVoice;
-      window.App?.showToast?.(`▶ Đang phát — ${label}`, 'success');
-
-    } catch(err) {
+    } catch (err) {
       window.App?.showToast?.('Không thể phát audio (trình duyệt chặn hoặc bản nhạc quá phức tạp)', 'error');
       console.error('[Audio]', err);
       stop();
     }
   }
 
-  /* ─── Stop ─── */
   function stop() {
-    if (_player && _isPlaying) {
-      // Restore schedule gốc nếu đang bị patch
-      if (_origSchedule && _player.instrumentPlayer) {
-        _player.instrumentPlayer.schedule = _origSchedule;
-        _origSchedule = null;
-      }
-      _player.stop();
-      _isPlaying = false;
-      if (_osmd?.cursor) {
-        _osmd.cursor.hide();
-        _osmd.cursor.reset();
-      }
+    if (_player) {
+      if (_player.instrumentPlayer) _restoreSchedule(_player.instrumentPlayer);
+      if (_isPlaying) _player.stop();
     }
+    _isPlaying = false;
+
+    if (_osmd?.cursor) {
+      _osmd.cursor.hide();
+      _osmd.cursor.reset();
+    }
+
     document.getElementById('btn-play-audio')?.classList.remove('hidden');
     document.getElementById('btn-stop-audio')?.classList.add('hidden');
   }
 
-  /* ─── Speed ─── */
   function setSpeed(rate) {
     if (!_player) return;
     if (typeof _player.setPlaybackRate === 'function') _player.setPlaybackRate(rate);
     else if (_player.playbackRate !== undefined)        _player.playbackRate = rate;
   }
 
-  /* ─── Pitch ranges cho từng bè (SATB, halfTone tuyệt đối) ───
-   *
-   * XML này là piano-style: S+A cùng Part/Voice (P1), T+B cùng Part/Voice (P2)
-   * → Không thể tách bằng VoiceId
-   * → Tách bằng PITCH RANGE (halfTone từ C0=0):
-   *
-   *   Soprano: G4(67)  → C6(84)   stem=down trong P1
-   *   Alto:    C4(60)  → F#4(66)  stem=up   trong P1
-   *   Tenor:   G2(43)  → B4(71)   stem=down trong P2 (nốt trên)
-   *   Bass:    C2(36)  → F3(53)   stem=down trong P2 (nốt dưới)
-   *
-   * Thực tế XML bài này:
-   *   P1 notes: G4(67),D5(74) = Soprano; D4(62),B4(71) = Alto
-   *   P2 notes: G3(55),B3(59) = Tenor;   B2(47),G2(43) = Bass
-   *
-   * Cutoff đơn giản: P1 midpoint ≈ 67 (G4), P2 midpoint ≈ 55 (G3)
-   * ─────────────────────────────────────────────────────────── */
-
-  let _origSchedule = null;  // lưu schedule gốc để restore
-
-  function _halfTone(midiNote) { return midiNote; } // halfTone = midi note number
-
-  function _shouldPlay(halfTone, partIndex, mode) {
-    if (mode === 'satb') return true;
-    // P1 (partIndex=0, Treble): note >= 67 → Soprano, < 67 → Alto
-    // P2 (partIndex=1, Bass):   note >= 55 → Tenor,   < 55 → Bass
-    if (partIndex === 0) {
-      if (mode === 'soprano') return halfTone >= 67;
-      if (mode === 'alto')    return halfTone < 67;
-      return false; // tenor/bass từ P1 không cần
-    }
-    if (partIndex === 1) {
-      if (mode === 'tenor') return halfTone >= 53;
-      if (mode === 'bass')  return halfTone < 53;
-      return false;
-    }
-    return true;
+  /**
+   * Đặt âm lượng phát bằng cách điều chỉnh Tone.js master Destination.
+   * @param {number} db - giá trị dB (-40 = gần im lặng, 0 = gốc, +20 = rất to)
+   */
+  function setVolume(db) {
+    _volumeDb = db;
+    _applyVolume();
   }
 
-  function applyPlaybackMode() {
-    if (!_player || !_osmd) return;
-    const mode = _currentVoice;
-    const instrPlayer = _player.instrumentPlayer;
-    if (!instrPlayer) return;
-
-    // Restore schedule gốc trước
-    if (_origSchedule) {
-      instrPlayer.schedule = _origSchedule;
-      _origSchedule = null;
-    }
-
-    if (mode === 'satb') return; // không filter gì
-
-    // Xác định midiId của P1 và P2 từ sheet
-    const instruments = _player.sheet?.Instruments;
-    const p1MidiId = instruments?.[0]?.MidiInstrumentId ?? 0;
-    const p2MidiId = instruments?.[1]?.MidiInstrumentId ?? 0;
-
-    console.log(`[Audio] Filter mode="${mode}" P1_midiId=${p1MidiId} P2_midiId=${p2MidiId}`);
-
-    // Monkey-patch schedule để lọc notes theo pitch range
-    _origSchedule = instrPlayer.schedule.bind(instrPlayer);
-    instrPlayer.schedule = function(midiId, time, notes) {
-      // Xác định Part từ midiId
-      let partIndex = -1;
-      if (midiId === p1MidiId) partIndex = 0;
-      else if (midiId === p2MidiId) partIndex = 1;
-
-      // Nếu S hoặc A: chỉ giữ P1 notes; nếu T hoặc B: chỉ giữ P2 notes
-      if (mode === 'soprano' || mode === 'alto') {
-        if (partIndex !== 0) return; // drop P2 hoàn toàn
-      } else { // tenor, bass
-        if (partIndex !== 1) return; // drop P1 hoàn toàn
-      }
-
-      // Filter notes theo pitch range trong cùng Part
-      const filtered = notes.filter(n => {
-        const ht = (n.note ?? n.halfTone ?? 60) + 12; // osmd halfTone offset +12
-        return _shouldPlay(ht, partIndex, mode);
-      });
-
-      if (filtered.length > 0) {
-        _origSchedule(midiId, time, filtered);
-      }
-    };
+  function _applyVolume() {
+    if (!window.Tone?.Destination) return;
+    /* Tone.Destination.volume là AudioParam (dB) */
+    Tone.Destination.volume.value = _volumeDb;
+    console.log(`[Audio] Volume = ${_volumeDb} dB`);
   }
 
-  /* ─── Enable / Disable controls ─── */
   function enableBtn(enabled) {
     const btn = document.getElementById('btn-play-audio');
     const spd = document.getElementById('audio-speed');
+    const vol = document.getElementById('audio-volume');
     if (btn) btn.disabled = !enabled;
     if (spd) spd.disabled = !enabled;
-
-    // Voice buttons
+    if (vol) vol.disabled = !enabled;
     document.querySelectorAll('.voice-btn').forEach(b => { b.disabled = !enabled; });
-
     if (!enabled) {
       stop();
-      _setVoice('satb'); // reset về SATB khi không có bài
+      _setVoice('satb'); // Reset voice visual về SATB khi disable
     }
   }
 
-  return { init, setup, enableBtn, stop, setSpeed };
+  function _setVoice(voice) {
+    _currentVoice = voice;
+    document.querySelectorAll('.voice-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.voice === voice);
+    });
+    const sel = document.getElementById('audio-playback-mode');
+    if (sel) sel.value = voice;
+  }
+
+  return { init, setup, enableBtn, stop, setSpeed, setVolume };
+
 })();
 
 window.SheetAudioPlayer = SheetAudioPlayer;

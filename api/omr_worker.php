@@ -1,9 +1,18 @@
 <?php
 /**
  * api/omr_worker.php
- * Trình chạy ngầm xử lý OMR thông qua phần mềm thứ 3.
- * Cách gọi trên Windows: start /B php api/omr_worker.php <job_id>
+ * Trình chạy ngầm xử lý OMR — gọi Docker OMR Engine qua HTTP.
+ *
+ * Luồng:
+ *   1. Nhận job_id từ argv
+ *   2. POST http://localhost:5555/process → OMR Engine xử lý async
+ *   3. Polling status mỗi 5 giây (timeout 10 phút)
+ *   4. Khi completed → copy file XML ra, cập nhật DB
+ *   5. Khi error    → cập nhật DB status = error
+ *
+ * Cách gọi: php api/omr_worker.php <job_id>
  */
+
 require_once __DIR__ . '/db.php';
 
 $job_id = $argv[1] ?? null;
@@ -11,101 +20,154 @@ if (!$job_id) {
     die("Thiếu Job ID\n");
 }
 
-define('WORKSPACE_DIR',  __DIR__ . '/../storage/omr_workspace/');
+define('WORKSPACE_DIR', __DIR__ . '/../storage/omr_workspace/');
+define('OMR_ENGINE_URL', 'http://localhost:5555');  // Docker host port
+define('POLL_INTERVAL', 5);      // Polling mỗi 5 giây
+define('MAX_WAIT', 600);         // Tối đa 10 phút
+
+// ── Ghi log helper ────────────────────────────────────────────────────────────
+function log_job(string $job_id, string $msg): void {
+    $ts = date('H:i:s');
+    file_put_contents(
+        WORKSPACE_DIR . $job_id . '_worker.log',
+        "[$ts] $msg\n",
+        FILE_APPEND | LOCK_EX
+    );
+    echo "[$ts] $msg\n";
+}
+
+// ── HTTP helper (không dùng curl để tránh extension dependency) ───────────────
+function http_post(string $url, array $data): ?array {
+    $json = json_encode($data);
+    $ctx  = stream_context_create([
+        'http' => [
+            'method'        => 'POST',
+            'header'        => "Content-Type: application/json\r\nContent-Length: " . strlen($json) . "\r\n",
+            'content'       => $json,
+            'timeout'       => 15,
+            'ignore_errors' => true,
+        ],
+    ]);
+    $res = @file_get_contents($url, false, $ctx);
+    if ($res === false) return null;
+    return json_decode($res, true);
+}
+
+function http_get(string $url): ?array {
+    $ctx = stream_context_create([
+        'http' => ['timeout' => 10, 'ignore_errors' => true],
+    ]);
+    $res = @file_get_contents($url, false, $ctx);
+    if ($res === false) return null;
+    return json_decode($res, true);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN
+// ═══════════════════════════════════════════════════════════════════════════════
 
 try {
-    // 1. Kiểm tra tồn tại
+    // ── 1. Kiểm tra job tồn tại trong DB ──────────────────────────────────────
     $stmt = $pdo->prepare("SELECT * FROM omr_workspace WHERE id = ? AND status = 'waiting'");
     $stmt->execute([$job_id]);
     $job = $stmt->fetch();
 
     if (!$job) {
-        die("Không tìm thấy Job hoặc đã xử lý\n");
+        die("Không tìm thấy job hoặc đã xử lý: $job_id\n");
     }
 
-    // 2. Chuyển trạng thái: Processing
-    $pdo->prepare("UPDATE omr_workspace SET status = 'processing' WHERE id = ?")->execute([$job_id]);
+    $ext = strtolower(pathinfo($job['original_filename'], PATHINFO_EXTENSION));
 
-    // Các biến đường dẫn
-    $ext = pathinfo($job['original_filename'], PATHINFO_EXTENSION);
-    $inputFile = realpath(WORKSPACE_DIR) . DIRECTORY_SEPARATOR . $job_id . '.' . $ext;
-    $outputDir = realpath(WORKSPACE_DIR);
-    $musicXmlFile = $job_id . '.mxl'; // Audiveris xuất file tên thư mục .mxl hoặc file chuẩn
-    
-    // ----------- CALL ENGINE (OEMER) -------------
-    // Gọi oemer của Python để nhận diện ảnh thành musicxml
-    $outputBaseName = $job_id;
-    
-    // Tìm đường dẫn thực thi của Oemer trên máy người dùng Windows
-    $oemerExe = 'oemer'; // Mặc định cho Docker (linux)
-    if (file_exists('C:\Users\haing\AppData\Roaming\Python\Python310\Scripts\oemer.exe')) {
-        $oemerExe = 'C:\Users\haing\AppData\Roaming\Python\Python310\Scripts\oemer.exe';
+    // ── 2. Đánh dấu processing ─────────────────────────────────────────────────
+    $pdo->prepare("UPDATE omr_workspace SET status = 'processing' WHERE id = ?")
+        ->execute([$job_id]);
+    log_job($job_id, "Job started (ext=$ext)");
+
+    // ── 3. Kiểm tra OMR Engine sống không ────────────────────────────────────
+    $health = http_get(OMR_ENGINE_URL . '/health');
+    if (!$health || ($health['status'] ?? '') !== 'ok') {
+        throw new RuntimeException("OMR Engine không phản hồi tại " . OMR_ENGINE_URL . ". Kiểm tra Docker container sheetapp-omr.");
     }
+    log_job($job_id, "OMR Engine OK — homr: " . ($health['homr_available'] ? 'yes' : 'no'));
 
-    $command = sprintf(
-        '%s %s -o %s 2>&1',
-        escapeshellarg($oemerExe),
-        escapeshellarg($inputFile),
-        escapeshellarg($outputDir)
-    );
+    // ── 4. Gửi job cho OMR Engine ─────────────────────────────────────────────
+    $response = http_post(OMR_ENGINE_URL . '/process', [
+        'job_id' => $job_id,
+        'ext'    => $ext,
+    ]);
 
-    // Chạy CLI Oemer
-    exec($command, $output, $returnVar);
+    if (!$response || ($response['status'] ?? '') !== 'processing') {
+        throw new RuntimeException("OMR Engine từ chối job: " . json_encode($response));
+    }
+    log_job($job_id, "OMR Engine nhận job, bắt đầu xử lý...");
 
-    // GHI LOG (Tuỳ chọn để debug)
-    file_put_contents(WORKSPACE_DIR . $job_id . '_log.txt', implode("\n", $output));
+    // ── 5. Polling kết quả ────────────────────────────────────────────────────
+    $elapsed = 0;
+    $last_step = '';
 
-    if ($returnVar === 0) {
-        // oemer xuất file có tên input + .musicxml
-        $folderName = pathinfo($inputFile, PATHINFO_FILENAME);
-        $generatedFile = $outputDir . DIRECTORY_SEPARATOR . $folderName . '.musicxml';
-        
-        if (file_exists($generatedFile)) {
-            $finalPath = $outputDir . DIRECTORY_SEPARATOR . $musicXmlFile;
-            
-            // Chạy công cụ đồng bộ XML (omr_sync)
-            $templatePath = realpath(__DIR__ . '/../storage/Thanh ca/001 HỠI THÁNH VƯƠNG, KÍP NGỰ LAI.xml');
-            if (file_exists($templatePath)) {
-                $syncCommand = sprintf(
-                    'php %s %s %s %s 2>&1',
-                    escapeshellarg(realpath(__DIR__ . '/../tools/omr_sync.php')),
-                    escapeshellarg($templatePath),
-                    escapeshellarg($generatedFile),
-                    escapeshellarg($finalPath)
-                );
-                exec($syncCommand, $syncOutput, $syncReturnVar);
-                file_put_contents(WORKSPACE_DIR . $job_id . '_sync_log.txt', implode("\n", $syncOutput));
-                
-                if ($syncReturnVar !== 0) {
-                     // Nếu sync fail, fallback dùng trực tiếp XML của oemer
-                     rename($generatedFile, $finalPath);
-                } else {
-                     // Xóa file raw của oemer
-                     @unlink($generatedFile);
-                }
-            } else {
-                // Nếu không có template, dùng luôn file do oemer tạo
-                rename($generatedFile, $finalPath);
-            }
-            
-            // Cập nhật Database
-            $pdo->prepare("UPDATE omr_workspace SET status = 'completed', musicxml_path = ? WHERE id = ?")
-                ->execute([$musicXmlFile, $job_id]);
-        } else {
-            // Không tìm thấy file xml/mxl nào
-            $pdo->prepare("UPDATE omr_workspace SET status = 'error' WHERE id = ?")->execute([$job_id]);
+    while ($elapsed < MAX_WAIT) {
+        sleep(POLL_INTERVAL);
+        $elapsed += POLL_INTERVAL;
+
+        $status = http_get(OMR_ENGINE_URL . '/status/' . $job_id);
+        if (!$status) {
+            log_job($job_id, "Polling lỗi (elapsed={$elapsed}s), thử lại...");
+            continue;
         }
 
-        // Dọn dẹp thư mục tạm Audiveris sinh ra (nếu muốn)
-        // ...
-        
-    } else {
-        // Xảy ra lỗi crash hoặc return code != 0
-        $pdo->prepare("UPDATE omr_workspace SET status = 'error' WHERE id = ?")->execute([$job_id]);
+        $step = $status['step'] ?? '';
+        if ($step !== $last_step) {
+            log_job($job_id, "Step: $step (elapsed={$elapsed}s)");
+            $last_step = $step;
+        }
+
+        $jobStatus = $status['status'] ?? 'processing';
+
+        if ($jobStatus === 'completed') {
+            // ── 6. Job hoàn tất ────────────────────────────────────────────────
+            $outputFile = $status['output_file'] ?? ($job_id . '.mxl');
+            $xmlPath = WORKSPACE_DIR . $outputFile;
+
+            if (!file_exists($xmlPath)) {
+                throw new RuntimeException("Output file không tồn tại: $xmlPath");
+            }
+
+            $pages = $status['pages_processed'] ?? 1;
+            log_job($job_id, "Completed! Pages=$pages, output=$outputFile");
+
+            $pdo->prepare("UPDATE omr_workspace SET status = 'completed', musicxml_path = ? WHERE id = ?")
+                ->execute([$outputFile, $job_id]);
+
+            log_job($job_id, "DB updated. Done!");
+            exit(0);
+        }
+
+        if ($jobStatus === 'error') {
+            $errMsg = $status['error'] ?? 'Unknown error';
+            throw new RuntimeException("OMR Engine báo lỗi: $errMsg");
+        }
+
+        // Vẫn đang xử lý — tiếp tục chờ
+        if (isset($status['current_page'], $status['total_pages'])) {
+            $cur   = $status['current_page'];
+            $total = $status['total_pages'];
+            if ($cur !== ($last_step)) {
+                log_job($job_id, "  → Page $cur/$total");
+            }
+        }
     }
 
+    // Timeout
+    throw new RuntimeException("Timeout sau " . MAX_WAIT . " giây — bài nhạc quá dài hoặc engine bị treo");
+
 } catch (Exception $e) {
-    // Log exception
-    $pdo->prepare("UPDATE omr_workspace SET status = 'error' WHERE id = ?")->execute([$job_id]);
-    file_put_contents(WORKSPACE_DIR . $job_id . '_error.txt', $e->getMessage());
+    $errMsg = $e->getMessage();
+    log_job($job_id ?? 'unknown', "ERROR: $errMsg");
+
+    if (isset($pdo) && $job_id) {
+        $pdo->prepare("UPDATE omr_workspace SET status = 'error' WHERE id = ?")
+            ->execute([$job_id]);
+        file_put_contents(WORKSPACE_DIR . $job_id . '_error.txt', $errMsg);
+    }
+    exit(1);
 }

@@ -2,8 +2,17 @@
 /**
  * api/sessions.php
  * Lưu trữ nhật ký biểu diễn theo từng bài hát.
- * GET  ?songId=xxx → Lấy settings + history
- * POST             → Lưu settings mới
+ *
+ * GET  ?songId=xxx → Lấy settings + perfNotes (public, không cần auth)
+ * POST             → Lưu userSettings hoặc perfNotes
+ *
+ * Cấu trúc JSON file:
+ * {
+ *   "songId":      "...",
+ *   "lastSaved":   "ISO date",
+ *   "userSettings": { lastTranspose, zoomLevel, history },
+ *   "perfNotes":   { key, bpm, text, updatedAt }   ← field mới
+ * }
  */
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
@@ -25,26 +34,38 @@ if ($method === 'GET') {
     echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 
 } elseif ($method === 'POST') {
-    $body = json_decode(file_get_contents('php://input'), true) ?? [];
+    $body   = json_decode(file_get_contents('php://input'), true) ?? [];
     $songId = $body['songId'] ?? '';
 
     if (!$songId) { http_response_code(400); echo json_encode(['error' => 'Missing songId']); exit; }
 
-    $userSettings = $body['userSettings'] ?? [];
-    $data = _writeSession($songId, $userSettings);
-    echo json_encode(['success' => true, 'userSettings' => $data], JSON_UNESCAPED_UNICODE);
+    $result = [];
+
+    /* Lưu userSettings nếu có */
+    if (isset($body['userSettings'])) {
+        $result['userSettings'] = _writeUserSettings($songId, $body['userSettings']);
+    }
+
+    /* Lưu perfNotes nếu có */
+    if (isset($body['perfNotes'])) {
+        $result['perfNotes'] = _writePerfNotes($songId, $body['perfNotes']);
+    }
+
+    echo json_encode(array_merge(['success' => true], $result), JSON_UNESCAPED_UNICODE);
 
 } else {
     http_response_code(405);
     echo json_encode(['error' => 'Method not allowed']);
 }
 
-// ---- FUNCTIONS ----
+// ── FUNCTIONS ──────────────────────────────────────────────────
 
 function _sessionFile(string $songId): string {
-    // Sanitize filename
-    $safe = preg_replace('/[^a-z0-9\-_]/', '', strtolower($songId));
-    return SESSIONS_DIR . $safe . '.json';
+    // Giữ prefix dễ đọc + hash để unique (tránh collision khi songId chứa unicode)
+    $prefix = preg_replace('/[^a-z0-9\-]/', '', strtolower(substr($songId, 0, 30)));
+    $hash   = substr(md5($songId), 0, 8);
+    $name   = $prefix ? "{$prefix}_{$hash}" : $hash;
+    return SESSIONS_DIR . $name . '.json';
 }
 
 function _readSession(string $songId): array {
@@ -53,37 +74,57 @@ function _readSession(string $songId): array {
         return [
             'songId'       => $songId,
             'userSettings' => _defaultSettings(),
+            'perfNotes'    => (object)[],
         ];
     }
     $data = json_decode(file_get_contents($file), true);
-    if (!is_array($data)) return ['songId' => $songId, 'userSettings' => _defaultSettings()];
-
-    // Ensure structure
+    if (!is_array($data)) {
+        return ['songId' => $songId, 'userSettings' => _defaultSettings(), 'perfNotes' => (object)[]];
+    }
+    // Ensure fields exist
     if (!isset($data['userSettings'])) $data['userSettings'] = _defaultSettings();
+    if (!isset($data['perfNotes']))    $data['perfNotes']    = (object)[];
     return $data;
 }
 
-function _writeSession(string $songId, array $userSettings): array {
-    $file = _sessionFile($songId);
-
-    // Merge với existing data để preserve history
+function _writeUserSettings(string $songId, array $userSettings): array {
+    $file     = _sessionFile($songId);
     $existing = _readSession($songId);
     $merged   = array_merge($existing['userSettings'], $userSettings);
 
-    // Keep history sorted chronologically, max 50 entries
     if (isset($merged['history']) && is_array($merged['history'])) {
         usort($merged['history'], fn($a,$b) => strcmp($a['date'] ?? '', $b['date'] ?? ''));
         $merged['history'] = array_slice($merged['history'], -50);
     }
 
-    $data = [
-        'songId'       => $songId,
+    $data = array_merge($existing, [
         'lastSaved'    => date('c'),
         'userSettings' => $merged,
-    ];
+    ]);
 
     file_put_contents($file, json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     return $merged;
+}
+
+function _writePerfNotes(string $songId, array $perfNotes): array {
+    $file     = _sessionFile($songId);
+    $existing = _readSession($songId);
+
+    // Sanitize input — chỉ cho phép các field đã biết
+    $safe = [
+        'key'       => substr(trim($perfNotes['key']       ?? ''), 0, 20),
+        'bpm'       => substr(trim($perfNotes['bpm']       ?? ''), 0, 10),
+        'text'      => substr(trim($perfNotes['text']      ?? ''), 0, 2000),
+        'updatedAt' => $perfNotes['updatedAt'] ?? date('c'),
+    ];
+
+    $data = array_merge($existing, [
+        'lastSaved' => date('c'),
+        'perfNotes' => $safe,
+    ]);
+
+    file_put_contents($file, json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+    return $safe;
 }
 
 function _defaultSettings(): array {

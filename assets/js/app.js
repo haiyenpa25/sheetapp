@@ -38,13 +38,17 @@ const App = (() => {
     if (window.PerformanceNotes) PerformanceNotes.init();
     if (window.SongInfoBar)      SongInfoBar.init();
 
-    // Sprint B — Volume control
-    const volSlider = document.getElementById('volume-slider');
-    volSlider?.addEventListener('input', () => {
-      const vol = parseInt(volSlider.value) / 100;
+    // Volume control — audio-volume slider (dB: -20 to +20, default +12)
+    const volSlider = document.getElementById('audio-volume');
+    if (volSlider) {
+      volSlider.addEventListener('input', () => {
+        const db = parseInt(volSlider.value);
+        _updateVolumeTrack(volSlider);
+        if (window.SheetAudioPlayer?.setVolume) SheetAudioPlayer.setVolume(db);
+      });
+      // Init track fill on page load
       _updateVolumeTrack(volSlider);
-      if (window.SheetAudioPlayer?.setVolume) SheetAudioPlayer.setVolume(vol);
-    });
+    }
 
     // Sprint F — Dark mode toggle
     const _darkBtn = document.getElementById('btn-dark-toggle');
@@ -206,7 +210,6 @@ const App = (() => {
     
     ChordCanvas.loadSong(song.id);
     AnnotationCanvas.loadSong(song.id);
-    if (window.PerformanceNotes) PerformanceNotes.loadSong(song.id);
     PageNav.reset();
 
     AppUI.showLoading(`Đang tải "${song.title}"...`);
@@ -294,8 +297,15 @@ const App = (() => {
       // Sprint A1 — Song Info Bar
       if (window.SongInfoBar) SongInfoBar.loadSong(originalXml, song);
 
-      // Sprint B — Enable volume slider
-      const volSlider2 = document.getElementById('volume-slider');
+      // Load Nhat Ky tu server (sau SongInfoBar de chip co du data khi render)
+      if (window.PerformanceNotes) await PerformanceNotes.loadSong(song.id);
+
+      // Enable nút Nhật Ký (không nằm trong nhóm controls thông thường)
+      const perfNotesBtn = document.getElementById('btn-perf-notes');
+      if (perfNotesBtn) perfNotesBtn.disabled = false;
+
+      // Enable volume slider khi bài load xong
+      const volSlider2 = document.getElementById('audio-volume');
       if (volSlider2) { volSlider2.disabled = false; _updateVolumeTrack(volSlider2); }
 
       // Enable audio controls (Phát + S/A/T/B/♪ voice buttons)
@@ -627,8 +637,9 @@ const App = (() => {
       zoomEl.addEventListener(evtType, e => { setZoom(parseInt(e.target.value, 10)); });
     }
     
+    // btn-session-panel (dropdown Tuỳ Chọn) → mở Nhật ký mới
     document.getElementById('btn-session-panel')?.addEventListener('click', () => {
-      document.getElementById('session-panel')?.classList.toggle('hidden');
+      window.PerformanceNotes?.toggle?.();
     });
     
     document.getElementById('btn-dark-mode')?.addEventListener('click', () => {
@@ -742,10 +753,13 @@ const App = (() => {
     });
   }
 
-  /* ─── Sprint B: Volume track CSS update ─── */
+  /* ─── Volume track CSS fill ─── */
   function _updateVolumeTrack(slider) {
-    const pct = slider.value + '%';
-    slider.style.background = `linear-gradient(to right, var(--accent,#7c3aed) 0%, var(--accent,#7c3aed) ${pct}, #d1d5db ${pct})`;
+    const min = parseFloat(slider.min ?? 0);
+    const max = parseFloat(slider.max ?? 100);
+    const val = parseFloat(slider.value ?? 0);
+    const pct = max > min ? Math.round(((val - min) / (max - min)) * 100) : 0;
+    slider.style.background = `linear-gradient(to right, var(--accent,#7c3aed) 0%, var(--accent,#7c3aed) ${pct}%, #d1d5db ${pct}%)`;
   }
 
   /* ─── Sprint E1: Measure Progress ─── */

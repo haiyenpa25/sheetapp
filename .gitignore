@@ -1,5 +1,30 @@
-storage/data/app.sqlite
+# ── CSDL & Data cá nhân (không push) ──
+storage/data/*.sqlite
+storage/data/*.db
 storage/data/songs.json.bak
 storage/data/sessions/
+
+# ── Bộ hợp âm HD (data riêng từng server) ──
 data/chord_sets/
+
+# ── OMR workspace (file upload tạm) ──
+storage/omr_workspace/
+
+# ── Annotation files ──
+storage/data/annotations/
+
+# ── File nhạc XML / PDF đã upload ──
+storage/Thanh ca/
+
+# ── Docker (mỗi server config riêng) ──
+docker-compose.yml
+omr-service/
+
+# ── Test files ──
 test*.php
+tmp_player.js
+
+# ── IDE / OS ──
+.DS_Store
+Thumbs.db
+.vscode/

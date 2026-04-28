@@ -131,6 +131,45 @@
 .pnp-actions { display: flex; align-items: center; justify-content: flex-end; gap: .5rem; }
 .pnp-saved-hint { font-size: .7rem; color: var(--success); transition: opacity .3s; }
 
+/* ─── Read-only variant ─── */
+.pnp-header-readonly { background: #475569; } /* slate instead of accent */
+
+.pnp-readonly-badge {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  background: rgba(71,85,105,.1); color: #475569;
+  border: 1px solid rgba(71,85,105,.25); border-radius: 99px;
+  padding: .15rem .55rem; align-self: flex-start; margin-bottom: .2rem;
+}
+
+.pnp-view-content { display: flex; flex-direction: column; gap: .55rem; }
+
+.pnp-view-row {
+  display: flex; align-items: flex-start; gap: .5rem;
+}
+.pnp-view-label {
+  font-size: .68rem; color: var(--text-muted);
+  min-width: 68px; flex-shrink: 0; padding-top: 2px;
+}
+.pnp-view-val {
+  font-size: .85rem; font-weight: 700; color: var(--text-primary);
+}
+.pnp-val-key {
+  color: var(--accent); font-size: .9rem;
+}
+.pnp-view-notes-row { flex-direction: column; align-items: flex-start; }
+.pnp-view-notes {
+  font-size: .8rem; color: var(--text-secondary); line-height: 1.65;
+  background: var(--bg-overlay, #f8f9fa);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: .45rem .6rem; width: 100%; box-sizing: border-box;
+  margin-top: .2rem; white-space: pre-wrap;
+}
+.pnp-empty {
+  font-size: .8rem; color: var(--text-muted); text-align: center;
+  padding: 1rem 0; font-style: italic;
+}
+
 @keyframes fadeSlideUp {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -905,7 +944,8 @@ body.dark-mode .lvi-word-only {
 }
 .song-info-strip.si-hidden { display: none; }
 .si-inner { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; flex: 1; }
-.si-inner.si-collapsed { display: none; }
+.si-top-row.si-collapsed { display: none; }
+
 .si-chip {
   display: inline-flex; align-items: center; gap: 2px;
   background: white; border: 1px solid #e5e7eb;
@@ -920,9 +960,71 @@ body.dark-mode .lvi-word-only {
 .si-chord-set     { border-color: #d1d5db; color: #6b7280; background: #f9fafb; }
 .si-chord-has     { border-color: #86efac; color: #15803d; background: #f0fdf4; }
 .si-chord-empty   { border-color: #d1d5db; color: #9ca3af; background: #f9fafb; font-style: italic; }
+.si-notes         { border-color: #fca5a5; color: #b91c1c; background: #fff5f5; }
 .si-toggle  { background: none; border: none; cursor: pointer; color: #9ca3af;
               padding: 0 .3rem; font-size: .8rem; transition: color .15s; }
 .si-toggle:hover { color: #6d28d9; }
+
+/* ─── Inline Notes Row (bên dưới chips) ─── */
+.song-info-strip {
+  flex-direction: column;
+  align-items: stretch;
+}
+.si-top-row {
+  display: flex; align-items: center; gap: .5rem; width: 100%;
+}
+.si-notes-inline {
+  display: flex;
+  align-items: baseline;
+  gap: .55rem;
+  padding: .2rem .1rem .1rem;
+  border-top: 1px solid rgba(109,40,217,.1);
+  font-size: .74rem;
+  color: var(--text-secondary, #4b5563);
+  flex-wrap: wrap;
+  line-height: 1.5;
+  animation: fadeSlideUp .15s ease;
+}
+.si-notes-inline.si-notes-hidden { display: none !important; }
+.si-ni-key {
+  font-weight: 800;
+  color: #6d28d9;
+  white-space: nowrap;
+  font-size: .78rem;
+}
+.si-ni-bpm {
+  font-weight: 700;
+  color: #065f46;
+  white-space: nowrap;
+  font-size: .74rem;
+}
+.si-ni-dot {
+  color: #d1d5db;
+  font-size: .7rem;
+}
+.si-ni-text {
+  color: #4b5563;
+  flex: 1;
+  min-width: 0;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+/* Nút edit nhật ký (admin only) */
+.si-ni-edit {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  font-size: .7rem;
+  padding: 0 .2rem;
+  border-radius: 4px;
+  transition: color .15s, background .15s;
+  white-space: nowrap;
+  align-self: flex-start;
+  margin-top: .05rem;
+}
+.si-ni-edit:hover { color: #6d28d9; background: rgba(109,40,217,.08); }
 
 
 /* =============================================
@@ -1008,6 +1110,12 @@ body.dark-mode .song-info-strip {
   border-color: var(--border, #2a2a38) !important;
   color: var(--text-primary, #e4e4ec) !important;
 }
+body.dark-mode .si-notes-inline {
+  border-top-color: rgba(167,139,250,.15);
+}
+body.dark-mode .si-ni-key { color: #a78bfa; }
+body.dark-mode .si-ni-bpm { color: #6ee7b7; }
+body.dark-mode .si-ni-text { color: #9ca3af; }
 body.dark-mode .sheet-viewer-wrapper { background: #0c0c14 !important; }
 body.dark-mode .osmd-container {
   background: #1a1a24 !important;

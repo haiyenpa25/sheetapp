@@ -35,6 +35,13 @@
         <option value="1.25">1.25×</option>
         <option value="1.5">1.5×</option>
       </select>
+      <!-- VOLUME SLIDER — Âm lượng phát -->
+      <label class="volume-label" title="Âm lượng">
+        <span class="volume-icon">🔊</span>
+        <input id="audio-volume" type="range" class="audio-volume-slider"
+               min="-20" max="20" step="1" value="12" disabled
+               title="Âm lượng (+12 dB mặc định)">
+      </label>
       <!-- Voice Selector: 5 chế độ phát bè SATB -->
       <div class="voice-selector" id="voice-selector" role="group" aria-label="Chọn bè phát">
         <button class="voice-btn voice-s" data-voice="soprano"
@@ -126,10 +133,11 @@
           Sân Khấu
         </button>
 
-        <button id="btn-session-panel" class="btn btn-ghost btn-sm btn-menu-item" disabled title="Nhật Ký Biểu Diễn">
+        <button id="btn-session-panel" class="btn btn-ghost btn-sm btn-menu-item" disabled title="Nhật ký biểu diễn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-          Nhật Ký
+          Nhật ký
         </button>
+
 
         <button id="btn-print" class="btn btn-ghost btn-sm btn-menu-item" disabled title="In sheet nhạc">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
@@ -200,12 +208,6 @@
       <button id="btn-next-song" class="icon-btn" title="Bài tiếp theo (↓)" disabled>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
-    </div>
-    <!-- VOLUME CONTROL — Sprint B -->
-    <div class="control-group" id="volume-group">
-      <span class="volume-icon" title="Âm lượng">🔊</span>
-      <input id="volume-slider" type="range" min="0" max="100" value="80"
-             class="volume-slider" title="Âm lượng (0–100%)" disabled>
     </div>
 
     <!-- DARK MODE — Sprint F -->
