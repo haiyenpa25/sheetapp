@@ -24,11 +24,41 @@ echo cssTag('components.css');
 echo cssTag('fab.css');
 
 ?>
-  <!-- OSMD & TONE.JS (Audio Player) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/osmd-audio-player/umd/OsmdAudioPlayer.min.js"></script>
-  <!-- TONAL.JS (Music Theory & Transposition) -->
-  <script src="https://cdn.jsdelivr.net/npm/tonal/browser/tonal.min.js"></script>
+  <!-- ── Thư viện âm thanh và OSMD (local vendor, fallback CDN) ── -->
+  <script>
+    // Load script với fallback: thử local trước, nếu fail mới dùng CDN
+    function _loadScript(localSrc, cdnSrc, globalCheck) {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = localSrc;
+        s.onload = resolve;
+        s.onerror = () => {
+          // Fallback to CDN
+          const s2 = document.createElement('script');
+          s2.src = cdnSrc;
+          s2.onload = resolve;
+          s2.onerror = reject;
+          document.head.appendChild(s2);
+        };
+        document.head.appendChild(s);
+      });
+    }
+  </script>
+  <!-- Tone.js -->
+  <script src="assets/js/vendor/Tone.js" onerror="
+    var s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js';
+    document.head.appendChild(s);"></script>
+  <!-- OSMD Audio Player -->
+  <script src="assets/js/vendor/OsmdAudioPlayer.min.js" onerror="
+    var s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/osmd-audio-player/umd/OsmdAudioPlayer.min.js';
+    document.head.appendChild(s);"></script>
+  <!-- TONAL.JS -->
+  <script src="assets/js/vendor/tonal.min.js" onerror="
+    var s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/tonal/browser/tonal.min.js';
+    document.head.appendChild(s);"></script>
 </head>
 <body>
 
@@ -51,8 +81,11 @@ echo cssTag('fab.css');
 
 
 <!-- ===== SCRIPTS ===== -->
-<!-- OSMD from CDN -->
-<script src="https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@1.8.6/build/opensheetmusicdisplay.min.js"></script>
+<!-- OSMD from local vendor (fallback CDN) -->
+<script src="assets/js/vendor/opensheetmusicdisplay.min.js" onerror="
+  var s=document.createElement('script');
+  s.src='https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@1.8.6/build/opensheetmusicdisplay.min.js';
+  document.head.appendChild(s);"></script>
 
 <?php
 // Auto cache-bust: dùng thời gian sửa file — không cần tăng số tay
