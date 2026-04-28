@@ -3,21 +3,14 @@
  * Soprano (S) · Alto (A) · Tenor (T) · Bass (B) · Hòa âm (♪)
  *
  * ══════════════════════════════════════════════════════════════
+ * FIX iOS/iPad/Mobile:
+ *   • iOS Safari yêu cầu AudioContext.resume() từ user gesture
+ *   • Tone.start() phải được await xong TRƯỚC khi tạo OsmdAudioPlayer
+ *   • Volume mặc định cao hơn (+18 dB) để đủ nghe trên mobile
+ *   • Unlock AudioContext sớm ngay khi user tap lần đầu bất kỳ đâu
+ *
  * NGUYÊN LÝ FILTER BÈ (Pitch-Rank):
- *
- *  OSMD AudioPlayer gọi schedule(midiId, time, notes) với notes là
- *  TẤT CẢ các nốt vang cùng lúc — có thể là 2, 3, hoặc 4 nốt.
- *
- *  Trong nhạc SATB chuẩn, thứ tự pitch LUÔN tương ứng với bè:
- *    sorted ascending → [Bass, Tenor, Alto, Soprano]
- *    sorted[0]   = Bass     (thấp nhất)
- *    sorted[1]   = Tenor    (thứ hai từ thấp)
- *    sorted[n-2] = Alto     (thứ hai từ cao)
- *    sorted[n-1] = Soprano  (cao nhất)
- *
- *  Cách này hoạt động đúng bất kể OSMD gọi schedule:
- *    • Một lần với tất cả 4 nốt (merged)
- *    • Hoặc riêng từng Part (2 nốt mỗi lần)
+ *   sorted ascending → [Bass, Tenor, Alto, Soprano]
  * ══════════════════════════════════════════════════════════════
  */
 
@@ -28,22 +21,13 @@ const SheetAudioPlayer = (() => {
   let _player       = null;
   let _isPlaying    = false;
   let _osmd         = null;
-  let _currentVoice = 'satb'; // 'soprano' | 'alto' | 'tenor' | 'bass' | 'satb'
-  let _origSchedule = null;   // backup để restore khi stop / đổi mode
-  let _volumeDb     = 12;     // mức boost mặc định (dB, 0 = gốc, +12 ≈ 4× louder)
+  let _currentVoice = 'satb';
+  let _origSchedule = null;
+  let _volumeDb     = 18;     // +18 dB mặc định — đủ nghe trên mobile/iPad
+  let _audioUnlocked = false; // Đã unlock AudioContext chưa
 
-  /**
-   * Ngưỡng phân biệt cặp nốt Treble (Soprano+Alto) vs Bass (Tenor+Bass)
-   * khi schedule chỉ nhận 2 nốt (1 Part riêng).
-   *
-   * Từ XML bài này (G major SATB):
-   *   P1 max note: luôn >= F#4(66) — Soprano cao nhất
-   *   P2 max note: luôn <= D4(62)  — Tenor cao nhất khoá Fa
-   *   → Khoảng trống 63-65 → threshold=64 an toàn cho mọi beat.
-   */
-  const TREBLE_THRESHOLD = 64; // E4
+  const TREBLE_THRESHOLD = 64; // E4 — phân biệt Treble vs Bass
 
-  /* ── Nhãn hiển thị ── */
   const VOICE_LABELS = {
     soprano : 'Soprano (Nữ Cao)',
     alto    : 'Alto (Nữ Trầm)',
@@ -53,13 +37,49 @@ const SheetAudioPlayer = (() => {
   };
 
   /* ══════════════════════════════════════
+   *  iOS AudioContext Unlock
+   *  Gọi sớm ngay khi user tap bất kỳ đâu
+   * ══════════════════════════════════════ */
+  function _unlockAudioContext() {
+    if (_audioUnlocked) return;
+
+    const unlock = async () => {
+      if (_audioUnlocked) return;
+      try {
+        // Tone.js tạo AudioContext nội bộ — cần start từ trong user gesture
+        if (window.Tone) {
+          await Tone.start();
+          // Resume AudioContext nếu bị suspended (iOS đặc biệt cần)
+          if (Tone.context?.state === 'suspended') {
+            await Tone.context.resume();
+          }
+        }
+
+        // Cũng resume bất kỳ AudioContext nào khác đang suspended
+        if (window.AudioContext || window.webkitAudioContext) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          // OsmdAudioPlayer có thể tạo context riêng
+          if (window._osmdAC && _osmdAC.state === 'suspended') {
+            await _osmdAC.resume();
+          }
+        }
+
+        _audioUnlocked = true;
+        console.log('[Audio] ✅ AudioContext unlocked');
+      } catch (e) {
+        console.warn('[Audio] Unlock failed:', e);
+      }
+    };
+
+    // Lắng nghe mọi gesture của user để unlock
+    ['touchstart', 'touchend', 'mousedown', 'pointerdown', 'keydown'].forEach(evt => {
+      document.addEventListener(evt, unlock, { once: false, passive: true });
+    });
+  }
+
+  /* ══════════════════════════════════════
    *  MIDI pitch helper
    * ══════════════════════════════════════ */
-
-  /**
-   * Trích MIDI note number (C4=60) từ note object của OSMD AudioPlayer.
-   * OSMD dùng `halfTone` = MIDI standard. Fallback `note` cho phiên bản cũ.
-   */
   function _getMidi(n) {
     return (typeof n.halfTone === 'number') ? n.halfTone
          : (typeof n.note    === 'number') ? n.note
@@ -67,62 +87,29 @@ const SheetAudioPlayer = (() => {
   }
 
   /* ══════════════════════════════════════
-   *  Core filter — Pitch-Rank
+   *  Pitch-Rank filter
    * ══════════════════════════════════════ */
-
-  /**
-   * Chọn note(s) cần phát từ danh sách notes vang cùng lúc.
-   *
-   * @param {object[]} notes - notes từ schedule callback (đã grouped theo time)
-   * @param {string}   mode  - 'soprano' | 'alto' | 'tenor' | 'bass'
-   * @returns {object[]}
-   */
   function _pickByVoice(notes, mode) {
     if (!notes || notes.length === 0) return [];
-
-    /* Sort ascending: thấp → cao */
     const s = [...notes].sort((a, b) => _getMidi(a) - _getMidi(b));
     const n = s.length;
 
-    /* ── 1 nốt ── */
-    if (n === 1) {
-      /* Nốt đơn: không xác định bè → phát để không bị đứt quãng */
-      return s;
-    }
+    if (n === 1) return s;
 
-    /* ── 2 nốt ── */
     if (n === 2) {
-      /*
-       * OSMD có thể gọi riêng từng Part:
-       *   Call với P1 (Treble): [Alto_note, Soprano_note]  → max >= TREBLE_THRESHOLD
-       *   Call với P2 (Bass):   [Bass_note, Tenor_note]    → max <  TREBLE_THRESHOLD
-       *
-       * Dùng max pitch để xác định cặp này thuộc Part nào, rồi chọn đúng bè.
-       */
       const maxMidi  = _getMidi(s[1]);
       const isTreble = maxMidi >= TREBLE_THRESHOLD;
-
       if (isTreble) {
-        /* P1 (khoá Sol): s[0]=Alto, s[1]=Soprano */
         if (mode === 'soprano') return [s[1]];
         if (mode === 'alto')    return [s[0]];
-        return []; /* Tenor/Bass không phát P1 */
+        return [];
       } else {
-        /* P2 (khoá Fa): s[0]=Bass, s[1]=Tenor */
         if (mode === 'tenor') return [s[1]];
         if (mode === 'bass')  return [s[0]];
-        return []; /* Soprano/Alto không phát P2 */
+        return [];
       }
     }
 
-    /* ── 3-4 nốt (merged từ cả 2 Part) ── */
-    /*
-     * Thứ tự pitch rank trong SATB chuẩn:
-     *   s[0]   = Bass     (thấp nhất)
-     *   s[1]   = Tenor    (thứ hai)
-     *   s[n-2] = Alto     (thứ hai từ trên)
-     *   s[n-1] = Soprano  (cao nhất)
-     */
     switch (mode) {
       case 'bass':    return [s[0]];
       case 'tenor':   return [s[Math.min(1, n - 1)]];
@@ -135,34 +122,19 @@ const SheetAudioPlayer = (() => {
   /* ══════════════════════════════════════
    *  applyPlaybackMode
    * ══════════════════════════════════════ */
-
   function applyPlaybackMode() {
     if (!_player || !_osmd) return;
-
     const instrPlayer = _player.instrumentPlayer;
-    if (!instrPlayer) {
-      console.warn('[Audio] instrumentPlayer không tồn tại.');
-      return;
-    }
+    if (!instrPlayer) return;
 
-    /* Luôn restore trước khi re-patch (tránh patch chồng) */
     _restoreSchedule(instrPlayer);
-
     const mode = _currentVoice;
+    if (mode === 'satb') return;
 
-    if (mode === 'satb') {
-      console.log('[Audio] Mode=SATB — phát toàn bộ.');
-      return;
-    }
-
-    console.log(`[Audio] Mode="${mode}" — áp dụng pitch-rank filter.`);
     _origSchedule = instrPlayer.schedule.bind(instrPlayer);
-
     instrPlayer.schedule = function satbSchedule(midiId, time, notes) {
       const filtered = _pickByVoice(notes, mode);
-      if (filtered.length > 0) {
-        _origSchedule(midiId, time, filtered);
-      }
+      if (filtered.length > 0) _origSchedule(midiId, time, filtered);
     };
   }
 
@@ -170,15 +142,30 @@ const SheetAudioPlayer = (() => {
     if (_origSchedule && instrPlayer) {
       instrPlayer.schedule = _origSchedule;
       _origSchedule = null;
-      console.log('[Audio] Schedule restored.');
     }
+  }
+
+  /* ══════════════════════════════════════
+   *  Volume
+   * ══════════════════════════════════════ */
+  function setVolume(db) {
+    _volumeDb = db;
+    _applyVolume();
+  }
+
+  function _applyVolume() {
+    if (!window.Tone?.Destination) return;
+    Tone.Destination.volume.value = _volumeDb;
+    console.log(`[Audio] Volume = ${_volumeDb} dB`);
   }
 
   /* ══════════════════════════════════════
    *  Public API
    * ══════════════════════════════════════ */
-
   function init() {
+    // Unlock AudioContext sớm — iOS cần được "kích hoạt" từ gesture đầu tiên
+    _unlockAudioContext();
+
     document.getElementById('btn-play-audio')?.addEventListener('click', play);
     document.getElementById('btn-stop-audio')?.addEventListener('click', stop);
 
@@ -186,7 +173,6 @@ const SheetAudioPlayer = (() => {
       setSpeed(parseFloat(e.target.value))
     );
 
-    /* Slider âm lượng (nếu có trong UI) */
     document.getElementById('audio-volume')?.addEventListener('input', e => {
       setVolume(parseFloat(e.target.value));
     });
@@ -207,18 +193,38 @@ const SheetAudioPlayer = (() => {
     if (_player && _isPlaying) stop();
     _player = null;
     if (typeof OsmdAudioPlayer === 'undefined') {
-      console.warn('[Audio] OsmdAudioPlayer chưa load — kiểm tra CDN.');
+      console.warn('[Audio] OsmdAudioPlayer chưa load.');
     }
   }
 
   async function play() {
     if (!_osmd) return;
     try {
-      await window.Tone?.start?.();
+      // ── Bước 1: Unlock AudioContext (QUAN TRỌNG trên iOS) ──
+      // Phải await Tone.start() TRONG user gesture (click event)
+      if (window.Tone) {
+        await Tone.start();
+        // iOS đặc biệt: resume() nếu context bị suspended sau khi start()
+        if (Tone.context?.state === 'suspended') {
+          await Tone.context.resume();
+        }
+        // Chờ context chuyển sang 'running'
+        if (Tone.context?.state !== 'running') {
+          await new Promise(resolve => {
+            const check = () => {
+              if (Tone.context.state === 'running') resolve();
+              else setTimeout(check, 100);
+            };
+            check();
+          });
+        }
+      }
 
-      /* ── Boost master volume qua Tone.js Destination ── */
+      // ── Bước 2: Áp dụng volume (sau khi context ready) ──
       _applyVolume();
+      _audioUnlocked = true;
 
+      // ── Bước 3: Tạo player và load ──
       if (!_player) {
         _player = new OsmdAudioPlayer();
       }
@@ -226,6 +232,9 @@ const SheetAudioPlayer = (() => {
       window.App?.showToast?.('🎵 Đang nạp âm thanh…', 'info');
       await _player.loadScore(_osmd);
       applyPlaybackMode();
+
+      // ── Bước 4: Tái áp dụng volume SAU khi load (iOS reset gain) ──
+      _applyVolume();
 
       /* Auto-scroll theo cursor */
       _player.on('iteration', () => {
@@ -247,7 +256,12 @@ const SheetAudioPlayer = (() => {
       window.App?.showToast?.(`▶ Đang phát — ${VOICE_LABELS[_currentVoice] ?? _currentVoice}`, 'success');
 
     } catch (err) {
-      window.App?.showToast?.('Không thể phát audio (trình duyệt chặn hoặc bản nhạc quá phức tạp)', 'error');
+      // Thông báo lỗi thân thiện hơn cho mobile
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const msg = isIOS
+        ? 'Không phát được trên iOS — thử bỏ chế độ Im Lặng (nút bên cạnh iPhone/iPad)'
+        : 'Không thể phát audio (trình duyệt chặn hoặc bản nhạc quá phức tạp)';
+      window.App?.showToast?.(msg, 'error');
       console.error('[Audio]', err);
       stop();
     }
@@ -275,22 +289,6 @@ const SheetAudioPlayer = (() => {
     else if (_player.playbackRate !== undefined)        _player.playbackRate = rate;
   }
 
-  /**
-   * Đặt âm lượng phát bằng cách điều chỉnh Tone.js master Destination.
-   * @param {number} db - giá trị dB (-40 = gần im lặng, 0 = gốc, +20 = rất to)
-   */
-  function setVolume(db) {
-    _volumeDb = db;
-    _applyVolume();
-  }
-
-  function _applyVolume() {
-    if (!window.Tone?.Destination) return;
-    /* Tone.Destination.volume là AudioParam (dB) */
-    Tone.Destination.volume.value = _volumeDb;
-    console.log(`[Audio] Volume = ${_volumeDb} dB`);
-  }
-
   function enableBtn(enabled) {
     const btn = document.getElementById('btn-play-audio');
     const spd = document.getElementById('audio-speed');
@@ -301,7 +299,7 @@ const SheetAudioPlayer = (() => {
     document.querySelectorAll('.voice-btn').forEach(b => { b.disabled = !enabled; });
     if (!enabled) {
       stop();
-      _setVoice('satb'); // Reset voice visual về SATB khi disable
+      _setVoice('satb');
     }
   }
 
@@ -314,7 +312,7 @@ const SheetAudioPlayer = (() => {
     if (sel) sel.value = voice;
   }
 
-  return { init, setup, enableBtn, stop, setSpeed, setVolume };
+  return { init, setup, enableBtn, stop, setSpeed, setVolume, applyPlaybackMode };
 
 })();
 

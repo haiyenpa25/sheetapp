@@ -39,8 +39,8 @@
       <label class="volume-label" title="Âm lượng">
         <span class="volume-icon">🔊</span>
         <input id="audio-volume" type="range" class="audio-volume-slider"
-               min="-20" max="20" step="1" value="12" disabled
-               title="Âm lượng (+12 dB mặc định)">
+               min="-20" max="24" step="1" value="18" disabled
+               title="Âm lượng (+18 dB mặc định — kéo sang phải để to hơn)">
       </label>
       <!-- Voice Selector: 5 chế độ phát bè SATB -->
       <div class="voice-selector" id="voice-selector" role="group" aria-label="Chọn bè phát">
