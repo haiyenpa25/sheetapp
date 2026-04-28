@@ -3,11 +3,21 @@
  * Soprano (S) · Alto (A) · Tenor (T) · Bass (B) · Hòa âm (♪)
  *
  * ══════════════════════════════════════════════════════════════
- * FIX iOS/iPad/Mobile:
- *   • iOS Safari yêu cầu AudioContext.resume() từ user gesture
- *   • Tone.start() phải được await xong TRƯỚC khi tạo OsmdAudioPlayer
- *   • Volume mặc định cao hơn (+18 dB) để đủ nghe trên mobile
- *   • Unlock AudioContext sớm ngay khi user tap lần đầu bất kỳ đâu
+ * FIX iOS/iPad KHÔNG CÓ TIẾNG:
+ *
+ * Có 2 lý do iOS block Web Audio:
+ *
+ * 1. AudioContext "suspended" — iOS yêu cầu resume() phải được gọi
+ *    ĐỒNG BỘ (synchronous) bên trong user gesture handler.
+ *    Nếu gọi sau "await" → iOS đã thu hồi quyền gesture → im lặng.
+ *    Fix: tách hàm play button handler thành 2 phần:
+ *      a) Phần SYNC: resume AudioContext + play silent buffer
+ *      b) Phần ASYNC: loadScore + play
+ *
+ * 2. Silent Mode (nút phần cứng bên hông iPhone) — Web Audio bị
+ *    mute hoàn toàn khi Silent Mode bật. Workaround: play 1 HTML5
+ *    <audio> element đồng thời (HTML5 Audio không bị Silent Mode)
+ *    để "kéo" audio route về speaker.
  *
  * NGUYÊN LÝ FILTER BÈ (Pitch-Rank):
  *   sorted ascending → [Bass, Tenor, Alto, Soprano]
@@ -18,15 +28,15 @@ const SheetAudioPlayer = (() => {
   'use strict';
 
   /* ── State ── */
-  let _player       = null;
-  let _isPlaying    = false;
-  let _osmd         = null;
-  let _currentVoice = 'satb';
-  let _origSchedule = null;
-  let _volumeDb     = 18;     // +18 dB mặc định — đủ nghe trên mobile/iPad
-  let _audioUnlocked = false; // Đã unlock AudioContext chưa
+  let _player        = null;
+  let _isPlaying     = false;
+  let _osmd          = null;
+  let _currentVoice  = 'satb';
+  let _origSchedule  = null;
+  let _volumeDb      = 18;      // +18 dB mặc định
+  let _audioUnlocked = false;
 
-  const TREBLE_THRESHOLD = 64; // E4 — phân biệt Treble vs Bass
+  const TREBLE_THRESHOLD = 64;
 
   const VOICE_LABELS = {
     soprano : 'Soprano (Nữ Cao)',
@@ -36,45 +46,57 @@ const SheetAudioPlayer = (() => {
     satb    : 'Hòa âm 4 bè',
   };
 
-  /* ══════════════════════════════════════
-   *  iOS AudioContext Unlock
-   *  Gọi sớm ngay khi user tap bất kỳ đâu
-   * ══════════════════════════════════════ */
-  function _unlockAudioContext() {
-    if (_audioUnlocked) return;
+  /* ══════════════════════════════════════════════════════════
+   *  _syncUnlock  — GỌI ĐỒNG BỘ trong user gesture, trước mọi await
+   *
+   *  Đây là kỹ thuật quan trọng nhất để fix iOS:
+   *  - ctx.resume() phải nằm TRƯỚC dòng "await" đầu tiên
+   *  - Play 1 buffer im lặng để "mở khóa" AudioContext thực sự
+   * ════════════════════════════════════════════════════════ */
+  function _syncUnlock() {
+    try {
+      // Lấy AudioContext thô của Tone.js
+      const ctx = window.Tone?.context?.rawContext
+               || window.Tone?.context?._context
+               || window.Tone?.context;
 
-    const unlock = async () => {
-      if (_audioUnlocked) return;
-      try {
-        // Tone.js tạo AudioContext nội bộ — cần start từ trong user gesture
-        if (window.Tone) {
-          await Tone.start();
-          // Resume AudioContext nếu bị suspended (iOS đặc biệt cần)
-          if (Tone.context?.state === 'suspended') {
-            await Tone.context.resume();
-          }
-        }
+      if (!ctx) return;
 
-        // Cũng resume bất kỳ AudioContext nào khác đang suspended
-        if (window.AudioContext || window.webkitAudioContext) {
-          const AC = window.AudioContext || window.webkitAudioContext;
-          // OsmdAudioPlayer có thể tạo context riêng
-          if (window._osmdAC && _osmdAC.state === 'suspended') {
-            await _osmdAC.resume();
-          }
-        }
-
-        _audioUnlocked = true;
-        console.log('[Audio] ✅ AudioContext unlocked');
-      } catch (e) {
-        console.warn('[Audio] Unlock failed:', e);
+      // ① Gọi resume() ĐỒNG BỘ (không await) — iOS bắt buộc phải làm vậy
+      if (ctx.state !== 'running') {
+        ctx.resume(); // fire and forget
       }
-    };
 
-    // Lắng nghe mọi gesture của user để unlock
-    ['touchstart', 'touchend', 'mousedown', 'pointerdown', 'keydown'].forEach(evt => {
-      document.addEventListener(evt, unlock, { once: false, passive: true });
-    });
+      // ② Play 1 sample im lặng — thực sự "kích hoạt" AudioContext trên iOS
+      const buf = ctx.createBuffer(1, 1, ctx.sampleRate || 22050);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(ctx.destination);
+      src.start(0);
+      src.stop(0.001);
+
+      _audioUnlocked = true;
+    } catch (e) {
+      console.warn('[Audio] _syncUnlock error:', e);
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════
+   *  _playSilentHtml5  — bypass iOS Silent Mode
+   *
+   *  Khi iPhone ở chế độ Im Lặng (hardware switch), Web Audio bị
+   *  mute hoàn toàn. HTML5 Audio <audio> thì không bị ảnh hưởng.
+   *  Bằng cách play một file audio HTML5 trước, audio route sẽ
+   *  chuyển sang speaker, sau đó Web Audio cũng có tiếng theo.
+   * ════════════════════════════════════════════════════════ */
+  function _playSilentHtml5() {
+    try {
+      // Data URI: file WAV im lặng 0.1s (base64)
+      const silentWav = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+      const audio = new Audio(silentWav);
+      audio.volume = 0.001; // gần như không nghe thấy
+      audio.play().catch(() => {}); // ignore nếu bị block
+    } catch (e) {}
   }
 
   /* ══════════════════════════════════════
@@ -97,8 +119,7 @@ const SheetAudioPlayer = (() => {
     if (n === 1) return s;
 
     if (n === 2) {
-      const maxMidi  = _getMidi(s[1]);
-      const isTreble = maxMidi >= TREBLE_THRESHOLD;
+      const isTreble = _getMidi(s[1]) >= TREBLE_THRESHOLD;
       if (isTreble) {
         if (mode === 'soprano') return [s[1]];
         if (mode === 'alto')    return [s[0]];
@@ -126,11 +147,9 @@ const SheetAudioPlayer = (() => {
     if (!_player || !_osmd) return;
     const instrPlayer = _player.instrumentPlayer;
     if (!instrPlayer) return;
-
     _restoreSchedule(instrPlayer);
     const mode = _currentVoice;
     if (mode === 'satb') return;
-
     _origSchedule = instrPlayer.schedule.bind(instrPlayer);
     instrPlayer.schedule = function satbSchedule(midiId, time, notes) {
       const filtered = _pickByVoice(notes, mode);
@@ -156,17 +175,29 @@ const SheetAudioPlayer = (() => {
   function _applyVolume() {
     if (!window.Tone?.Destination) return;
     Tone.Destination.volume.value = _volumeDb;
-    console.log(`[Audio] Volume = ${_volumeDb} dB`);
   }
 
   /* ══════════════════════════════════════
-   *  Public API
+   *  Init
    * ══════════════════════════════════════ */
   function init() {
-    // Unlock AudioContext sớm — iOS cần được "kích hoạt" từ gesture đầu tiên
-    _unlockAudioContext();
+    /* ────────────────────────────────────────────────────────
+     *  Nút PHÁT — tách làm 2 bước:
+     *    1. _syncUnlock() + _playSilentHtml5() — ĐỒNG BỘ, trong gesture
+     *    2. _playAsync() — bất đồng bộ sau đó
+     * ────────────────────────────────────────────────────────
+     *  LÝ DO: iOS Safari coi tất cả code sau "await" đầu tiên
+     *  là NGOÀI user gesture → không cho resume AudioContext.
+     *  Bằng cách gọi resume() TRƯỚC await, ta vẫn nằm trong gesture.
+     * ──────────────────────────────────────────────────────── */
+    document.getElementById('btn-play-audio')?.addEventListener('click', () => {
+      // ① SYNC — phải là dòng code đầu tiên của handler, trước mọi await
+      _syncUnlock();
+      _playSilentHtml5();
+      // ② ASYNC — sau khi context đã được unlock
+      _playAsync();
+    });
 
-    document.getElementById('btn-play-audio')?.addEventListener('click', play);
     document.getElementById('btn-stop-audio')?.addEventListener('click', stop);
 
     document.getElementById('audio-speed')?.addEventListener('change', e =>
@@ -186,6 +217,16 @@ const SheetAudioPlayer = (() => {
         if (_isPlaying) applyPlaybackMode();
       }
     });
+
+    /* Pre-warm: unlock AudioContext ngay khi user chạm vào màn hình lần đầu */
+    const _earlyUnlock = () => {
+      if (_audioUnlocked) return;
+      _syncUnlock();
+      document.removeEventListener('touchstart', _earlyUnlock);
+      document.removeEventListener('mousedown', _earlyUnlock);
+    };
+    document.addEventListener('touchstart', _earlyUnlock, { passive: true });
+    document.addEventListener('mousedown',  _earlyUnlock, { passive: true });
   }
 
   function setup(osmd) {
@@ -197,34 +238,32 @@ const SheetAudioPlayer = (() => {
     }
   }
 
-  async function play() {
+  /* ══════════════════════════════════════
+   *  _playAsync — phần bất đồng bộ của play()
+   *  (đã tách ra khỏi click handler để iOS unlock hoạt động)
+   * ══════════════════════════════════════ */
+  async function _playAsync() {
     if (!_osmd) return;
     try {
-      // ── Bước 1: Unlock AudioContext (QUAN TRỌNG trên iOS) ──
-      // Phải await Tone.start() TRONG user gesture (click event)
+      // Gọi Tone.start() — lúc này context đã được resume() ở trên rồi
       if (window.Tone) {
         await Tone.start();
-        // iOS đặc biệt: resume() nếu context bị suspended sau khi start()
-        if (Tone.context?.state === 'suspended') {
-          await Tone.context.resume();
-        }
-        // Chờ context chuyển sang 'running'
+        // Chờ context thực sự "running" (tối đa 2s)
         if (Tone.context?.state !== 'running') {
-          await new Promise(resolve => {
-            const check = () => {
-              if (Tone.context.state === 'running') resolve();
-              else setTimeout(check, 100);
+          await new Promise((resolve, reject) => {
+            const deadline = Date.now() + 2000;
+            const poll = () => {
+              if (Tone.context?.state === 'running') return resolve();
+              if (Date.now() > deadline) return reject(new Error('AudioContext không chuyển sang running'));
+              setTimeout(poll, 50);
             };
-            check();
+            poll();
           });
         }
       }
 
-      // ── Bước 2: Áp dụng volume (sau khi context ready) ──
       _applyVolume();
-      _audioUnlocked = true;
 
-      // ── Bước 3: Tạo player và load ──
       if (!_player) {
         _player = new OsmdAudioPlayer();
       }
@@ -233,10 +272,9 @@ const SheetAudioPlayer = (() => {
       await _player.loadScore(_osmd);
       applyPlaybackMode();
 
-      // ── Bước 4: Tái áp dụng volume SAU khi load (iOS reset gain) ──
+      // Tái áp dụng volume sau loadScore (iOS reset gain về 0)
       _applyVolume();
 
-      /* Auto-scroll theo cursor */
       _player.on('iteration', () => {
         const cursorEl = _osmd.cursor?.cursorElement;
         if (!cursorEl) return;
@@ -256,15 +294,25 @@ const SheetAudioPlayer = (() => {
       window.App?.showToast?.(`▶ Đang phát — ${VOICE_LABELS[_currentVoice] ?? _currentVoice}`, 'success');
 
     } catch (err) {
-      // Thông báo lỗi thân thiện hơn cho mobile
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      const msg = isIOS
-        ? 'Không phát được trên iOS — thử bỏ chế độ Im Lặng (nút bên cạnh iPhone/iPad)'
-        : 'Không thể phát audio (trình duyệt chặn hoặc bản nhạc quá phức tạp)';
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      let msg;
+      if (isIOS) {
+        msg = '⚠️ Không phát được — kiểm tra: (1) nút Im Lặng bên cạnh iPhone/iPad, (2) âm lượng phần cứng';
+      } else {
+        msg = 'Không thể phát audio (trình duyệt chặn hoặc file quá phức tạp)';
+      }
       window.App?.showToast?.(msg, 'error');
       console.error('[Audio]', err);
       stop();
     }
+  }
+
+  /* ── play() public (chuyển sang _playAsync cho iOS) ── */
+  function play() {
+    _syncUnlock();
+    _playSilentHtml5();
+    return _playAsync();
   }
 
   function stop() {
@@ -273,12 +321,10 @@ const SheetAudioPlayer = (() => {
       if (_isPlaying) _player.stop();
     }
     _isPlaying = false;
-
     if (_osmd?.cursor) {
       _osmd.cursor.hide();
       _osmd.cursor.reset();
     }
-
     document.getElementById('btn-play-audio')?.classList.remove('hidden');
     document.getElementById('btn-stop-audio')?.classList.add('hidden');
   }
@@ -312,7 +358,7 @@ const SheetAudioPlayer = (() => {
     if (sel) sel.value = voice;
   }
 
-  return { init, setup, enableBtn, stop, setSpeed, setVolume, applyPlaybackMode };
+  return { init, setup, play, enableBtn, stop, setSpeed, setVolume, applyPlaybackMode };
 
 })();
 
