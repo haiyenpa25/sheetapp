@@ -37,9 +37,10 @@ const PerformanceNotes = (() => {
     _cache  = {};
 
     try {
-      const res  = await fetch(`api/sessions.php?songId=${encodeURIComponent(songId)}`);
-      const data = await res.json();
-      _cache = data.perfNotes || {};
+      const data = await window.ApiService?.sessions?.load?.(songId);
+      if (data && data.perfNotes) {
+        _cache = data.perfNotes;
+      }
     } catch (e) {
       console.warn('[PerfNotes] Load error:', e);
     }
@@ -167,11 +168,7 @@ const PerformanceNotes = (() => {
     _cache = data;
 
     try {
-      await fetch('api/sessions.php', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ songId: _songId, perfNotes: data }),
-      });
+      await window.ApiService?.sessions?.savePerfNotes?.(_songId, data);
     } catch (e) {
       console.warn('[PerfNotes] Save error:', e);
     }

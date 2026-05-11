@@ -10,8 +10,7 @@ const Auth = (() => {
 
   async function checkSession() {
     try {
-      const res = await fetch('api/auth.php?action=me');
-      const data = await res.json();
+      const data = await window.ApiService.auth.me();
       if (data.loggedIn) {
         _currentUser = data.username;
         _role = data.role;
@@ -30,12 +29,7 @@ const Auth = (() => {
 
   async function doLogin(username, password) {
     try {
-      const res = await fetch('api/auth.php?action=login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      const data = await res.json();
+      const data = await window.ApiService.auth.login({ username, password });
       if (data.success) {
         _currentUser = data.username;
         _role = data.role;
@@ -56,7 +50,7 @@ const Auth = (() => {
   }
 
   async function doLogout() {
-    await fetch('api/auth.php?action=logout');
+    await window.ApiService.auth.logout();
     _currentUser = null;
     _role = 'viewer';
     _updateUI();

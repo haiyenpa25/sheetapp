@@ -11,7 +11,8 @@ if (php_sapi_name() !== 'cli') {
     header('Content-Type: text/plain; charset=utf-8');
 }
 
-require_once __DIR__ . '/../api/db.php';
+require_once __DIR__ . '/../api/core/DB.php';
+$pdo = DB::get();
 
 $BASE_DIR    = __DIR__ . '/../data/chord_sets';
 $SET_NAME    = 'HD';

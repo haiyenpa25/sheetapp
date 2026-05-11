@@ -13,8 +13,18 @@ const PageNav = (() => {
   let currentPage  = 1;
   let pageOffsets  = [];    // Mảng vị trí scrollTop tương ứng mỗi trang (px)
 
-  const wrapper    = () => document.querySelector('.sheet-viewer-wrapper');
-  const indicator  = () => document.getElementById('page-indicator');
+  let _wrapperEl   = null;
+  let _indicatorEl = null;
+
+  function wrapper() {
+    if (!_wrapperEl) _wrapperEl = document.querySelector('.sheet-viewer-wrapper');
+    return _wrapperEl;
+  }
+  
+  function indicator() {
+    if (!_indicatorEl) _indicatorEl = document.getElementById('page-indicator');
+    return _indicatorEl;
+  }
 
   /* ===================== PUBLIC API ===================== */
 
@@ -22,8 +32,8 @@ const PageNav = (() => {
     document.getElementById('btn-page-prev')?.addEventListener('click', goToPrev);
     document.getElementById('btn-page-next')?.addEventListener('click', goToNext);
 
-    // Scroll listener → cập nhật trang hiện tại
-    wrapper()?.addEventListener('scroll', _onScroll, { passive: true });
+    // Scroll listener → cập nhật trang hiện tại (Throttled via rAF)
+    wrapper()?.addEventListener('scroll', _onScrollThrottled, { passive: true });
   }
 
   /**
@@ -79,6 +89,16 @@ const PageNav = (() => {
   function getCurrentPage() { return currentPage; }
 
   /* ===================== INTERNAL ===================== */
+  let _ticking = false;
+  function _onScrollThrottled() {
+    if (!_ticking) {
+      window.requestAnimationFrame(() => {
+        _onScroll();
+        _ticking = false;
+      });
+      _ticking = true;
+    }
+  }
 
   function _onScroll() {
     const wrapEl = wrapper();

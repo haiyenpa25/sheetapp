@@ -46,42 +46,30 @@ const LibraryUI = (() => {
 
   async function loadCategories() {
     try {
-      const res = await fetch('api/categories.php');
-      categories = await res.json();
+      categories = await ApiService.categories.list();
       const select = document.getElementById('category-filter');
       if (select && Array.isArray(categories)) {
         const optionsHtml = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
         select.innerHTML = '<option value="">Tất cả danh mục</option>' + optionsHtml;
         select.addEventListener('change', _onSearch);
-
         const editSelect = document.getElementById('edit-song-category');
         if (editSelect) editSelect.innerHTML = optionsHtml;
       }
-    } catch(err) {
-      console.error('[Library] Lỗi tải categories:', err);
-    }
+    } catch(err) { console.error('[Library] Lỗi tải categories:', err); }
   }
 
   async function loadSongs() {
     try {
-      const res = await fetch('api/songs.php');
-      songs = await res.json();
+      songs = await ApiService.songs.list();
       if (!Array.isArray(songs)) songs = [];
-      // Sắp xếp theo httlvnId nếu có
       songs.sort((a, b) => (a.httlvnId || 0) - (b.httlvnId || 0));
       render(songs);
       _updateCount(songs.length);
-
-      // Auto-load song from URL
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlSongId = urlParams.get('song');
-      if (urlSongId) {
-          selectSong(urlSongId, false); // false để không pushState trùng lặp
-      }
+      const urlSongId = new URLSearchParams(window.location.search).get('song');
+      if (urlSongId) selectSong(urlSongId, false);
     } catch (err) {
       console.error('[Library] Lỗi tải danh sách:', err);
-      songs = [];
-      render([]);
+      songs = []; render([]);
     }
   }
 
@@ -141,22 +129,17 @@ const LibraryUI = (() => {
   }
 
   async function _promptAddToSetlist(songId) {
-    const res = await fetch('api/setlists.php');
-    const data = await res.json();
-    if (!data.success || data.data.length === 0) {
+    const data = await ApiService.setlists.list();
+    if (!data || data.length === 0) {
       window.App?.showToast('Chưa có Setlist nào được tạo', 'error');
       return;
     }
-    const sls = data.data.map(sl => `${sl.id}: ${sl.title}`).join('\\n');
-    const setId = prompt(`Nhập ID của Setlist muốn thêm vào:\\n${sls}`);
+    const sls = data.map(sl => `${sl.id}: ${sl.title}`).join('\n');
+    const setId = prompt(`Nhập ID của Setlist muốn thêm vào:\n${sls}`);
     if (!setId) return;
     
-    await fetch('api/setlists.php?action=add_item', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ setlist_id: parseInt(setId), song_id: songId, chord_profile: 'default' })
-    });
-    window.App?.showToast('Đã thêm bài hát vào Setlist', 'success');
+    const result = await ApiService.setlists.addItem({ setlist_id: parseInt(setId), song_id: songId });
+    if (result) window.App?.showToast('Đã thêm bài hát vào Setlist', 'success');
   }
 
   function selectSong(songId, updateUrl = true) {
@@ -191,7 +174,7 @@ const LibraryUI = (() => {
 
   async function deleteSong(songId) {
     try {
-      await fetch(`api/songs.php?id=${encodeURIComponent(songId)}`, { method: 'DELETE' });
+      await ApiService.songs.delete(songId);
       songs = songs.filter(s => s.id !== songId);
       if (activeSongId === songId) activeSongId = null;
       render(songs);
@@ -256,14 +239,14 @@ const LibraryUI = (() => {
     if (!listE) return;
     listE.innerHTML = '<div class="empty-state"><span class="empty-icon">🔍</span><p>Đang tìm theo lời...</p></div>';
     try {
-      const res  = await fetch('api/songs.php?lyric_search=' + encodeURIComponent(q));
-      const data = await res.json();
-      if (!Array.isArray(data) || data.length === 0) {
+      const data = await window.ApiService.songs.search(q);
+      const s = data.data || [];
+      if (!Array.isArray(s) || s.length === 0) {
         render([], { emptyMsg: 'Không tìm thấy bài nào', emptyHint: 'Thử từ khác hoặc chuyển sang tìm tên' });
         return;
       }
       // Render với lyric snippet
-      listE.innerHTML = data.map(song => _songItemHTML(song, song.lyric_snippet)).join('');
+      listE.innerHTML = s.map(song => _songItemHTML(song, song.lyric_snippet)).join('');
       listE.querySelectorAll('.song-item').forEach(item => {
         item.addEventListener('click', () => selectSong(item.dataset.id));
       });

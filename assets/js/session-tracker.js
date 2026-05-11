@@ -17,9 +17,8 @@ const SessionTracker = (() => {
   async function loadSong(songId) {
     currentSongId = songId;
     try {
-      const res  = await fetch(`api/sessions.php?songId=${encodeURIComponent(songId)}`);
-      const data = await res.json();
-      currentSettings = data.userSettings || _defaultSettings();
+      const data = await window.ApiService?.sessions?.load?.(songId);
+      currentSettings = (data && data.userSettings) ? data.userSettings : _defaultSettings();
       return currentSettings;
     } catch (err) {
       console.warn('[Session] Không thể load session:', err);
@@ -89,14 +88,7 @@ const SessionTracker = (() => {
   async function _doSave() {
     if (!currentSongId || !currentSettings) return;
     try {
-      await fetch('api/sessions.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          songId: currentSongId,
-          userSettings: currentSettings
-        })
-      });
+      await window.ApiService?.sessions?.saveUserSettings?.(currentSongId, currentSettings);
     } catch (err) {
       console.warn('[Session] Lỗi lưu session:', err);
     }

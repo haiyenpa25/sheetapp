@@ -13,15 +13,18 @@
  * Cách gọi: php api/omr_worker.php <job_id>
  */
 
-require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/core/DB.php';
+$pdo = DB::get();
 
 $job_id = $argv[1] ?? null;
 if (!$job_id) {
     die("Thiếu Job ID\n");
 }
 
+require_once __DIR__ . '/core/Config.php';
+
 define('WORKSPACE_DIR', __DIR__ . '/../storage/omr_workspace/');
-define('OMR_ENGINE_URL', 'http://localhost:5555');  // Docker host port
+define('OMR_ENGINE_URL', Config::get('OMR_ENGINE_URL', 'http://localhost:5555'));
 define('POLL_INTERVAL', 5);      // Polling mỗi 5 giây
 define('MAX_WAIT', 600);         // Tối đa 10 phút
 

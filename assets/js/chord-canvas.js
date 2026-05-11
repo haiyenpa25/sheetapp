@@ -22,8 +22,12 @@ const ChordCanvas = (() => {
   const DOT_CLASS  = 'cc-dot';
   const BTN_CLASS  = 'cc-dot-btn';
 
+  let _isInitialized = false;
+
   /* ─── Init ──────────────────────────────────────────────────── */
   function init() {
+    if (_isInitialized) return;
+    _isInitialized = true;
     // Cả 2 nút: hidden compat + visible bar button đều trigger toggleAddMode
     document.getElementById('btn-add-chord-mode')?.addEventListener('click', toggleAddMode);
     document.getElementById('btn-add-chord-mode-bar')?.addEventListener('click', toggleAddMode);
@@ -108,17 +112,16 @@ const ChordCanvas = (() => {
     });
   }
 
-  async function loadSong(songId) {
+  async function loadSong(songId, initialSet = 'HD') {
     _clear();
     setAddMode(false);
-    _currentSet   = 'HD';   // MẶC ĐỊ NH đầu tiên là HD
+    _currentSet   = initialSet || 'HD';
     _customChords = {};
 
-    // Pre-fetch HD chords đồng thời với XML fetch của app.js (không block)
+    // Pre-fetch chords đồng thời với XML fetch của app.js (không block)
     if (songId) {
       try {
-        const res = await fetch(`api/chord_sets.php?action=load&songId=${encodeURIComponent(songId)}&name=HD`);
-        const r   = await res.json();
+        const r = await window.ApiService.chordSets.load(songId, _currentSet);
         if (r.success && r.chords) {
           r.chords.forEach(({ measureIdx, noteIdx, chord }) => {
             _customChords[`${measureIdx}_${noteIdx}`] = chord;
@@ -151,16 +154,13 @@ const ChordCanvas = (() => {
     document.getElementById('add-chord-hint')?.classList.toggle('hidden', !on);
 
     // Chord dots
-    document.querySelectorAll('.' + BTN_CLASS).forEach(d => { d.style.display = on ? 'flex' : 'none'; });
-    document.querySelectorAll('.cc-edit-badge').forEach(d => { d.style.display = on ? 'flex' : 'none'; });
-
-    // Tắt AnnotateMode nếu đang bật
-    if (on && window.AnnotationCanvas && document.getElementById('btn-add-annotate-mode')?.classList.contains('active')) {
-      window.AnnotationCanvas.setAddMode(false);
+    // Thay vì ẩn hiện display, ta gọi _build() để nó tự render lại trạng thái Edit/View
+    if (on) {
+      _build();
+    } else {
+      _closePopup();
+      _build();
     }
-
-    if (on) { if (document.querySelectorAll('.' + DOT_CLASS).length === 0) _build(); }
-    else { _closePopup(); }
   }
 
   function toggleAddMode() { setAddMode(!_editEnabled); }
@@ -172,9 +172,13 @@ const ChordCanvas = (() => {
     _noteEls = [];
   }
 
+  let _containerEl = null;
+  let _styleBlockEl = null;
+
   function _build() {
     _clear();
-    const container = document.getElementById('osmd-container');
+    if (!_containerEl) _containerEl = document.getElementById('osmd-container');
+    const container = _containerEl;
     if (!container) return;
     const svg = container.querySelector('svg');
     if (!svg) return;
@@ -188,23 +192,31 @@ const ChordCanvas = (() => {
     _noteEls = notes;
     
     // Quản lý hiển thị Hợp âm gốc của OSMD
-    let styleBlock = document.getElementById('cc-custom-style');
-    if (!styleBlock) {
-        styleBlock = document.createElement('style');
-        styleBlock.id = 'cc-custom-style';
-        document.head.appendChild(styleBlock);
+    if (!_styleBlockEl) {
+        _styleBlockEl = document.getElementById('cc-custom-style');
+        if (!_styleBlockEl) {
+            _styleBlockEl = document.createElement('style');
+            _styleBlockEl.id = 'cc-custom-style';
+            document.head.appendChild(_styleBlockEl);
+        }
     }
+    let styleBlock = _styleBlockEl;
 
     if (_currentSet === 'default') {
         styleBlock.textContent = '';
     } else {
-        // Áp đặt CSS siêu ưu tiên (!important) bắt buộc OSMD SVG phải chịu phép
+        // Ẩn nội dung text của ChordSymbol (dựa vào class vf-chordsymbol)
+        // ĐỒNG THỜI ẩn tất cả các thẻ text trong SVG có màu trùng với màu hợp âm (để triệt tiêu hoàn toàn hợp âm rác)
+        const chordColor = window.DisplaySettings?.getChordPrefs?.()?.color || '#dc2626';
         styleBlock.textContent = `
-            #osmd-container svg text[font-family*="OSMDChordFont"],
-            #osmd-container svg text[font-family*="OSMDChordFont"] tspan {
-                fill: #dc2626 !important;
-                font-weight: 800 !important;
-            }
+          #osmd-container svg g.vf-chordsymbol text,
+          #osmd-container svg g.vf-chordsymbol tspan,
+          #osmd-container svg text[fill="${chordColor}"],
+          #osmd-container svg text[fill="${chordColor}"] tspan {
+            fill: transparent !important;
+            stroke: transparent !important;
+            user-select: none;
+          }
         `;
     }
 
@@ -220,6 +232,48 @@ const ChordCanvas = (() => {
 
     mapped.forEach(m => _placeDot(m, chordTextPositions));
 
+    // Canh thẳng hàng ngang các hợp âm trên cùng một dòng (tránh nhảy múa lên xuống theo nốt)
+    _alignDOMChords();
+  }
+
+  /* ─── Align DOM Chords horizontally per system ─────────────────── */
+  function _alignDOMChords() {
+    const container = document.getElementById('osmd-container');
+    if (!container) return;
+
+    // Tìm tất cả các badge và chord text
+    const elements = Array.from(container.querySelectorAll('.cc-edit-badge, .cc-chord-text'));
+    if (!elements.length) return;
+
+    // Nhóm theo dòng (chênh lệch top < 50px)
+    const rows = [];
+    elements.forEach(el => {
+      const top = parseFloat(el.style.top);
+      if (isNaN(top)) return;
+
+      let found = false;
+      for (const row of rows) {
+        if (Math.abs(row.avgTop - top) < 50) {
+          row.els.push(el);
+          row.minTop = Math.min(row.minTop, top);
+          let sum = 0;
+          row.els.forEach(e => sum += parseFloat(e.style.top));
+          row.avgTop = sum / row.els.length;
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        rows.push({ avgTop: top, minTop: top, els: [el] });
+      }
+    });
+
+    // Ép toàn bộ các phần tử trong cùng 1 dòng về minTop (vị trí cao nhất để không đè nốt)
+    rows.forEach(row => {
+      row.els.forEach(el => {
+        el.style.top = row.minTop + 'px';
+      });
+    });
   }
 
   /* ─── Build chord text position map ────────────────────────── */
@@ -237,7 +291,7 @@ const ChordCanvas = (() => {
 
     // Lấy tất cả chord text SVG, sort top→bottom, left→right (đúng thứ tự bài nhạc)
     const chordTextEls = Array.from(
-      svg.querySelectorAll('text[font-family*="OSMDChordFont"]')
+      svg.querySelectorAll('g.vf-chordsymbol text')
     ).sort((a, b) => {
       const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
       if (Math.abs(ra.top - rb.top) > 15) return ra.top - rb.top;
@@ -323,13 +377,13 @@ const ChordCanvas = (() => {
     const container = document.getElementById('osmd-container');
     const cRect = container.getBoundingClientRect();
 
-    // Vị trí fallback dựa vào nốt nhạc (dùng khi chưa có SVG chord text)
-    const cx = (rect.left - cRect.left) + rect.width / 2;
-    const cy = (rect.top  - cRect.top)  - 20;
-
     const scale   = ChordCanvasUI.getScale();
     const dotSize = ChordCanvasUI.getDotSize(scale);
     const fSize   = Math.max(10, Math.round(11 * scale));
+
+    // Vị trí fallback dựa vào nốt nhạc (cách nốt một khoảng tỉ lệ thuận với scale)
+    const cx = (rect.left - cRect.left) + rect.width / 2;
+    const cy = (rect.top  - cRect.top)  - (25 * scale);
 
     if (chord) {
       if (!_editEnabled && _currentSet === 'default') return;
@@ -337,59 +391,100 @@ const ChordCanvas = (() => {
       // Tìm vị trí chord text SVG (nếu OSMD đã render)
       const textPos = chordTextPositions.get(`${measureIdx}_${noteIdx}`);
 
-      let badgeX, badgeY;
-      if (textPos) {
-        // ✅ Đặt badge PHÍA TRÊN chữ hợp âm (không đè lên)
-        // Center X = center của chord text; Y = bên trên chord text (gap 2px)
-        badgeX = textPos.bx + textPos.bw / 2 - dotSize / 2;
-        badgeY = textPos.by - dotSize - 6;  // 6px gap để không đè lên chữ
+      if (_currentSet === 'default') {
+        // Mặc định: OSMD đã vẽ hợp âm, ta chỉ chèn badge ✎ phía trên
+        const badgeX = textPos ? textPos.bx + textPos.bw / 2 : cx;
+        const badgeY = textPos ? textPos.by - 6 : cy - dotSize / 2;
+
+        const badge = document.createElement('div');
+        badge.className = DOT_CLASS + ' cc-edit-badge';
+        badge.textContent = '\u270e';
+        badge.title = 'Sửa hợp âm: ' + chord;
+        ChordCanvasUI.applyAbsolute(badge, badgeX, badgeY, [
+          'display:' + (_editEnabled ? 'flex' : 'none'),
+          'align-items:center', 'justify-content:center',
+          'width:' + dotSize + 'px', 'height:' + dotSize + 'px', 'border-radius:50%',
+          'background:rgba(109,40,217,0.87)',
+          'border:2.5px solid rgba(255,255,255,0.8)',
+          'color:#fff', 'font-size:' + fSize + 'px', 'line-height:1',
+          'box-shadow:0 2px 7px rgba(109,40,217,0.55)',
+          'pointer-events:auto', 'cursor:pointer', 'user-select:none', 'z-index:12',
+          'transform: translateX(-50%) translateY(-100%)',
+          'transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease'
+        ]);
+        badge.addEventListener('mouseenter', () => { badge.style.transform = 'translateX(-50%) translateY(-100%) scale(1.15)'; badge.style.background = 'rgba(109,40,217,1)'; badge.style.boxShadow = '0 4px 12px rgba(109,40,217,0.7)'; });
+        badge.addEventListener('mouseleave', () => { badge.style.transform = 'translateX(-50%) translateY(-100%) scale(1)'; badge.style.background = 'rgba(109,40,217,0.87)'; badge.style.boxShadow = '0 2px 7px rgba(109,40,217,0.55)'; });
+        badge.addEventListener('click', e => { e.stopPropagation(); _showPopup(badge, measureIdx, noteIdx, chord); });
+        container.appendChild(badge);
+
+        const span = document.createElement('span');
+        span.className = DOT_CLASS + ' cc-chord-text';
+        span.title = chord;
+        const spanX = textPos ? textPos.bx + textPos.bw / 2 : cx;
+        const spanY = textPos ? textPos.by + textPos.bh / 2 : cy;
+        ChordCanvasUI.applyAbsolute(span, spanX, spanY, [
+          'transform: translate(-50%, -50%)', 'opacity:0', 'width:60px', 'height:22px',
+          'pointer-events:' + (_editEnabled ? 'auto' : 'none'),
+          'cursor:pointer', 'display:block'
+        ]);
+        span.addEventListener('click', e => {
+          if (!_editEnabled) return;
+          e.stopPropagation(); _showPopup(span, measureIdx, noteIdx, chord);
+        });
+        container.appendChild(span);
 
       } else {
-        // Fallback: vị trí ước tính phía trên nốt (custom set chưa reload)
-        badgeX = cx - dotSize / 2;
-        badgeY = cy - dotSize / 2;
+        // Custom: Dùng DOM Overlay vĩnh viễn (do OSMD đã bị ẩn fill: transparent)
+        let spanX = textPos ? textPos.bx + textPos.bw / 2 : cx;
+        let spanY = cy - (10 * scale);
+        if (textPos) {
+          spanY = textPos.by + (textPos.bh || 20) / 2;
+        } else {
+          let closestDist = Infinity;
+          for (let pos of chordTextPositions.values()) {
+            let dist = Math.abs(pos.by - cy);
+            if (dist < 120 * scale && dist < closestDist) {
+              closestDist = dist;
+              spanY = pos.by + (pos.bh || 20) / 2;
+            }
+          }
+        }
+
+        const textBadge = document.createElement('div');
+        textBadge.className = DOT_CLASS + ' cc-custom-chord-text';
+        textBadge.textContent = chord;
+        textBadge.title = _editEnabled ? 'Sửa hợp âm: ' + chord : chord;
+
+        const baseStyle = [
+          'position:absolute', `left:${spanX}px`, `top:${spanY}px`,
+          'transform:translate(-50%, -50%)',
+          'font-family: Arial, sans-serif', 'font-weight: bold',
+          'white-space: nowrap', 'z-index: 12'
+        ];
+        baseStyle.push(`font-size: ${Math.max(14, 18 * scale)}px`);
+
+        if (_editEnabled) {
+          baseStyle.push(
+            'color: #8b5cf6', 'background: rgba(255,255,255,0.95)',
+            'border: 1.5px solid #8b5cf6', 'border-radius: 6px',
+            'padding: 2px 6px', 'box-shadow: 0 4px 10px rgba(109,40,217,0.2)',
+            'cursor: pointer', 'pointer-events: auto',
+            'transition: transform 0.15s ease, box-shadow 0.15s ease'
+          );
+          textBadge.addEventListener('mouseenter', () => { textBadge.style.transform = 'translate(-50%, -50%) scale(1.08)'; textBadge.style.boxShadow = '0 6px 14px rgba(109,40,217,0.3)'; });
+          textBadge.addEventListener('mouseleave', () => { textBadge.style.transform = 'translate(-50%, -50%) scale(1)'; textBadge.style.boxShadow = '0 4px 10px rgba(109,40,217,0.2)'; });
+          textBadge.addEventListener('click', e => { e.stopPropagation(); _showPopup(textBadge, measureIdx, noteIdx, chord); });
+        } else {
+          baseStyle.push(
+            'color: #dc2626', 'background: transparent', 'border: none',
+            'padding: 0', 'box-shadow: none',
+            'cursor: default', 'pointer-events: none'
+          );
+        }
+
+        textBadge.style.cssText = baseStyle.join(';');
+        container.appendChild(textBadge);
       }
-
-      // Badge ✎ — hiện phía TRÊN văn bản hợp âm
-      const badge = document.createElement('div');
-      badge.className = DOT_CLASS + ' cc-edit-badge';
-      badge.textContent = '\u270e'; // ✎
-      badge.title = 'S\u1eeda h\u1ee3p \u00e2m: ' + chord;
-      ChordCanvasUI.applyAbsolute(badge, badgeX, badgeY, [
-        'display:' + (_editEnabled ? 'flex' : 'none'),
-        'align-items:center', 'justify-content:center',
-        'width:' + dotSize + 'px', 'height:' + dotSize + 'px', 'border-radius:50%',
-        'background:rgba(109,40,217,0.87)',
-        'border:2.5px solid rgba(255,255,255,0.8)',
-        'color:#fff', 'font-size:' + fSize + 'px', 'line-height:1',
-        'box-shadow:0 2px 7px rgba(109,40,217,0.55)',
-        'pointer-events:auto', 'cursor:pointer', 'user-select:none', 'z-index:12'
-      ]);
-      badge.addEventListener('click', e => {
-        e.stopPropagation();
-        _showPopup(badge, measureIdx, noteIdx, chord);
-      });
-      container.appendChild(badge);
-
-      // Invisible click zone tại vị trí chord text (để dễ click vào chữ hợp âm)
-      const span = document.createElement('span');
-      span.className = DOT_CLASS + ' cc-chord-text';
-      span.title = chord;
-      const spanX = textPos ? textPos.bx + textPos.bw / 2 - 30 : cx - 30;
-      const spanY = textPos ? textPos.by                       : cy;
-      ChordCanvasUI.applyAbsolute(span, spanX, spanY, [
-        'white-space:nowrap', 'user-select:none',
-        'opacity:0', 'width:60px', 'height:22px',
-        'pointer-events:' + (_editEnabled ? 'auto' : 'none'),
-        'cursor:pointer', 'display:block'
-      ]);
-      span.addEventListener('click', e => {
-        if (!_editEnabled) return;
-        e.stopPropagation();
-        _showPopup(span, measureIdx, noteIdx, chord);
-      });
-      container.appendChild(span);
-
     } else {
       const btn = document.createElement('div');
       btn.className = DOT_CLASS + ' ' + BTN_CLASS;
@@ -398,8 +493,11 @@ const ChordCanvas = (() => {
         'display:' + (_editEnabled ? 'flex' : 'none'), 'align-items:center', 'justify-content:center',
         `width:${dotSize}px`, `height:${dotSize}px`, 'border-radius:50%', 'background:rgba(109,40,217,0.8)',
         'color:#fff', `font-size:${fSize}px`, 'line-height:1', 'box-shadow:0 1px 4px rgba(109,40,217,0.4)',
-        'pointer-events:auto', 'cursor:pointer', 'user-select:none'
+        'pointer-events:auto', 'cursor:pointer', 'user-select:none',
+        'transition: transform 0.15s ease, background 0.15s ease'
       ]);
+      btn.addEventListener('mouseenter', () => { btn.style.transform = 'scale(1.15)'; btn.style.background = 'rgba(109,40,217,1)'; });
+      btn.addEventListener('mouseleave', () => { btn.style.transform = 'scale(1)'; btn.style.background = 'rgba(109,40,217,0.8)'; });
       btn.addEventListener('click', e => { e.stopPropagation(); _showPopup(btn, measureIdx, noteIdx, ''); });
       container.appendChild(btn);
     }
@@ -525,11 +623,7 @@ const ChordCanvas = (() => {
     });
 
     try {
-      const res = await fetch('api/chord_sets.php', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'save', songId, name: _currentSet, chords: arr })
-      });
-      const r = await res.json();
+      const r = await window.ApiService.chordSets.save(songId, _currentSet, arr);
       if (r.success) window.App?.showToast?.(`Đã lưu hợp âm cho "${_currentSet}"`, 'success');
       else window.App?.showToast?.('Lỗi lưu: ' + (r.message || ''), 'error');
     } catch(e) { window.App?.showToast?.('Lỗi: ' + e.message, 'error'); }
@@ -543,8 +637,7 @@ const ChordCanvas = (() => {
       const songId = window.App?.getCurrentSongId?.();
       if (songId) {
         try {
-          const res = await fetch(`api/chord_sets.php?action=load&songId=${encodeURIComponent(songId)}&name=${encodeURIComponent(name)}`);
-          const r   = await res.json();
+          const r = await window.ApiService.chordSets.load(songId, name);
           if (r.success && r.chords) {
             r.chords.forEach(({ measureIdx, noteIdx, chord }) => { _customChords[`${measureIdx}_${noteIdx}`] = chord; });
           }
@@ -568,11 +661,7 @@ const ChordCanvas = (() => {
     if (!songId) return;
 
     try {
-      const res = await fetch('api/chord_sets.php', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'save', songId, name, chords: [] })
-      });
-      const r = await res.json();
+      const r = await window.ApiService.chordSets.save(songId, name, []);
       if (!r.success) { window.App?.showToast?.('Tạo thất bại', 'error'); return; }
     } catch(e) { return; }
 
@@ -595,10 +684,7 @@ const ChordCanvas = (() => {
     const songId = window.App?.getCurrentSongId?.();
     if (!songId) return;
     try {
-      await fetch('api/chord_sets.php', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete', songId, name })
-      });
+      await window.ApiService.chordSets.delete(songId, name);
     } catch(e) {}
     if (_currentSet === name) await switchSet('HD'); // fallback về HD thay vì default
     _refreshSetDropdown();
@@ -620,8 +706,7 @@ const ChordCanvas = (() => {
     selector.disabled = false;
     let sets = ['default'];
     try {
-      const res = await fetch(`api/chord_sets.php?action=list&songId=${encodeURIComponent(songId)}`);
-      const r   = await res.json();
+      const r = await window.ApiService.chordSets.list(songId);
       if (r.success) {
         // Đảm bảo HD luôn trong danh sách (dù rỗng)
         const hdInList = r.sets.some(s => s === 'HD');

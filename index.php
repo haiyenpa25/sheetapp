@@ -98,6 +98,13 @@ function jsTag(string $file): string {
     $v    = file_exists($path) ? filemtime($path) : time();
     return "<script src=\"assets/js/{$file}?v={$v}\"></script>\n";
 }
+
+// ── 1. CORE Infrastructure (load đầu tiên) ──
+echo jsTag('core/EventBus.js');
+echo jsTag('core/Store.js');
+echo jsTag('core/ApiService.js');
+
+// ── 2. Renderers & Engines ──
 echo jsTag('osmd-renderer.js');
 echo jsTag('lyric-extractor.js');
 echo jsTag('transpose-engine.js');
@@ -105,9 +112,10 @@ echo jsTag('session-tracker.js');
 echo jsTag('auth.js');
 echo jsTag('history-manager.js');
 echo jsTag('url-state.js');
+
+// ── 3. Feature Modules ──
 echo jsTag('library-ui.js');
 echo jsTag('setlist-ui.js');
-
 echo jsTag('importer.js');
 echo jsTag('admin-ui.js');
 echo jsTag('display-settings.js');
@@ -121,12 +129,16 @@ echo jsTag('audio-player.js');
 echo jsTag('auto-scroller.js');
 echo jsTag('page-nav.js');
 echo jsTag('app-ui.js');
-echo jsTag('song-info-bar.js');   // Sprint A1
+echo jsTag('song-info-bar.js');
+
+// ── 4. App Controllers (load sau, phụ thuộc vào modules trên) ──
+echo jsTag('song-loader.js');
+echo jsTag('keyboard-handler.js');
+echo jsTag('toolbar-controller.js');
 echo jsTag('app.js');
 echo jsTag('fab.js');
-
-
 ?>
+
 
 </body>
 </html>

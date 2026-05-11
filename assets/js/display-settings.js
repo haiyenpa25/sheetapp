@@ -98,10 +98,17 @@ const DisplaySettings = (() => {
                 }
             });
             
-            // Xử lý scroll để menu trôi theo hoặc tắt
+            // Xử lý scroll để menu trôi theo hoặc tắt (Throttled)
+            let _ticking = false;
             window.addEventListener('scroll', () => {
-                if (!compactPanel.classList.contains('hidden')) {
-                    compactPanel.classList.add('hidden');
+                if (!_ticking) {
+                    window.requestAnimationFrame(() => {
+                        if (!compactPanel.classList.contains('hidden')) {
+                            compactPanel.classList.add('hidden');
+                        }
+                        _ticking = false;
+                    });
+                    _ticking = true;
                 }
             }, { passive: true });
         }
@@ -141,7 +148,7 @@ const DisplaySettings = (() => {
         document.getElementById('btn-reset-chord-settings')?.addEventListener('click', resetChordPrefs);
         document.getElementById('btn-save-chord-settings')?.addEventListener('click', saveChordPrefs);
 
-        // Lắng nghe khi Admin Tab mở để vẽ preview
+        // Lắng nghe khi Admin Tab mở để vẽ preview, đóng thì dọn rác
         const tabs = document.querySelectorAll('.admin-tab-btn');
         tabs.forEach(t => {
             t.addEventListener('click', () => {
@@ -149,6 +156,8 @@ const DisplaySettings = (() => {
                     // Update UI form with current loaded values
                     _updateChordAdminUI();
                     _renderPreviewCanvas();
+                } else {
+                    if (previewOsmd && previewOsmd.clear) previewOsmd.clear();
                 }
             });
         });

@@ -135,7 +135,7 @@ const ChordCanvasXML = (() => {
     const bass = m[4] ? (m[4].charAt(0).toUpperCase() + m[4].slice(1)) : null;
 
     const h = doc.createElement('harmony');
-    if (isCustom) h.setAttribute('color', '#dc2626');
+    if (isCustom) h.setAttribute('color', window.DisplaySettings?.getChordPrefs?.()?.color || '#dc2626');
     
     
     const r = doc.createElement('root');
@@ -185,6 +185,18 @@ const ChordCanvasXML = (() => {
     // Xóa tất cả các thẻ <harmony> (hợp âm cũ Mặc định) hiện có
     const harmonies = doc.querySelectorAll('harmony');
     harmonies.forEach(h => h.remove());
+
+    // Xóa thêm các thẻ <words> và <credit-words> (Text Direction / Floating Text) có nội dung giống hợp âm
+    // (Vì nhiều phần mềm xuất XML biến hợp âm thành text tĩnh, gây ra lỗi hiển thị kép)
+    const words = doc.querySelectorAll('words, credit-words');
+    const chordRegex = /^[A-G][#b]?(m|min|maj|M|dim|aug|sus|add)?\d*(\/[A-G][#b]?)?$/i;
+    words.forEach(w => {
+      if (chordRegex.test(w.textContent.trim())) {
+        const parent = w.closest('direction') || w.closest('credit');
+        if (parent) parent.remove();
+        else w.remove();
+      }
+    });
 
     // Nếu không có customChordsMap hoặc Map trống, trả về XML trắng hợp âm
     if (!customChordsMap || Object.keys(customChordsMap).length === 0) {

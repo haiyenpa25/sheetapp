@@ -10,6 +10,7 @@ const AnnotationCanvas = (() => {
   let _notes       = {}; // { "measureIdx_noteIdx": { text, color } }
   let _noteEls     = [];
   let _ro          = null;
+  let _isInitialized = false;
 
   const DOT_CLASS = 'ano-dot';
   const BTN_CLASS = 'ano-dot-btn';
@@ -22,6 +23,9 @@ const AnnotationCanvas = (() => {
       if (e.key === 'Escape') { _closePopup(); setAddMode(false); }
     });
     
+    if (_isInitialized) return;
+    _isInitialized = true;
+
     const container = document.getElementById('osmd-container');
     if (container) {
       let rTid = null;
@@ -44,14 +48,15 @@ const AnnotationCanvas = (() => {
     if (!songId) return;
 
     try {
-      const res = await fetch(`api/annotations.php?action=load&songId=${encodeURIComponent(songId)}`);
-      const r = await res.json();
-      if (r.success && r.annotations) {
-        r.annotations.forEach(a => {
+      const annotations = await window.ApiService?.annotations?.load?.(songId);
+      if (Array.isArray(annotations)) {
+        annotations.forEach(a => {
           _notes[`${a.measureIdx}_${a.noteIdx}`] = a;
         });
       }
-    } catch(e) {}
+    } catch(e) {
+      console.warn('Load annotation error:', e);
+    }
     _build();
   }
 
@@ -161,11 +166,15 @@ const AnnotationCanvas = (() => {
       div.style.cssText = [
         'position:absolute', `left:${cx}px`, `top:${cy}px`,
         'transform:translateX(-50%)', 'z-index:90',
-        'border-radius:4px',
-        `font-size:${Math.max(10, 11 * scale)}px`, 'padding:2px 7px',
+        'border-radius:6px',
+        `font-size:${Math.max(10, 11 * scale)}px`, 'padding:3px 8px',
         'white-space:nowrap', 'user-select:none', 'pointer-events:auto', 'cursor:pointer',
-        'box-shadow:0 2px 4px rgba(0,0,0,.12)'
+        'box-shadow: 0 4px 10px rgba(0,0,0,0.15)', 'transition: transform 0.15s ease, box-shadow 0.15s ease'
       ].join(';');
+
+      div.addEventListener('mouseenter', () => { div.style.transform = 'translateX(-50%) scale(1.05)'; div.style.boxShadow = '0 6px 14px rgba(0,0,0,0.2)'; });
+      div.addEventListener('mouseleave', () => { div.style.transform = 'translateX(-50%) scale(1)'; div.style.boxShadow = '0 4px 10px rgba(0,0,0,0.15)'; });
+
 
       div.addEventListener('click', e => { e.stopPropagation(); _showPopup(div, measureIdx, noteIdx, anno); });
       container.appendChild(div);
@@ -179,10 +188,14 @@ const AnnotationCanvas = (() => {
         'position:absolute', `left:${cx}px`, `top:${cy}px`,
         'transform:translateX(-50%)', 'z-index:80',
         'display:flex', 'align-items:center', 'justify-content:center',
-        `width:${dotSize}px`, `height:${dotSize}px`, 'border-radius:50%', 'background:rgba(5,150,105,0.8)',
-        'color:#fff', `font-size:${10 * scale}px`, 'line-height:1', 'box-shadow:0 1px 4px rgba(5,150,105,0.4)',
-        'pointer-events:auto', 'cursor:pointer', 'user-select:none'
+        `width:${dotSize}px`, `height:${dotSize}px`, 'border-radius:50%', 'background:rgba(5,150,105,0.85)',
+        'color:#fff', `font-size:${10 * scale}px`, 'line-height:1', 'box-shadow:0 2px 7px rgba(5,150,105,0.5)',
+        'pointer-events:auto', 'cursor:pointer', 'user-select:none', 'transition: transform 0.15s ease, background 0.15s ease'
       ].join(';');
+
+      btn.addEventListener('mouseenter', () => { btn.style.transform = 'translateX(-50%) scale(1.15)'; btn.style.background = 'rgba(5,150,105,1)'; });
+      btn.addEventListener('mouseleave', () => { btn.style.transform = 'translateX(-50%) scale(1)'; btn.style.background = 'rgba(5,150,105,0.85)'; });
+
       
       btn.addEventListener('click', e => { e.stopPropagation(); _showPopup(btn, measureIdx, noteIdx, null); });
       container.appendChild(btn);
@@ -212,11 +225,17 @@ const AnnotationCanvas = (() => {
     pop.className = 'cc-popup';
     pop.style.cssText = [
       'position:fixed', `left:${ar.left + ar.width / 2}px`, `top:${ar.bottom + 8}px`,
-      'transform:translateX(-50%)', 'z-index:99999',
-      'background:#fff', 'border:1.5px solid #059669', 'border-radius:10px',
-      'padding:.65rem .8rem', 'box-shadow:0 8px 28px rgba(5,150,105,.22)',
-      'min-width:230px', 'pointer-events:auto'
+      'transform:translateX(-50%) translateY(10px)', 'z-index:99999',
+      'background:var(--bg-surface, #fff)', 'border:1px solid rgba(5,150,105,0.3)', 'border-radius:var(--radius, 12px)',
+      'padding:.8rem', 'box-shadow:var(--shadow, 0 8px 28px rgba(5,150,105,0.2))',
+      'min-width:240px', 'pointer-events:auto', 'opacity:0', 'transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease'
     ].join(';');
+    
+    // Kích hoạt animation slide-up
+    setTimeout(() => {
+        pop.style.transform = 'translateX(-50%) translateY(0)';
+        pop.style.opacity = '1';
+    }, 10);
 
     const colorBtns = _COLORS.map(c =>
       `<button class="ano-color-btn ${selColor===c.id?'active':''}" data-color="${c.id}"
@@ -327,14 +346,12 @@ const AnnotationCanvas = (() => {
     
     const arr = Object.values(_notes);
     try {
-      const res = await fetch('api/annotations.php', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'save', songId, annotations: arr })
-      });
-      const r = await res.json();
-      if (r.success) window.App?.showToast?.(`Đã lưu ghi chú`, 'success');
-      else window.App?.showToast?.('Lỗi lưu ghi chú', 'error');
-    } catch(e) {}
+      await window.ApiService?.annotations?.save?.(songId, arr);
+      window.App?.showToast?.(`Đã lưu ghi chú`, 'success');
+    } catch(e) {
+      console.warn('Save annotation error:', e);
+      window.App?.showToast?.('Lỗi lưu ghi chú', 'error');
+    }
     _build();
   }
 

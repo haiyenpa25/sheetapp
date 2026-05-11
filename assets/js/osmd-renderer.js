@@ -83,6 +83,11 @@ const OSMDRenderer = (() => {
         osmd.rules.DefaultColorChordSymbol = prefs.color;
         osmd.rules.ChordSymbolTextHeight   = prefs.size;
         osmd.rules.ChordSymbolYOffset      = prefs.yOffset;
+        
+        // --- ÉP KHOẢNG CÁCH HỢP ÂM CỐ ĐỊNH, KHÔNG BỊ ĐẨY LÊN CAO ---
+        osmd.rules.ChordSymbolYPadding = 0.0;
+        osmd.rules.ChordSymbolYSpacing = 0.0;
+        osmd.rules.ChordOverlapAllowedIntoNextMeasure = true;
 
         // Title sizing — đặt lại mỗi lần refresh
         if (osmd.rules.SheetTitleHeight !== undefined)   osmd.rules.SheetTitleHeight   = 2.0;

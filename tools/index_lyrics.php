@@ -4,7 +4,8 @@
  * Đọc tất cả file XML, extract lời bài hát → lưu vào cột lyrics_text trong DB
  * Chạy 1 lần: php tools/index_lyrics.php
  */
-require __DIR__ . '/../api/db.php';
+require __DIR__ . '/../api/core/DB.php';
+$pdo = DB::get();
 
 // Thêm cột lyrics_text nếu chưa có
 try {

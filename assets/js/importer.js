@@ -154,12 +154,7 @@ const Importer = (() => {
     _showProgress('Đang truy cập trang bài hát...');
 
     try {
-      const res  = await fetch('api/import.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'scrape', url, title })
-      });
-      const data = await res.json();
+      const data = await window.ApiService.importer.search(url);
 
       if (!data.success) throw new Error(data.message || 'Scrape thất bại');
 
@@ -188,8 +183,7 @@ const Importer = (() => {
       formData.append('file', selectedFile);
       formData.append('title', title);
 
-      const res  = await fetch('api/import.php?type=upload', { method: 'POST', body: formData });
-      const data = await res.json();
+      const data = await window.ApiService.importer.upload(formData);
 
       if (!data.success) throw new Error(data.message || 'Upload thất bại');
 
@@ -214,12 +208,7 @@ const Importer = (() => {
     _showProgress('Đang tải file XML...');
 
     try {
-      const res  = await fetch('api/import.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'url', url, title })
-      });
-      const data = await res.json();
+      const data = await window.ApiService.importer.fetch(url);
 
       if (!data.success) throw new Error(data.message || 'Tải file thất bại');
 
@@ -235,8 +224,7 @@ const Importer = (() => {
 
   async function _fetchOmrQueue() {
     try {
-      const res = await fetch('api/omr.php');
-      const data = await res.json();
+      const data = await window.ApiService.omr.list();
       const container = document.getElementById('omr-queue-container');
       const list = document.getElementById('omr-queue-list');
       if (data && data.length > 0) {
@@ -269,8 +257,7 @@ const Importer = (() => {
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res = await fetch('api/omr.php', { method: 'POST', body: fd });
-      const data = await res.json();
+      const data = await window.ApiService.omr.create(fd);
       if (!data.success) throw new Error(data.error);
       _fetchOmrQueue();
       document.getElementById('import-progress')?.classList.add('hidden');
@@ -295,14 +282,13 @@ const Importer = (() => {
   
   window.Importer.deleteOmrJob = async function(id) {
     if(!confirm('Xoá bản nhận diện này?')) return;
-    await fetch('api/omr.php?id='+id, { method: 'DELETE' });
+    await window.ApiService.omr.delete(id);
     _fetchOmrQueue();
   };
 
   async function _loadCategoriesForOmr() {
     try {
-      const res = await fetch('api/categories.php');
-      const cats = await res.json();
+      const cats = await window.ApiService.categories.list();
       const sel = document.getElementById('omr-review-category');
       if (sel && Array.isArray(cats)) {
         sel.innerHTML = cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
@@ -321,25 +307,16 @@ const Importer = (() => {
       // URL có thể là file tĩnh hoặc API
       const xmlUrl = window.location.origin + window.location.pathname.replace(/\/index\.php$/, '') + '/storage/omr_workspace/' + id + '.mxl';
       
-      const res  = await fetch('api/import.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'url', url: xmlUrl, title: title })
-      });
-      const data = await res.json();
+      const data = await window.ApiService.importer.fetch(xmlUrl);
       if (!data.success) throw new Error(data.message || 'Lưu kho thất bại');
       
       // Update Category manually vì API url mặc định cat 1.
-      await fetch(`api/songs.php?id=${data.song.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ categoryId: catId })
-      });
+      await window.ApiService.songs.update(data.song.id, { categoryId: catId });
       data.song.category_id = catId; // force local update
 
       _showResult(`✅ Đã đưa vào kho: <strong>${_esc(data.title)}</strong>`, 'success');
       // Delete OMR Queue job
-      await fetch('api/omr.php?id='+id, { method: 'DELETE' });
+      await window.ApiService.omr.delete(id);
       
       _triggerSuccess(data.song);
     } catch (err) {

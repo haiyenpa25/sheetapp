@@ -68,9 +68,8 @@ const AdminUI = (() => {
      ==================================== */
   async function loadCategories() {
     try {
-      const res = await fetch('api/categories.php?action=list');
-      const data = await res.json();
-      currentCategories = data.data || [];
+      const res = await window.ApiService.categories.list();
+      currentCategories = res.data || [];
       
       const tbody = document.querySelector('#admin-categories-table tbody');
       if (!tbody) return;
@@ -104,12 +103,8 @@ const AdminUI = (() => {
     if (!name || !name.trim()) return;
 
     try {
-      const res = await fetch('api/categories.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ name: name.trim() })
-      });
-      if (res.ok) {
+      const res = await window.ApiService.categories.create({ name: name.trim() });
+      if (res.success) {
         showToast('Tạo danh mục thành công');
         loadCategories();
       }
@@ -131,12 +126,8 @@ const AdminUI = (() => {
     if (!name) return;
 
     try {
-      const res = await fetch('api/categories.php', {
-        method: 'PUT',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ id, name })
-      });
-      if (res.ok) {
+      const res = await window.ApiService.categories.update(id, { name });
+      if (res.success) {
         showToast('Cập nhật thành công');
         loadCategories();
       }
@@ -148,8 +139,8 @@ const AdminUI = (() => {
   window.AdminUI_deleteCategory = async function(id) {
     if(!confirm("Bạn có chắc chắn muốn xoá danh mục này? (Các bài hát bên trong sẽ trở thành Không Xác Định)")) return;
     try {
-      const res = await fetch(`api/categories.php?id=${id}`, { method: 'DELETE' });
-      if (res.ok) {
+      const res = await window.ApiService.categories.delete(id);
+      if (res.success) {
         showToast('Đã xoá danh mục');
         loadCategories();
         loadSongs(); // Update bài hát
@@ -164,8 +155,7 @@ const AdminUI = (() => {
      CÁC HÀM CHO TAB BÀI HÁT
      ==================================== */
   function loadSongs() {
-    fetch('api/songs.php')
-      .then(res => res.json())
+    window.ApiService.songs.list()
       .then(data => {
         const tbody = document.querySelector('#admin-songs-table tbody');
         if (!tbody) return;
@@ -202,11 +192,7 @@ const AdminUI = (() => {
      const title = inputEl.value.trim();
      if (!title) return;
      try {
-       await fetch('api/songs.php', {
-         method: 'PUT',
-         headers: {'Content-Type': 'application/json'},
-         body: JSON.stringify({ id, action: 'update_metadata', patch: { title } })
-       });
+       await window.ApiService.songs.updateMetadata(id, { title });
        showToast('Đã lưu tên bài', 'success');
        window.dispatchEvent(new Event('libraryLibraryUpdated'));
      } catch (e) {}
@@ -214,11 +200,7 @@ const AdminUI = (() => {
 
   window.AdminUI_updateSongCategory = async function(id, catId) {
      try {
-       await fetch('api/songs.php', {
-         method: 'PUT',
-         headers: {'Content-Type': 'application/json'},
-         body: JSON.stringify({ id, action: 'update_metadata', patch: { category_id: catId || null } })
-       });
+       await window.ApiService.songs.updateMetadata(id, { categoryId: catId || null });
        showToast('Đã xếp danh mục', 'success');
        window.dispatchEvent(new Event('libraryLibraryUpdated'));
      } catch (e) {}
@@ -227,8 +209,8 @@ const AdminUI = (() => {
   window.AdminUI_deleteSong = async function(id) {
     if(!confirm('Xoá vĩnh viễn bài hát này?')) return;
     try {
-      const res = await fetch(`api/songs.php?id=${id}`, { method: 'DELETE' });
-      if (res.ok) {
+      const res = await window.ApiService.songs.delete(id);
+      if (res.success) {
         showToast('Đã xoá bài hát');
         loadSongs();
         window.dispatchEvent(new Event('libraryLibraryUpdated'));
@@ -242,8 +224,7 @@ const AdminUI = (() => {
      CÁC HÀM CHO TAB NGƯỜI DÙNG
      ==================================== */
   function loadUsers() {
-    fetch('api/users.php')
-      .then(res => res.json())
+    window.ApiService.users.list()
       .then(users => {
         if(users.error) return; // Nếu ko phải admin
         const tbody = document.querySelector('#admin-users-table tbody');
@@ -279,17 +260,12 @@ const AdminUI = (() => {
     if(!pass) return;
 
     try {
-      const res = await fetch('api/users.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ username: user, password: pass, role: 'viewer' })
-      });
-      const data = await res.json();
-      if(data.success) {
+      const res = await window.ApiService.users.create({ username: user, password: pass, role: 'viewer' });
+      if(res.success) {
         showToast('Tạo tài khoản thành công');
         loadUsers();
       } else {
-        showToast(data.error || 'Có lỗi xảy ra', 'error');
+        showToast(res.error || 'Có lỗi xảy ra', 'error');
       }
     } catch (e) {
       console.error(e);
@@ -297,7 +273,7 @@ const AdminUI = (() => {
   }
 
   window.AdminUI_updateUserRole = async function(id, role) {
-    await fetch('api/users.php', { method: 'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id, role})});
+    await window.ApiService.users.update(id, { role });
     showToast('Đã đổi quyền');
   };
 
@@ -305,16 +281,16 @@ const AdminUI = (() => {
     const newpass = prompt('Nhập mật khẩu mới cho user này:');
     if(!newpass) return;
     try {
-       await fetch('api/users.php', { method: 'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id, password: newpass})});
+       await window.ApiService.users.update(id, { password: newpass });
        showToast('Đã ép đổi mật khẩu');
     } catch(e){}
   };
 
   window.AdminUI_deleteUser = async function(id) {
-    if(!confirm("Xoá tài khoản này?")) return;
+    if(!confirm('Xoá tài khoản này?')) return;
     try {
-       await fetch(`api/users.php?id=${id}`, { method: 'DELETE' });
-       showToast('Đã xoá User');
+       await window.ApiService.users.delete(id);
+       showToast('Đã xoá tài khoản');
        loadUsers();
     } catch(e){}
   };

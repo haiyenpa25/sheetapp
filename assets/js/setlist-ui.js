@@ -11,8 +11,7 @@ const SetlistUI = (() => {
 
   async function fetchSetlists() {
     try {
-      const res = await fetch('api/setlists.php');
-      const data = await res.json();
+      const data = await window.ApiService.setlists.list();
       if (data.success) {
         _setlists = data.data;
         renderList();
@@ -58,7 +57,7 @@ const SetlistUI = (() => {
         delBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
           if (confirm(`Bạn chắc muốn xoá setlist: ${sl.title}?`)) {
-            await fetch(`api/setlists.php?id=${sl.id}`, { method: 'DELETE' });
+            await window.ApiService.setlists.delete(sl.id);
             if (_currentSetlist?.id === sl.id) backToSetlists();
             fetchSetlists();
           }
@@ -71,8 +70,7 @@ const SetlistUI = (() => {
   async function viewSetlistDetail(id) {
     window.App?.showLoading?.('Đang tải Setlist...');
     try {
-      const res = await fetch(`api/setlists.php?id=${id}`);
-      const data = await res.json();
+      const data = await window.ApiService.setlists.get(id);
       if (data.success) {
         _currentSetlist = data.data;
         document.getElementById('setlist-list')?.classList.add('hidden');
@@ -138,7 +136,7 @@ const SetlistUI = (() => {
       if (delBtn) {
         delBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
-          await fetch(`api/setlists.php?action=remove_item&id=${item.id}`, { method: 'DELETE' });
+          await window.ApiService.setlists.removeItem(item.id);
           viewSetlistDetail(_currentSetlist.id);
         });
       }
@@ -221,12 +219,7 @@ const SetlistUI = (() => {
     let transpose_key = parseInt(toneStr) || 0;
 
     try {
-      const res = await fetch('api/setlists.php?action=add_item', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ setlist_id: setId, song_id: songId, order_index: songIndex, transpose_key: transpose_key })
-      });
-      const data = await res.json();
+      const data = await window.ApiService.setlists.addItem({ setlist_id: setId, song_id: songId, order_index: songIndex, transpose_key: transpose_key });
       if (data.success) {
         window.App?.showToast?.('Đã thêm vào Setlist!', 'success');
         if (_currentSetlist?.id === setId) viewSetlistDetail(setId); // Refresh detail
@@ -257,7 +250,7 @@ const SetlistUI = (() => {
   async function ensureSongsLoaded() {
     if (_allSongsCache.length > 0) return;
     if (!_songsPromise) {
-      _songsPromise = fetch('api/songs.php').then(r => r.json()).then(data => {
+      _songsPromise = window.ApiService.songs.list().then(data => {
         _allSongsCache = Array.isArray(data) ? data : [];
       }).catch(e => console.error('Failed to load songs for SetlistUI', e));
     }
@@ -301,12 +294,7 @@ const SetlistUI = (() => {
     document.getElementById('btn-create-setlist')?.addEventListener('click', async () => {
       const title = prompt("Tên Setlist mới (VD: Worship CN 20/4):");
       if (!title) return;
-      const res = await fetch('api/setlists.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, scheduled_date: new Date().toISOString().split('T')[0] })
-      });
-      const data = await res.json();
+      const data = await window.ApiService.setlists.create({ title, scheduled_date: new Date().toISOString().split('T')[0] });
       if (data.success) fetchSetlists();
     });
 

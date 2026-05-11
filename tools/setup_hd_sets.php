@@ -16,7 +16,8 @@ if ($secret !== 'setup2025hd') {
     exit;
 }
 
-require_once __DIR__ . '/../api/db.php';
+require_once __DIR__ . '/../api/core/DB.php';
+$pdo = DB::get();
 
 $BASE_DIR   = __DIR__ . '/../data/chord_sets';
 $SET_NAME   = 'HD';

@@ -1,5 +1,6 @@
 <?php
-require __DIR__ . '/../api/db.php';
+require __DIR__ . '/../api/core/DB.php';
+$pdo = DB::get();
 $cols = $pdo->query('PRAGMA table_info(songs)')->fetchAll(PDO::FETCH_ASSOC);
 echo "Columns: ";
 foreach($cols as $c) echo $c['name'].' ';

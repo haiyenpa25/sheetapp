@@ -101,11 +101,17 @@ const ChordCanvasUI = (() => {
 
     pop.style.cssText = [
       'position:absolute', `left:${popLeft}px`, `top:${popTop}px`,
-      'transform:translateX(-50%) translateY(-100%)', 'z-index:99999',
-      'background:#fff', 'border:1.5px solid #6d28d9', 'border-radius:10px',
-      'padding:.6rem .75rem', 'box-shadow:0 8px 28px rgba(109,40,217,.22)',
-      'min-width:260px', 'max-width:320px', 'pointer-events:auto'
+      'transform:translateX(-50%) translateY(10px)', 'z-index:99999',
+      'background:var(--bg-surface, #fff)', 'border:1px solid rgba(109,40,217,0.3)', 'border-radius:var(--radius, 12px)',
+      'padding:.8rem', 'box-shadow:var(--shadow, 0 8px 28px rgba(109,40,217,.22))',
+      'min-width:260px', 'max-width:320px', 'pointer-events:auto',
+      'opacity:0', 'transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease'
     ].join(';');
+
+    setTimeout(() => {
+        pop.style.transform = 'translateX(-50%) translateY(-100%)';
+        pop.style.opacity = '1';
+    }, 10);
 
     pop.innerHTML = `
       <div style="font-size:.65rem;font-weight:700;color:#6d28d9;text-transform:uppercase;
@@ -274,8 +280,6 @@ const ChordCanvasUI = (() => {
       if (val) {
         _pushHist(val);
         window.ChordCanvas?.saveChordWithoutReload?.(measureIdx, noteIdx, val);
-        anchor.style.opacity = '1'; anchor.style.background = 'transparent'; anchor.style.boxShadow = 'none';
-        anchor.innerHTML = `<span class="chord-dot-text" style="font-size:1.1rem;color:#8b5cf6">${val}</span>`;
       }
       window.ChordCanvas?.openNextPopup?.(measureIdx, noteIdx);
     };

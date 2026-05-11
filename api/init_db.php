@@ -2,9 +2,11 @@
 // api/init_db.php
 // Chạy file này 1 lần duy nhất từ trình duyệt để khởi tạo Database SQLite
 
-require_once __DIR__ . '/db.php';
+// Không cần db.php, dùng MVC DB Core
+require_once __DIR__ . '/core/DB.php';
 
 try {
+    $pdo = DB::get();
     // 1. Tạo bảng users
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS users (
