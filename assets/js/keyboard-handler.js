@@ -29,6 +29,7 @@ const KeyboardHandler = (() => {
       case 'PageDown': e.preventDefault(); PageNav?.goToNext?.(); break;
       case 'PageUp':   e.preventDefault(); PageNav?.goToPrev?.(); break;
       case 'c': case 'C': if (xml) ChordCanvas?.toggleAddMode?.(); break;
+      case 'h': case 'H': if (xml) ChordCanvas?.toggleHighlight?.(); break; // Highlight mode
       case 'f': case 'F': AppUI?.toggleFullscreen?.(); break;
       case 'p': case 'P': if (xml) window.print(); break;
       case 'd': case 'D': document.getElementById('btn-dark-toggle')?.click(); break;

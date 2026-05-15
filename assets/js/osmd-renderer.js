@@ -79,7 +79,7 @@ const OSMDRenderer = (() => {
    */
   function refreshRules() {
     if (osmd && osmd.rules) {
-        let prefs = { size: 2.2, yOffset: 0.8, color: '#dc2626' };
+        let prefs = { size: 2.6, yOffset: 1.2, color: '#dc2626' }; // chuẩn hiện tại
         if (window.DisplaySettings) prefs = DisplaySettings.getChordPrefs();
 
         osmd.rules.DefaultColorChordSymbol = prefs.color;

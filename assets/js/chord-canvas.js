@@ -51,7 +51,7 @@ const ChordCanvas = (() => {
     if (container) {
       let rTid = null;
       _ro = new ResizeObserver(() => {
-        if (!_editEnabled && !_highlightMode) return;
+        // Luôn rebuild khi container resize — kể cả view mode thường
         clearTimeout(rTid);
         rTid = setTimeout(() => { if (!_popup) _build(); }, 150);
       });
@@ -62,7 +62,7 @@ const ChordCanvas = (() => {
     if (window.visualViewport) {
       let vpTid = null;
       const onVpChange = () => {
-        if (!_editEnabled && !_highlightMode) return;
+        // Luôn rebuild khi viewport thay đổi (pinch zoom mobile)
         clearTimeout(vpTid);
         vpTid = setTimeout(() => { if (!_popup) _build(); }, 250);
       };
