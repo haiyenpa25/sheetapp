@@ -75,6 +75,25 @@ const OSMDRenderer = (() => {
   }
 
   /**
+   * Buộc container tính lại chiều rộng thực trước khi render
+   * (fix SVG tràn phải sau khi chord canvas thêm elements)
+   */
+  function _forceLayoutRecalc() {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    // Đọc clientWidth để buộc browser flush layout
+    const w = container.clientWidth;
+    // Đảm bảo SVG không rộng hơn container
+    const svg = container.querySelector('svg');
+    if (svg && w > 0) {
+      svg.style.maxWidth = w + 'px';
+      svg.style.width    = '100%';
+    }
+    // Xóa overflow ẩn sau khi render (chỉ để clip trong quá trình render)
+    return w;
+  }
+
+  /**
    * Cập nhật lại Engraving Rules trước khi render
    */
   function refreshRules() {
@@ -211,7 +230,9 @@ const OSMDRenderer = (() => {
       }
 
       refreshRules();
+      _forceLayoutRecalc();
       await osmd.render();
+      _forceLayoutRecalc(); // lần 2: sau render để clip SVG nếu vẫn rộng
       _titleCompacted = false;
       _compactTitleSVG();
       isLoaded = true;
@@ -245,7 +266,9 @@ const OSMDRenderer = (() => {
       }
 
       refreshRules();
+      _forceLayoutRecalc();
       await osmd.render();
+      _forceLayoutRecalc();
       _titleCompacted = false;
       _compactTitleSVG();
       if (onReadyCallback) onReadyCallback(osmd);  // Gọi lại để ChordCanvas rebuild
@@ -257,15 +280,16 @@ const OSMDRenderer = (() => {
   }
 
   /**
-   * Thay đổi mức zoom (0.5 → 2.5)
+   * Thay đổi mức zoom — nhận decimal (0.1 → 2.5), App.setZoom đã convert từ percent
    */
   async function setZoom(level) {
-    currentZoom = Math.max(0.5, Math.min(2.5, level));
+    // level là decimal: 0.1 = 10%, 1.0 = 100%, 2.0 = 200%
+    currentZoom = Math.max(0.1, Math.min(2.5, level));
     if (osmd && isLoaded) {
       osmd.zoom = currentZoom;
+      _forceLayoutRecalc();
       await osmd.render();
-      // Không compact title lại sau zoom — title vị trí không đổi
-      // Gọi onReadyCallback để ChordCanvas rebuild sau zoom
+      _forceLayoutRecalc();
       if (onReadyCallback) onReadyCallback(osmd);
     }
   }

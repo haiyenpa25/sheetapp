@@ -343,28 +343,40 @@
 .osmd-container {
   position: relative;
   padding: 2rem 2rem;
-  /* Không cố định max-width — để OSMD tự căn chỉnh theo zoom */
   max-width: 980px;
   margin: 1.5rem auto;
   background: #ffffff;
   border-radius: var(--radius);
   box-shadow: 0 2px 20px rgba(109,40,217,.10), 0 1px 4px rgba(0,0,0,.06);
   min-height: 400px;
+  /* Fix box model — padding không làm container rộng hơn */
+  box-sizing: border-box;
+  /* Ngăn SVG tràn ngang */
+  overflow-x: hidden;
 }
-.osmd-container svg { width: 100%; height: auto; display: block; }
+/* SVG luôn fit 100% chiều ngang container */
+.osmd-container svg {
+  width: 100% !important;
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
 
-/* ---- Tablet ---- */
+/* ---- Tablet (iPad ≤ 900px) ---- */
 @media (max-width: 900px) {
-  /* iPad/Tablet — osmd-container phải full width để tránh overflow */
   .osmd-container {
-    max-width: 100%;
-    margin: 0.75rem 0.5rem;
-    padding: 1.25rem 1rem;
+    /* Full width, không margin ngang — tránh phần tử là width chín xác */
+    max-width: calc(100% - 1rem);
+    width: calc(100% - 1rem);
+    margin: 0.5rem auto;
+    padding: 1.25rem 0.75rem;
     border-radius: 8px;
+    box-sizing: border-box;
+    overflow-x: hidden;
   }
 }
 
-/* ---- Mobile ---- */
+/* ---- Mobile (≤ 768px) ---- */
 @media (max-width: 768px) {
   .page-bar {
     overflow-x: auto; scrollbar-width: none;
@@ -372,12 +384,19 @@
     gap: .2rem; padding: .25rem .4rem;
   }
   .page-bar::-webkit-scrollbar { display: none; }
-  /* Compact gap giữa các nhóm */
   .pb-group { gap: .2rem; }
   .pb-sep { padding-left: .35rem; margin-left: .35rem; }
-  .osmd-container { padding: 1rem 0.5rem; margin: 0.25rem; border-radius: 6px; min-height: 300px; }
+  .osmd-container {
+    max-width: calc(100% - 0.5rem);
+    width: calc(100% - 0.5rem);
+    padding: 0.75rem 0.5rem;
+    margin: 0.25rem auto;
+    border-radius: 6px;
+    min-height: 300px;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
   .welcome-screen { padding: 1.5rem 1rem; }
-  /* Ẩn label text "Nhật ký" trên mobile, chỉ giữ icon */
   #btn-perf-notes .desktop-only { display: none; }
 }
 
@@ -402,10 +421,13 @@
 /* ---- Landscape (Xoay ngang) trên mobile/tablet ---- */
 @media (max-width: 900px) and (orientation: landscape) {
   .osmd-container {
-    max-width: 100%;
-    margin: 0.25rem 0.5rem;
-    padding: 0.75rem 1rem;
+    max-width: calc(100% - 1rem);
+    width: calc(100% - 1rem);
+    margin: 0.25rem auto;
+    padding: 0.75rem 0.75rem;
     border-radius: 6px;
+    box-sizing: border-box;
+    overflow-x: hidden;
   }
   .page-bar {
     min-height: 40px;
