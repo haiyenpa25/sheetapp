@@ -120,8 +120,8 @@ const Auth = (() => {
     // Thêm hợp âm — cần quyền Ban Hát trở lên
     document.getElementById('btn-add-chord-mode')?.classList.toggle('hidden', !canEditChords);
     document.getElementById('btn-add-chord-mode-bar')?.classList.toggle('hidden', !canEditChords);
-    // Nút Nổi bật hợp âm — cần ít nhất Ban Hát
-    document.getElementById('btn-chord-highlight')?.classList.toggle('hidden', !canEditChords);
+    // Nổi bật hợp âm — TấT CẢ người dùng đều được dùng (chỉ xem, không sửa)
+    document.getElementById('btn-chord-highlight')?.classList.remove('hidden');
     // Tạo bộ hợp âm mới — cần quyền Ban Hát trở lên
     document.getElementById('btn-new-chord-set')?.classList.toggle('hidden', !canEditChords);
     // Ghi chú — Admin only
@@ -130,6 +130,8 @@ const Auth = (() => {
     // FAB items
     document.getElementById('fab-chord')?.classList.toggle('hidden', !canEditChords);
     document.getElementById('fab-annotate')?.classList.toggle('hidden', !canEdit);
+    // FAB highlight — tất cẢ đều thấy
+    document.getElementById('fab-highlight')?.classList.remove('hidden');
 
     // Nút thùng rác chord set — admin only
     const delBtn = document.getElementById('btn-delete-chord-set');
