@@ -119,9 +119,7 @@ const OSMDRenderer = (() => {
                   }
               });
 
-              // FIX: Sau khi xoa notes voice>1, cac slur/tie elements con lai
-              // co the mat "pair" (start khong co stop). OSMD ve arc khong lo.
-              // Giai phap: xoa toan bo slur + tie trong compact mode
+              // Sau khi xóa notes voice>1, slur/tie có thể mất pair → xóa luôn trong compact mode
               doc.querySelectorAll("notations slur").forEach(el => el.remove());
               doc.querySelectorAll("notations tied").forEach(el => el.remove());
               doc.querySelectorAll("note > tie").forEach(el => el.remove());
@@ -379,7 +377,6 @@ const OSMDRenderer = (() => {
   }
 
   function setCompactMode(val) {
-
       _isCompactMode = !!val;
       if (isLoaded && osmd && currentXmlString) {
           reload(currentXmlString);
@@ -389,7 +386,7 @@ const OSMDRenderer = (() => {
   function getCompactMode() { return _isCompactMode; }
 
   /**
-   * FIX #4: Ẩn chữ "Điệp Khúc", Coda, D.C., Fine... trong SVG khi compact mode bật.
+   * Ẩn/hiện chữ Điệp Khúc, Coda, D.C., Fine... trong SVG khi compact mode bật.
    * Các text này xuất phát từ <rehearsal> hoặc <direction><words> trong MusicXML.
    */
   function _hideRepeatLabels(hide) {
@@ -469,14 +466,10 @@ const OSMDRenderer = (() => {
           });
       }
 
-      // Title Option
-      if (compactPrefs.hideTitle) {
-          osmd.setOptions({ drawTitle: false });
-      } else {
-          osmd.setOptions({ drawTitle: true });
-      }
+      // Title visibility
+      osmd.setOptions({ drawTitle: !compactPrefs.hideTitle });
 
-      // FIX #4: Ẩn / hiện chữ Điệp Khúc/Coda sau khi OSMD render xong SVG
+      // Ẩn/hiện chữ Điệp Khúc/Coda sau khi OSMD render xong SVG
       setTimeout(() => _hideRepeatLabels(_isCompactMode), 400);
   }
 

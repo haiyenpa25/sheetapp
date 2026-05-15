@@ -58,7 +58,7 @@ const ChordCanvas = (() => {
       _ro.observe(container);
     }
 
-    // FIX #3: iPad pinch zoom không trigger ResizeObserver — phải dùng visualViewport
+    // visualViewport: cho phép rebuild khi pinch-zoom trên iPad (ResizeObserver không bắt được)
     if (window.visualViewport) {
       let vpTid = null;
       const onVpChange = () => {
@@ -70,7 +70,7 @@ const ChordCanvas = (() => {
       window.visualViewport.addEventListener('scroll', onVpChange);
     }
     
-    console.log('[ChordCanvas] init OK');
+
   }
 
   function onOSMDRendered() { 
@@ -777,8 +777,7 @@ const ChordCanvas = (() => {
 
   function _closePopup() { _popup?.remove(); _popup = null; }
 
-  /* ─── Save / Delete chord ────────────────────────────────────── */
-  /* ─── Undo / Redo ────────────────────────────────────────────────────────── */
+  /* ─── Save / Delete / Undo / Redo ─────────────────────────── */
   function _pushUndo() {
     _undoStack.push({ set: _currentSet, chords: {..._customChords} });
     if (_undoStack.length > 20) _undoStack.shift();
@@ -843,7 +842,7 @@ const ChordCanvas = (() => {
       delete _customChords[`${measureIdx}_${noteIdx}`];
       await _saveCustomSet();
       setTimeout(() => requestAnimationFrame(_build), 80);
-      // U3: toast hint undo
+      // Toast hint undo sau khi xóa
       if (deleted) {
         window.App?.showToast?.(`Đã xóa "${deleted}" — Ctrl+Z để hoàn tác`, 'info');
       }
@@ -976,17 +975,9 @@ const ChordCanvas = (() => {
     if (newBtn) newBtn.classList.toggle('hidden', !isLoggedIn);
   }
 
+  /** Cập nhật nhanh UI selector + nút xóa/tạo mà không cần gọi API. */
   function _updateSetUI() {
-    const selector = document.getElementById('chord-set-selector');
-    if (selector) selector.value = _currentSet;
-    const isAdmin2    = window.Auth?.isAdmin?.()    ?? false;
-    const isLoggedIn2 = window.Auth?.isLoggedIn?.() ?? false;
-    const deleteBtn2  = document.getElementById('btn-delete-chord-set');
-    if (deleteBtn2) deleteBtn2.style.display = (_currentSet !== 'default' && isAdmin2) ? 'inline-flex' : 'none';
-    const newBtn2 = document.getElementById('btn-new-chord-set');
-    if (newBtn2) newBtn2.classList.toggle('hidden', !isLoggedIn2);
-    const clearBtn = document.getElementById('btn-clear-all-chords');
-    if (clearBtn) clearBtn.classList.toggle('hidden', _currentSet === 'default');
+    _refreshSetDropdown(); // refreshSetDropdown đã cover toàn bộ UI sync
   }
 
   function _applyTranspose(chordMap) {
