@@ -37,8 +37,8 @@
   --shadow-sm:     0 1px 6px rgba(0,0,0,.08);
   --transition:    .2s cubic-bezier(.4,0,.2,1);
 
-  --font-body: 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, 'Menlo', 'Consolas', monospace; /* Không cần tải font ngoài */
 }
 
 html { font-size: 14px; height: 100%; }
@@ -55,6 +55,28 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--bg-raised); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--bg-hover); }
+
+/* iPad / mobile scroll optimization */
+.sheet-viewer-wrapper,
+.sidebar,
+.library-list,
+.setlist-list {
+  -webkit-overflow-scrolling: touch; /* iOS momentum scroll */
+  touch-action: pan-y;
+}
+
+/* Đầu tư GPU cho các phần tử hay animation */
+.toolbar, .sidebar, .sheet-viewer-wrapper {
+  transform: translateZ(0);     /* Force GPU layer */
+  backface-visibility: hidden;
+}
+
+/* content-visibility cho các panel ẩn (không render khi hidden) */
+.modal-overlay,
+#admin-console,
+#session-panel {
+  content-visibility: auto;
+}
 
 /* Utilities */
 .hidden   { display: none !important; }

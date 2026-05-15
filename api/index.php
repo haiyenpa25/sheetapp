@@ -3,10 +3,16 @@
  * api/index.php — Front Controller / Router
  */
 session_start();
+
+// Bật gzip cho API response (giảm bandwidth mobile/iPad)
+if (!ob_start('ob_gzhandler')) { ob_start(); }
+
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
+// API không cache — luôn lấy data mới nhất
+header('Cache-Control: no-store, no-cache, must-revalidate');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);

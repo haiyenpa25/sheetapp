@@ -14,7 +14,13 @@
   <meta name="description" content="Ứng dụng xem, dịch giọng và ghi chép nhạc thánh ca tương tác. Hỗ trợ MusicXML, transpose và nhật ký biểu diễn.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Chỉ load 2 weights cần thiết, display=swap để không block render -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <!-- DNS prefetch cho CDN fallback (không block) -->
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+  <!-- Preload OSMD (file lớn nhất, cần sớm nhất) -->
+  <link rel="preload" href="assets/js/vendor/opensheetmusicdisplay.min.js" as="script">
 <?php
 function cssTag(string $file): string {
     $path = __DIR__ . '/assets/css/' . $file;
@@ -48,18 +54,18 @@ echo cssTag('fab.css');
       });
     }
   </script>
-  <!-- Tone.js -->
-  <script src="assets/js/vendor/Tone.js" onerror="
+  <!-- Tone.js — defer: không cần thiết cho render ban đầu -->
+  <script src="assets/js/vendor/Tone.js" defer onerror="
     var s=document.createElement('script');
     s.src='https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js';
     document.head.appendChild(s);"></script>
-  <!-- OSMD Audio Player -->
-  <script src="assets/js/vendor/OsmdAudioPlayer.min.js" onerror="
+  <!-- OSMD Audio Player — defer -->
+  <script src="assets/js/vendor/OsmdAudioPlayer.min.js" defer onerror="
     var s=document.createElement('script');
     s.src='https://cdn.jsdelivr.net/npm/osmd-audio-player/umd/OsmdAudioPlayer.min.js';
     document.head.appendChild(s);"></script>
-  <!-- TONAL.JS -->
-  <script src="assets/js/vendor/tonal.min.js" onerror="
+  <!-- Tonal.js — defer -->
+  <script src="assets/js/vendor/tonal.min.js" defer onerror="
     var s=document.createElement('script');
     s.src='https://cdn.jsdelivr.net/npm/tonal/browser/tonal.min.js';
     document.head.appendChild(s);"></script>
@@ -92,19 +98,20 @@ echo cssTag('fab.css');
   document.head.appendChild(s);"></script>
 
 <?php
-// Auto cache-bust: dùng thời gian sửa file — không cần tăng số tay
-function jsTag(string $file): string {
+// Auto cache-bust: dùng thời gian sửa file
+function jsTag(string $file, bool $defer = true): string {
     $path = __DIR__ . '/assets/js/' . $file;
     $v    = file_exists($path) ? filemtime($path) : time();
-    return "<script src=\"assets/js/{$file}?v={$v}\"></script>\n";
+    $d    = $defer ? ' defer' : '';
+    return "<script src=\"assets/js/{$file}?v={$v}\"{$d}></script>\n";
 }
 
-// ── 1. CORE Infrastructure (load đầu tiên) ──
-echo jsTag('core/EventBus.js');
-echo jsTag('core/Store.js');
-echo jsTag('core/ApiService.js');
+// ── 1. CORE Infrastructure (không defer — cần sớm nhất) ──
+echo jsTag('core/EventBus.js', false);
+echo jsTag('core/Store.js',    false);
+echo jsTag('core/ApiService.js', false);
 
-// ── 2. Renderers & Engines ──
+// ── 2. Renderers & Engines (defer OK) ──
 echo jsTag('osmd-renderer.js');
 echo jsTag('lyric-extractor.js');
 echo jsTag('transpose-engine.js');
@@ -113,7 +120,7 @@ echo jsTag('auth.js');
 echo jsTag('history-manager.js');
 echo jsTag('url-state.js');
 
-// ── 3. Feature Modules ──
+// ── 3. Feature Modules (defer) ──
 echo jsTag('library-ui.js');
 echo jsTag('setlist-ui.js');
 echo jsTag('importer.js');
@@ -131,7 +138,7 @@ echo jsTag('page-nav.js');
 echo jsTag('app-ui.js');
 echo jsTag('song-info-bar.js');
 
-// ── 4. App Controllers (load sau, phụ thuộc vào modules trên) ──
+// ── 4. App Controllers (defer, phụ thuộc vào modules trên) ──
 echo jsTag('song-loader.js');
 echo jsTag('keyboard-handler.js');
 echo jsTag('toolbar-controller.js');
