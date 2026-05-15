@@ -131,7 +131,10 @@
       <div class="zoom-select-wrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="zoom-icon-sm"><circle cx="11" cy="11" r="8"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
         <select id="zoom-slider" class="zoom-select" disabled title="Chọn mức phóng to">
-          <option value="30">30%</option><option value="40">40%</option>
+          <option value="10">10%</option><option value="15">15%</option>
+          <option value="20">20%</option><option value="25">25%</option>
+          <option value="30">30%</option><option value="35">35%</option>
+          <option value="40">40%</option><option value="45">45%</option>
           <option value="50">50%</option><option value="60">60%</option>
           <option value="70">70%</option><option value="80">80%</option>
           <option value="90">90%</option><option value="100" selected>100%</option>

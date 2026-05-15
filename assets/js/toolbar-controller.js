@@ -37,42 +37,60 @@ const ToolbarController = (() => {
   }
 
   function _bindSidebar() {
-    const toggle = () => {
-      const sidebar  = document.getElementById('sidebar');
-      const overlay  = document.getElementById('sidebar-overlay');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+
+    function _openSidebar() {
+      sidebar?.classList.remove('mobile-hidden');
+      overlay?.classList.remove('hidden');
+      // Click overlay → đóng
+      if (overlay) {
+        overlay.onclick = _closeSidebar;
+      }
+    }
+
+    function _closeSidebar() {
+      sidebar?.classList.add('mobile-hidden');
+      overlay?.classList.add('hidden');
+    }
+
+    function _toggle() {
       if (!sidebar) return;
       if (window.innerWidth <= 900) {
-        sidebar.classList.toggle('mobile-hidden');
+        // Mobile/iPad: toggle ỳ nghĩa rõ ràng
         if (sidebar.classList.contains('mobile-hidden')) {
-          overlay?.classList.add('hidden');
+          _openSidebar();
         } else {
-          overlay?.classList.remove('hidden');
-          if (overlay) overlay.onclick = () => { sidebar.classList.add('mobile-hidden'); overlay.classList.add('hidden'); };
+          _closeSidebar();
         }
       } else {
+        // Desktop: collapse narrow
         sidebar.classList.toggle('collapsed');
       }
-    };
-    document.getElementById('btn-toggle-sidebar')?.addEventListener('click', toggle);
-    document.getElementById('btn-open-sidebar')?.addEventListener('click', toggle);
+    }
 
-    // Init mobile
-    if (window.innerWidth <= 900) document.getElementById('sidebar')?.classList.add('mobile-hidden');
+    document.getElementById('btn-toggle-sidebar')?.addEventListener('click', _toggle);
+    document.getElementById('btn-open-sidebar')?.addEventListener('click', _toggle);
+
+    // Init: mobile bắt đầu ẩn sidebar
+    if (window.innerWidth <= 900) {
+      sidebar?.classList.add('mobile-hidden');
+      overlay?.classList.add('hidden');
+    }
 
     // Resize handler
     let _lastW = window.innerWidth;
     window.addEventListener('resize', _debounce(() => {
-      const sidebar = document.getElementById('sidebar');
-      const overlay = document.getElementById('sidebar-overlay');
-      if (!sidebar) return;
       const w = window.innerWidth;
       if (w <= 900) {
-        if (sidebar.classList.contains('mobile-hidden')) {
-          overlay?.classList.add('hidden');
+        // Chuyển sang mobile: ẩn sidebar nếu đang mở
+        if (!sidebar?.classList.contains('mobile-hidden')) {
+          _closeSidebar();
         }
-        sidebar.classList.remove('collapsed');
+        sidebar?.classList.remove('collapsed');
       } else {
-        sidebar.classList.remove('mobile-hidden');
+        // Chuyển sang desktop: hiện sidebar
+        sidebar?.classList.remove('mobile-hidden');
         overlay?.classList.add('hidden');
       }
       const wDelta = Math.abs(w - _lastW);
@@ -86,12 +104,17 @@ const ToolbarController = (() => {
 
     if ('onorientationchange' in window) {
       window.addEventListener('orientationchange', () => {
+        // Xử lý xoay màn hình: đóng sidebar rồi re-render
+        if (window.innerWidth <= 900) _closeSidebar();
         setTimeout(async () => {
           if (!OSMDRenderer?.getIsLoaded?.()) return;
           try { await OSMDRenderer.getInstance()?.render?.(); ChordCanvas?.reposition?.(); } catch(e) {}
         }, 500);
       });
     }
+
+    // Expose cho các module khác dùng
+    window._closeSidebar = _closeSidebar;
   }
 
   function _bindDarkMode() {
