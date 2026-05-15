@@ -8,6 +8,7 @@
  * Cũng hiện số trang hiện tại dựa trên scroll position.
  */
 const PageNav = (() => {
+  'use strict';
 
   let totalPages   = 1;
   let currentPage  = 1;

@@ -4,6 +4,7 @@
  * v3: + Lyric Search, + Favorites, + Recently Viewed
  */
 const LibraryUI = (() => {
+  'use strict';
 
   let songs         = [];
   let categories    = [];

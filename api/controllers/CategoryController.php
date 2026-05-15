@@ -12,10 +12,9 @@ class CategoryController {
             switch ($method) {
                 case 'GET':
                     $categories = CategoryService::getAll();
-                    // Keep returning raw array for frontend compatibility if Response::ok() breaks it, 
-                    // but wait, Response::ok() works if frontend accepts {success: true, data: ...}
-                    // Currently `ApiService.js` expects raw array for categories? Let's check `api/categories.php`.
-                    // Yes, `api/categories.php` returned raw array. We will keep raw array to not break frontend.
+                    // INTENTIONAL: Trả raw array (không bọc Response::ok()) vì
+                    // ApiService.categories.list() và LibraryUI expect Array.isArray() trực tiếp.
+                    // Để đổi: cần sửa đồng thời ApiService + library-ui.js + admin-ui.js.
                     echo json_encode($categories, JSON_UNESCAPED_UNICODE);
                     break;
 

@@ -9,6 +9,17 @@ class UserService {
         return DB::query("SELECT id, username, role, created_at FROM users ORDER BY created_at DESC");
     }
 
+    /**
+     * T\u00ecm user theo username (d\u00f9ng cho AuthController login).
+     * Tr\u1ea3 false n\u1ebfu kh\u00f4ng t\u00ecm th\u1ea5y.
+     */
+    public static function findByUsername(string $username): array|false {
+        return DB::run(
+            "SELECT id, username, password_hash, role FROM users WHERE username = ?",
+            [$username]
+        )->fetch();
+    }
+
     public static function create(string $username, string $password, string $role): int {
         $hash = password_hash($password, PASSWORD_DEFAULT);
         DB::run("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)", [$username, $hash, $role]);

@@ -15,7 +15,7 @@ class AnnotationController {
 
             if ($action === 'load') {
                 $annotations = AnnotationService::load($songId);
-                echo json_encode(['success' => true, 'annotations' => $annotations]);
+                Response::ok(['annotations' => $annotations]);
                 return;
             }
 
@@ -32,7 +32,7 @@ class AnnotationController {
             if ($action === 'save') {
                 $annotations = $body['annotations'] ?? [];
                 $ok = AnnotationService::save($songId, $annotations);
-                echo json_encode(['success' => $ok]);
+                $ok ? Response::ok() : Response::error('Lỗi lưu annotation');
                 return;
             }
 

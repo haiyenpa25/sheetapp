@@ -4,7 +4,7 @@
  */
 require_once __DIR__ . '/../core/Response.php';
 require_once __DIR__ . '/../core/Auth.php';
-require_once __DIR__ . '/../core/DB.php';
+require_once __DIR__ . '/../services/UserService.php';
 
 class AuthController {
     public function handleRequest(string $method): void {
@@ -17,7 +17,8 @@ class AuthController {
                 $password = $data['password'] ?? '';
                 if (!$username || !$password) { Response::error('Thiếu username/password'); return; }
 
-                $user = DB::run("SELECT id, username, password_hash, role FROM users WHERE username = ?", [$username])->fetch();
+                // Business logic ở UserService, không SQL trong Controller
+                $user = UserService::findByUsername($username);
                 if ($user && password_verify($password, $user['password_hash'])) {
                     $_SESSION['user_id']  = $user['id'];
                     $_SESSION['username'] = $user['username'];
@@ -37,7 +38,8 @@ class AuthController {
                 if (Auth::isLoggedIn()) {
                     Response::ok(['loggedIn' => true, 'username' => Auth::username(), 'role' => $_SESSION['role']]);
                 } else {
-                    echo json_encode(['loggedIn' => false, 'role' => 'viewer']);
+                    // INTENTIONAL: trả {loggedIn: false} dù không có session
+                    Response::ok(['loggedIn' => false, 'role' => 'viewer']);
                 }
                 break;
 

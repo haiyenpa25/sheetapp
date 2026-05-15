@@ -29,6 +29,9 @@ const SongLoader = (() => {
     _autoCloseSidebar();
 
     try {
+      // INTENTIONAL EXCEPTION: fetch() tĩnh được phép cho static asset (file XML trên server).
+      // Đây không phải API call mà là tải file tĩnh → không cần qua ApiService.
+      // Tham khảo: CODING_STANDARDS.md §2.1 — ngoại lệ fetch() cho static asset.
       const res = await fetch(song.xmlPath);
       if (!res.ok) throw new Error(`Không thể tải file: ${res.status}`);
       const xml = await res.text();

@@ -4,6 +4,7 @@
  * Mỗi bài hát có file session riêng: /api/sessions.php?songId=xxx
  */
 const SessionTracker = (() => {
+  'use strict';
 
   let currentSongId   = null;
   let currentSettings = null;

@@ -79,7 +79,7 @@ const ApiService = (() => {
   };
 
   const omr = {
-    list:   ()       => _request('api/index.php?route=omr'),
+    list:   ()       => _request('api/index.php?route=omr').then(r => r.jobs ?? []),
     create: (fd)     => _request('api/index.php?route=omr', { method: 'POST', body: fd }), // fd is FormData, don't use _json
     delete: (id)     => _request(`api/index.php?route=omr&id=${id}`, { method: 'DELETE' }),
   };

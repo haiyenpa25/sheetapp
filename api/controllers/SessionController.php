@@ -10,7 +10,8 @@ class SessionController {
         if ($method === 'GET') {
             $songId = $_GET['songId'] ?? '';
             if (!$songId) { Response::error('Missing songId'); return; }
-            echo json_encode(SessionService::load($songId), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            // SessionService::load() trả về {songId, userSettings, perfNotes}
+            Response::ok(SessionService::load($songId));
         } elseif ($method === 'POST') {
             $body   = json_decode(file_get_contents('php://input'), true) ?? [];
             $songId = $body['songId'] ?? '';
@@ -23,7 +24,7 @@ class SessionController {
             if (isset($body['perfNotes'])) {
                 $result['perfNotes'] = SessionService::savePerfNotes($songId, $body['perfNotes']);
             }
-            echo json_encode(array_merge(['success' => true], $result), JSON_UNESCAPED_UNICODE);
+            Response::ok($result);
         } else {
             Response::methodNotAllowed();
         }

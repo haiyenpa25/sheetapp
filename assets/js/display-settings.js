@@ -3,14 +3,15 @@
  * Quản lý cấu hình hiển thị bản nhạc (Hợp âm & Compact Mode) lưu theo thiết bị (localStorage).
  */
 const DisplaySettings = (() => {
+  'use strict';
 
     const CHORD_PREFS_KEY = 'sheetapp_chord_prefs';
     const COMPACT_PREFS_KEY = 'sheetapp_compact_prefs';
 
     // Giá trị chuẩn ban đầu
     let chordPrefs = {
-        size: 2.2,
-        yOffset: 0.8,
+        size: 2.6,     // Tăng từ 2.2 → 2.6: to hơn, rõ ràng hơn
+        yOffset: 1.2,  // Tăng từ 0.8 → 1.2: cao hơn trên khuông nhạc
         color: '#dc2626'
     };
 
@@ -208,7 +209,15 @@ const DisplaySettings = (() => {
     function _loadPrefs() {
         try {
             const cp = localStorage.getItem(CHORD_PREFS_KEY);
-            if (cp) chordPrefs = { ...chordPrefs, ...JSON.parse(cp) };
+            if (cp) {
+                const saved = JSON.parse(cp);
+                // Migration: nếu size <= 2.2 (giá trị cũ), nâng lên default mới 2.6
+                if (saved.size !== undefined && saved.size <= 2.2) {
+                    saved.size = 2.6;
+                    saved.yOffset = Math.max(saved.yOffset ?? 0.8, 1.2);
+                }
+                chordPrefs = { ...chordPrefs, ...saved };
+            }
 
             const comp = localStorage.getItem(COMPACT_PREFS_KEY);
             if (comp) compactPrefs = { ...compactPrefs, ...JSON.parse(comp) };

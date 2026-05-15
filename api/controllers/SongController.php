@@ -12,8 +12,8 @@ class SongController {
             switch ($method) {
                 case 'GET':
                     $lyric = trim($_GET['lyric_search'] ?? '');
-                    // Return plain array for backward compat with frontend (Response::ok prepends success: true)
-                    // Wait, frontend expects array. So I shouldn't use Response::ok here if frontend wants raw array.
+                    // INTENTIONAL: Trả raw array vì LibraryUI.loadSongs() expect Array.isArray() trực tiếp.
+                    // Để đổi sang Response::ok(): cần sửa đồng thời ApiService.songs.list() + library-ui.js + admin-ui.js.
                     $data = $lyric !== '' ? SongService::searchByLyric($lyric) : SongService::getAll();
                     echo json_encode($data, JSON_UNESCAPED_UNICODE);
                     break;

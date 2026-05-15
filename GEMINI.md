@@ -7,3 +7,8 @@
 @./.agent-skills/api-and-interface-design/SKILL.md
 @./.agent-skills/security-and-hardening/SKILL.md
 @./.agent-skills/performance-optimization/SKILL.md
+
+# SheetApp Project Standards — Đọc theo thứ tự
+@./AI_AGENT.md
+@./CODING_STANDARDS.md
+@./PROJECT_REGISTRY.md

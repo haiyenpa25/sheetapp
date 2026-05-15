@@ -3,6 +3,7 @@
  * v2: Fixed z-index, backdrop at body level, arc all UP-LEFT (không che nội dung)
  */
 const FAB = (() => {
+  'use strict';
 
   let _isDragging = false;
   let _dragStartX = 0, _dragStartY = 0;

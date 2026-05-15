@@ -3,6 +3,7 @@
  * Lõi MusicXML Transposition được tiếp sức bởi Tonal.js
  */
 const TransposeEngine = (() => {
+  'use strict';
 
   // Ánh xạ 12 nốt Chromatic (để dự phòng và đồng bộ hoá enharmonic)
   const NOTES_SHARP = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];

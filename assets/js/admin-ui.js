@@ -3,6 +3,7 @@
  * Quản lý giao diện Admin Console (Bảng điều khiển quản trị tập trung)
  */
 const AdminUI = (() => {
+  'use strict';
 
   const modal = () => document.getElementById('admin-modal');
   let currentCategories = [];
@@ -113,14 +114,14 @@ const AdminUI = (() => {
     }
   }
 
-  window.AdminUI_editCategory = function(id) {
+  function editCategory(id) {
     document.getElementById(`cat-name-${id}`).classList.add('hidden');
     document.getElementById(`cat-input-${id}`).classList.remove('hidden');
     document.getElementById(`btn-edit-cat-${id}`).classList.add('hidden');
     document.getElementById(`btn-save-cat-${id}`).classList.remove('hidden');
-  };
+  }
 
-  window.AdminUI_saveCategory = async function(id) {
+  async function saveCategory(id) {
     const input = document.getElementById(`cat-input-${id}`);
     const name = input.value.trim();
     if (!name) return;
@@ -134,9 +135,9 @@ const AdminUI = (() => {
     } catch (e) {
       showToast('Lỗi cập nhật', 'error');
     }
-  };
+  }
 
-  window.AdminUI_deleteCategory = async function(id) {
+  async function deleteCategory(id) {
     if(!confirm("Bạn có chắc chắn muốn xoá danh mục này? (Các bài hát bên trong sẽ trở thành Không Xác Định)")) return;
     try {
       const res = await window.ApiService.categories.delete(id);
@@ -148,7 +149,7 @@ const AdminUI = (() => {
     } catch (e) {
       showToast('Xoá thất bại', 'error');
     }
-  };
+  }
 
 
   /* ====================================
@@ -188,7 +189,7 @@ const AdminUI = (() => {
       .catch(console.error);
   }
 
-  window.AdminUI_updateSongTitle = async function(id, inputEl) {
+  async function updateSongTitle(id, inputEl) {
      const title = inputEl.value.trim();
      if (!title) return;
      try {
@@ -196,17 +197,17 @@ const AdminUI = (() => {
        showToast('Đã lưu tên bài', 'success');
        window.dispatchEvent(new Event('libraryLibraryUpdated'));
      } catch (e) {}
-  };
+  }
 
-  window.AdminUI_updateSongCategory = async function(id, catId) {
+  async function updateSongCategory(id, catId) {
      try {
        await window.ApiService.songs.updateMetadata(id, { categoryId: catId || null });
        showToast('Đã xếp danh mục', 'success');
        window.dispatchEvent(new Event('libraryLibraryUpdated'));
      } catch (e) {}
-  };
+  }
 
-  window.AdminUI_deleteSong = async function(id) {
+  async function deleteSong(id) {
     if(!confirm('Xoá vĩnh viễn bài hát này?')) return;
     try {
       const res = await window.ApiService.songs.delete(id);
@@ -218,21 +219,23 @@ const AdminUI = (() => {
     } catch (e) {
       showToast('Xoá thất bại', 'error');
     }
-  };
+  }
 
   /* ====================================
      CÁC HÀM CHO TAB NGƯỜI DÙNG
      ==================================== */
   function loadUsers() {
     window.ApiService.users.list()
-      .then(users => {
-        if(users.error) return; // Nếu ko phải admin
+      .then(res => {
+        // UserController trả {success:true, users:[...]}
+        if (!res.success) return; // Không phải admin → forbidden
+        const users = res.users || [];
         const tbody = document.querySelector('#admin-users-table tbody');
         if(!tbody) return;
         tbody.innerHTML = '';
         users.forEach(u => {
           const amIOwner = (u.username === 'banhat');
-          tr = document.createElement('tr');
+          const tr = document.createElement('tr');
           tr.innerHTML = `
             <td>#${u.id}</td>
             <td><strong>${u.username}</strong></td>
@@ -272,28 +275,28 @@ const AdminUI = (() => {
     }
   }
 
-  window.AdminUI_updateUserRole = async function(id, role) {
+  async function updateUserRole(id, role) {
     await window.ApiService.users.update(id, { role });
     showToast('Đã đổi quyền');
-  };
+  }
 
-  window.AdminUI_changeUserPass = async function(id) {
+  async function changeUserPass(id) {
     const newpass = prompt('Nhập mật khẩu mới cho user này:');
     if(!newpass) return;
     try {
        await window.ApiService.users.update(id, { password: newpass });
        showToast('Đã ép đổi mật khẩu');
     } catch(e){}
-  };
+  }
 
-  window.AdminUI_deleteUser = async function(id) {
+  async function deleteUser(id) {
     if(!confirm('Xoá tài khoản này?')) return;
     try {
        await window.ApiService.users.delete(id);
        showToast('Đã xoá tài khoản');
        loadUsers();
     } catch(e){}
-  };
+  }
 
   function showToast(msg, type='success') {
      if(typeof window.AppUI !== 'undefined' && window.AppUI.showToast) {
@@ -301,20 +304,9 @@ const AdminUI = (() => {
      }
   }
 
-  // Gắn scope cho window để HTML onClick tìm thấy
-  window.AdminUI = {
-    editCategory: window.AdminUI_editCategory,
-    saveCategory: window.AdminUI_saveCategory,
-    deleteCategory: window.AdminUI_deleteCategory,
-    updateSongTitle: window.AdminUI_updateSongTitle,
-    updateSongCategory: window.AdminUI_updateSongCategory,
-    deleteSong: window.AdminUI_deleteSong,
-    updateUserRole: window.AdminUI_updateUserRole,
-    changeUserPass: window.AdminUI_changeUserPass,
-    deleteUser: window.AdminUI_deleteUser
-  };
-
-  return { init, openModal };
+  // Export ra window.AdminUI — một điểm duy nhất
+  // Các hàm handler (editCategory, deleteSong, ...) được gọi từ inline onclick trong HTML
+  return { init, openModal, editCategory, saveCategory, deleteCategory, updateSongTitle, updateSongCategory, deleteSong, updateUserRole, changeUserPass, deleteUser };
 })();
 
 document.addEventListener('DOMContentLoaded', () => {

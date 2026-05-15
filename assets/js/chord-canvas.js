@@ -11,6 +11,7 @@ const ChordCanvas = (() => {
 
   /* ─── State ───────────────────────────────────────────────────────────────── */
   let _editEnabled   = false;
+  let _highlightMode = false; // Chế độ nổi bật: badge tím đậm ngay cả khi không edit
   let _popup         = null;
   let _currentSet    = 'default';
   let _customChords  = {};
@@ -19,8 +20,9 @@ const ChordCanvas = (() => {
   let _undoStack     = [];   // [{set, chords}]
   let _redoStack     = [];   // [{set, chords}]
 
-  const DOT_CLASS  = 'cc-dot';
-  const BTN_CLASS  = 'cc-dot-btn';
+  const DOT_CLASS    = 'cc-dot';
+  const BTN_CLASS    = 'cc-dot-btn';
+  const HIGHLIGHT_KEY = 'sheetapp_chord_highlight'; // localStorage key
 
   let _isInitialized = false;
 
@@ -28,10 +30,18 @@ const ChordCanvas = (() => {
   function init() {
     if (_isInitialized) return;
     _isInitialized = true;
+
+    // Restore highlight mode từ localStorage
+    try { _highlightMode = localStorage.getItem(HIGHLIGHT_KEY) === 'true'; } catch(e) {}
+
     // Cả 2 nút: hidden compat + visible bar button đều trigger toggleAddMode
     document.getElementById('btn-add-chord-mode')?.addEventListener('click', toggleAddMode);
     document.getElementById('btn-add-chord-mode-bar')?.addEventListener('click', toggleAddMode);
     document.getElementById('btn-cancel-add-chord')?.addEventListener('click', () => setAddMode(false));
+
+    // Nút highlight mode
+    document.getElementById('btn-chord-highlight')?.addEventListener('click', toggleHighlight);
+
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') { _closePopup(); setAddMode(false); }
     });
@@ -41,9 +51,9 @@ const ChordCanvas = (() => {
     if (container) {
       let rTid = null;
       _ro = new ResizeObserver(() => {
-        if (!_editEnabled) return;
+        if (!_editEnabled && !_highlightMode) return;
         clearTimeout(rTid);
-        rTid = setTimeout(() => { if (_editEnabled && !_popup) _build(); }, 150);
+        rTid = setTimeout(() => { if (!_popup) _build(); }, 150);
       });
       _ro.observe(container);
     }
@@ -52,15 +62,15 @@ const ChordCanvas = (() => {
     if (window.visualViewport) {
       let vpTid = null;
       const onVpChange = () => {
-        if (!_editEnabled) return;
+        if (!_editEnabled && !_highlightMode) return;
         clearTimeout(vpTid);
-        vpTid = setTimeout(() => { if (_editEnabled && !_popup) _build(); }, 250);
+        vpTid = setTimeout(() => { if (!_popup) _build(); }, 250);
       };
       window.visualViewport.addEventListener('resize', onVpChange);
       window.visualViewport.addEventListener('scroll', onVpChange);
     }
     
-    console.log('[CC] init OK');
+    console.log('[ChordCanvas] init OK');
   }
 
   function onOSMDRendered() { 
@@ -165,6 +175,35 @@ const ChordCanvas = (() => {
 
   function toggleAddMode() { setAddMode(!_editEnabled); }
 
+  /* ─── Highlight Mode ─────────────────────────────────────────── */
+  /**
+   * Chế độ nổi bật: badge tím đậm thường trực, không cần vào edit mode.
+   * Phân biệt với edit mode: click badge mở popup nhưng cursor không dời về từng nốt.
+   */
+  function toggleHighlight() {
+    _highlightMode = !_highlightMode;
+    try { localStorage.setItem(HIGHLIGHT_KEY, String(_highlightMode)); } catch(e) {}
+
+    // Sync nút
+    const btn = document.getElementById('btn-chord-highlight');
+    if (btn) {
+      btn.classList.toggle('active', _highlightMode);
+      btn.title = _highlightMode ? 'Tắt nổi bật hợp âm' : 'Bật nổi bật hợp âm';
+    }
+
+    // Rebuild overlay
+    _build();
+  }
+
+  function setHighlightMode(on) {
+    _highlightMode = !!on;
+    try { localStorage.setItem(HIGHLIGHT_KEY, String(_highlightMode)); } catch(e) {}
+    const btn = document.getElementById('btn-chord-highlight');
+    if (btn) btn.classList.toggle('active', _highlightMode);
+    _build();
+  }
+
+
   /* ─── Build dots ─────────────────────────────────────────────── */
   function _clear() {
     document.querySelectorAll('.' + DOT_CLASS).forEach(d => d.remove());
@@ -236,45 +275,130 @@ const ChordCanvas = (() => {
     _alignDOMChords();
   }
 
-  /* ─── Align DOM Chords horizontally per system ─────────────────── */
+  /* ─── Align DOM Chords — cố định theo đường kẻ trên cùng của khuông nhạc ──── */
+  /**
+   * Chiến lược:
+   * 1. Quét SVG tìm TẤT CẢ horizontal staff lines (dòng kẻ ngang).
+   * 2. Nhóm thành các "system" (khuông nhạc) theo dải Y.
+   * 3. Mỗi system có topLine = đường kẻ trên cùng → Y cố định cho badge = topLine - GAP.
+   * 4. GAP là px màn hình thực (không nhân scale) → không thay đổi khi zoom.
+   */
   function _alignDOMChords() {
     const container = document.getElementById('osmd-container');
     if (!container) return;
 
-    // Tìm tất cả các badge và chord text
-    const elements = Array.from(container.querySelectorAll('.cc-edit-badge, .cc-chord-text'));
+    const cRect = container.getBoundingClientRect();
+    const GAP_PX = 22; // px từ top staff line lên badge — KHÔNG đổi khi zoom
+
+    // ── 1. Tìm tất cả đường kẻ ngang SVG (staff lines) ──────────────
+    const svg = container.querySelector('svg');
+    if (!svg) return;
+
+    // OSMD vẽ staff lines bằng <line> hoặc <path> trong group .vf-stave
+    // Cũng có thể là path d="M x1 y H x2" — dùng getBoundingClientRect() để lấy Y thực
+    let staffLineRects = [];
+    const staveGroups = Array.from(svg.querySelectorAll('g.vf-stave, g[class*="stave"]'));
+    if (staveGroups.length) {
+      staveGroups.forEach(g => {
+        // Lấy các line/path con là đường ngang (width >> height)
+        Array.from(g.querySelectorAll('line, path')).forEach(el => {
+          const r = el.getBoundingClientRect();
+          if (r.width > 40 && r.height < 4 && r.top > 0) {
+            staffLineRects.push(r.top - cRect.top); // Y trong container coords
+          }
+        });
+      });
+    }
+
+    // Fallback: tìm tất cả <line> ngang trong SVG
+    if (!staffLineRects.length) {
+      Array.from(svg.querySelectorAll('line')).forEach(el => {
+        const r = el.getBoundingClientRect();
+        if (r.width > 40 && r.height < 4 && r.top > 0) {
+          staffLineRects.push(r.top - cRect.top);
+        }
+      });
+    }
+
+    if (!staffLineRects.length) {
+      // Không tìm được staff lines — fallback về align theo minTop trong mỗi dải
+      _alignDOMChordsFallback(container);
+      return;
+    }
+
+    // ── 2. Nhóm staff lines thành hệ (system) ──────────────────────
+    // Mỗi hệ 5 dòng kẻ, cách nhau ~4px. Giữa các hệ, gap lớn hơn nhiều.
+    staffLineRects.sort((a, b) => a - b);
+
+    const systems = [];  // [{topY, bottomY}]
+    let sysStart = staffLineRects[0];
+    let prev = staffLineRects[0];
+    const SYS_GAP = 30; // gap tối thiểu giữa 2 system (px)
+
+    for (let i = 1; i < staffLineRects.length; i++) {
+      const curr = staffLineRects[i];
+      if (curr - prev > SYS_GAP) {
+        systems.push({ topY: sysStart, bottomY: prev });
+        sysStart = curr;
+      }
+      prev = curr;
+    }
+    systems.push({ topY: sysStart, bottomY: prev });
+
+    // ── 3. Gom badge theo system, ép về Y cố định ──────────────────
+    const allBadges = Array.from(
+      container.querySelectorAll('.cc-edit-badge, .cc-chord-text, .cc-custom-chord-text')
+    );
+    if (!allBadges.length) return;
+
+    systems.forEach(sys => {
+      // Badge thuộc về system nào? Badge nằm trên topY (tối đa 120px phía trên)
+      const targetY = sys.topY - GAP_PX;
+
+      const inSystem = allBadges.filter(el => {
+        const elTop = parseFloat(el.style.top);
+        if (isNaN(elTop)) return false;
+        // Badge nằm trong vùng từ (topY - 140) đến (bottomY + 40)
+        return elTop >= sys.topY - 140 && elTop <= sys.bottomY + 40;
+      });
+
+      inSystem.forEach(el => {
+        el.style.top = targetY + 'px';
+        // Cập nhật transform để vẫn center theo chiều dọc
+        const cur = el.style.transform || '';
+        if (!cur.includes('translateY')) {
+          // translate(-50%, -50%) → giữ nguyên, chỉ override top
+        }
+      });
+    });
+  }
+
+  /** Fallback khi không có staff line data: chỉ align về minTop trong mỗi dải 60px */
+  function _alignDOMChordsFallback(container) {
+    const elements = Array.from(
+      container.querySelectorAll('.cc-edit-badge, .cc-chord-text, .cc-custom-chord-text')
+    );
     if (!elements.length) return;
 
-    // Nhóm theo dòng (chênh lệch top < 50px)
     const rows = [];
     elements.forEach(el => {
       const top = parseFloat(el.style.top);
       if (isNaN(top)) return;
-
       let found = false;
       for (const row of rows) {
-        if (Math.abs(row.avgTop - top) < 50) {
+        if (Math.abs(row.avgTop - top) < 60) {
           row.els.push(el);
           row.minTop = Math.min(row.minTop, top);
-          let sum = 0;
-          row.els.forEach(e => sum += parseFloat(e.style.top));
+          const sum = row.els.reduce((s, e) => s + parseFloat(e.style.top), 0);
           row.avgTop = sum / row.els.length;
-          found = true;
-          break;
+          found = true; break;
         }
       }
-      if (!found) {
-        rows.push({ avgTop: top, minTop: top, els: [el] });
-      }
+      if (!found) rows.push({ avgTop: top, minTop: top, els: [el] });
     });
-
-    // Ép toàn bộ các phần tử trong cùng 1 dòng về minTop (vị trí cao nhất để không đè nốt)
-    rows.forEach(row => {
-      row.els.forEach(el => {
-        el.style.top = row.minTop + 'px';
-      });
-    });
+    rows.forEach(row => row.els.forEach(el => { el.style.top = row.minTop + 'px'; }));
   }
+
 
   /* ─── Build chord text position map ────────────────────────── */
   /**
@@ -379,7 +503,8 @@ const ChordCanvas = (() => {
 
     const scale   = ChordCanvasUI.getScale();
     const dotSize = ChordCanvasUI.getDotSize(scale);
-    const fSize   = Math.max(10, Math.round(11 * scale));
+    // Font size: scale tỉ lệ đẹp với zoom, min 13px, max 22px
+    const fSize   = Math.min(22, Math.max(13, Math.round(14 * scale)));
 
     // Vị trí fallback dựa vào nốt nhạc (cách nốt một khoảng tỉ lệ thuận với scale)
     const cx = (rect.left - cRect.left) + rect.width / 2;
@@ -436,16 +561,17 @@ const ChordCanvas = (() => {
       } else {
         // Custom: Dùng DOM Overlay vĩnh viễn (do OSMD đã bị ẩn fill: transparent)
         let spanX = textPos ? textPos.bx + textPos.bw / 2 : cx;
-        let spanY = cy - (10 * scale);
+        // spanY: top edge của badge — _alignDOMChords sẽ ép về staffTopY - GAP
+        let spanY = cy - (18 * scale); // rough initial Y, sẽ được align
         if (textPos) {
-          spanY = textPos.by + (textPos.bh || 20) / 2;
+          spanY = textPos.by - 4; // ngay trên text SVG
         } else {
           let closestDist = Infinity;
           for (let pos of chordTextPositions.values()) {
             let dist = Math.abs(pos.by - cy);
             if (dist < 120 * scale && dist < closestDist) {
               closestDist = dist;
-              spanY = pos.by + (pos.bh || 20) / 2;
+              spanY = pos.by - 4;
             }
           }
         }
@@ -455,32 +581,97 @@ const ChordCanvas = (() => {
         textBadge.textContent = chord;
         textBadge.title = _editEnabled ? 'Sửa hợp âm: ' + chord : chord;
 
+        const chordColor = window.DisplaySettings?.getChordPrefs?.()?.color || '#dc2626';
+        // Parse màu để tạo nền nhạt tương ứng
+        const _hex2rgb = h => { const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h); return r ? [parseInt(r[1],16),parseInt(r[2],16),parseInt(r[3],16)] : [220,38,38]; };
+        const [cr,cg,cb] = _hex2rgb(chordColor);
+
         const baseStyle = [
           'position:absolute', `left:${spanX}px`, `top:${spanY}px`,
-          'transform:translate(-50%, -50%)',
-          'font-family: Arial, sans-serif', 'font-weight: bold',
-          'white-space: nowrap', 'z-index: 12'
+          'transform:translateX(-50%)',  // CHỈ center theo X, top là điểm neo
+          'font-family: "Georgia", serif', 'font-weight: bold',
+          'white-space: nowrap', 'z-index: 12',
+          'letter-spacing: -0.01em', 'line-height: 1'
         ];
-        baseStyle.push(`font-size: ${Math.max(14, 18 * scale)}px`);
+        baseStyle.push(`font-size: ${fSize}px`);
 
         if (_editEnabled) {
+          // Chế độ chỉnh sửa: viền màu accent, nền trắng
           baseStyle.push(
-            'color: #8b5cf6', 'background: rgba(255,255,255,0.95)',
-            'border: 1.5px solid #8b5cf6', 'border-radius: 6px',
-            'padding: 2px 6px', 'box-shadow: 0 4px 10px rgba(109,40,217,0.2)',
+            `color: rgb(${cr},${cg},${cb})`,
+            'background: rgba(255,255,255,0.97)',
+            `border: 1.5px solid rgba(${cr},${cg},${cb},0.7)`,
+            'border-radius: 6px',
+            'padding: 2px 7px',
+            `box-shadow: 0 2px 8px rgba(${cr},${cg},${cb},0.22)`,
             'cursor: pointer', 'pointer-events: auto',
             'transition: transform 0.15s ease, box-shadow 0.15s ease'
           );
-          textBadge.addEventListener('mouseenter', () => { textBadge.style.transform = 'translate(-50%, -50%) scale(1.08)'; textBadge.style.boxShadow = '0 6px 14px rgba(109,40,217,0.3)'; });
-          textBadge.addEventListener('mouseleave', () => { textBadge.style.transform = 'translate(-50%, -50%) scale(1)'; textBadge.style.boxShadow = '0 4px 10px rgba(109,40,217,0.2)'; });
+          textBadge.addEventListener('mouseenter', () => {
+            textBadge.style.transform = 'translateX(-50%) scale(1.1)';
+            textBadge.style.boxShadow = `0 4px 14px rgba(${cr},${cg},${cb},0.38)`;
+          });
+          textBadge.addEventListener('mouseleave', () => {
+            textBadge.style.transform = 'translateX(-50%) scale(1)';
+            textBadge.style.boxShadow = `0 2px 8px rgba(${cr},${cg},${cb},0.22)`;
+          });
           textBadge.addEventListener('click', e => { e.stopPropagation(); _showPopup(textBadge, measureIdx, noteIdx, chord); });
-        } else {
+        } else if (_highlightMode) {
+          // Chế độ nổi bật: badge tím đậm — như edit mode nhưng không cần chỉnh sửa
           baseStyle.push(
-            'color: #dc2626', 'background: transparent', 'border: none',
-            'padding: 0', 'box-shadow: none',
-            'cursor: default', 'pointer-events: none'
+            'color: #fff',
+            'background: rgba(109,40,217,0.9)',
+            'border: 1.5px solid rgba(109,40,217,0.7)',
+            'border-radius: 7px',
+            'padding: 3px 8px',
+            'box-shadow: 0 3px 10px rgba(109,40,217,0.4)',
+            'cursor: pointer', 'pointer-events: auto',
+            'transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease',
+            'font-family: "Georgia", serif', 'letter-spacing: 0.01em'
           );
+          textBadge.addEventListener('mouseenter', () => {
+            textBadge.style.transform = 'translateX(-50%) scale(1.12)';
+            textBadge.style.background = 'rgba(109,40,217,1)';
+            textBadge.style.boxShadow = '0 6px 18px rgba(109,40,217,0.55)';
+          });
+          textBadge.addEventListener('mouseleave', () => {
+            textBadge.style.transform = 'translateX(-50%) scale(1)';
+            textBadge.style.background = 'rgba(109,40,217,0.9)';
+            textBadge.style.boxShadow = '0 3px 10px rgba(109,40,217,0.4)';
+          });
+          textBadge.addEventListener('click', e => {
+            e.stopPropagation();
+            setAddMode(true);
+            _showPopup(textBadge, measureIdx, noteIdx, chord);
+          });
+        } else {
+          // Chế độ xem thường: pill nền nhạt + viền mờ — dễ đọc như tập bài hát in
+          baseStyle.push(
+            `color: rgb(${cr},${cg},${cb})`,
+            `background: rgba(${cr},${cg},${cb},0.06)`,
+            `border: 1px solid rgba(${cr},${cg},${cb},0.22)`,
+            'border-radius: 5px',
+            'padding: 1px 6px',
+            'box-shadow: none',
+            'cursor: pointer', 'pointer-events: auto',
+            'transition: background 0.15s ease, transform 0.12s ease'
+          );
+          textBadge.addEventListener('mouseenter', () => {
+            textBadge.style.background = `rgba(${cr},${cg},${cb},0.13)`;
+            textBadge.style.transform = 'translateX(-50%) scale(1.05)';
+          });
+          textBadge.addEventListener('mouseleave', () => {
+            textBadge.style.background = `rgba(${cr},${cg},${cb},0.06)`;
+            textBadge.style.transform = 'translateX(-50%) scale(1)';
+          });
+          textBadge.addEventListener('click', e => {
+            e.stopPropagation();
+            // Bật edit mode rồi mở popup
+            setAddMode(true);
+            _showPopup(textBadge, measureIdx, noteIdx, chord);
+          });
         }
+
 
         textBadge.style.cssText = baseStyle.join(';');
         container.appendChild(textBadge);
@@ -801,6 +992,9 @@ const ChordCanvas = (() => {
     },
     getCurrentSet: () => _currentSet,
     getCustomChords: () => _customChords,
+    toggleHighlight,
+    setHighlightMode,
+    isHighlightMode: () => _highlightMode,
     undo,
     redo
   };

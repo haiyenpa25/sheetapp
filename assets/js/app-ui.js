@@ -77,6 +77,7 @@ const AppUI = (() => {
      'zoom-slider', 'btn-session-panel','btn-print',
      'btn-prev-song','btn-next-song', 'btn-mixer',
      'btn-add-annotate-mode','btn-add-chord-mode','btn-add-chord-mode-bar',
+     'btn-chord-highlight',
      'chord-set-selector', 'btn-play-audio',
      'btn-auto-scroll','scroll-speed','btn-dark-mode',
      'btn-perf-notes'].forEach(id => {
@@ -86,6 +87,12 @@ const AppUI = (() => {
 
     // Voice buttons S/A/T/B/♪ — enable/disable cùng lúc với các control khác
     document.querySelectorAll('.voice-btn').forEach(b => { b.disabled = !enabled; });
+
+    // Sync trạng thái active của nút highlight khi enable lại
+    if (enabled && window.ChordCanvas?.isHighlightMode) {
+      const hlBtn = document.getElementById('btn-chord-highlight');
+      if (hlBtn) hlBtn.classList.toggle('active', ChordCanvas.isHighlightMode());
+    }
 
     if (!enabled) {
       if (window.SheetAudioPlayer) window.SheetAudioPlayer.stop();

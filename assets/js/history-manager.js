@@ -4,6 +4,7 @@
  * Lưu trong localStorage — không cần backend
  */
 const HistoryManager = (() => {
+  'use strict';
 
   const HISTORY_KEY   = 'sheetapp_history_v1';
   const FAVORITES_KEY = 'sheetapp_favorites_v1';

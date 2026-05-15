@@ -15,7 +15,7 @@ class ChordSetController {
 
             if ($action === 'list') {
                 $names = ChordSetService::listSets($songId);
-                echo json_encode(['success' => true, 'sets' => $names]);
+                Response::ok(['sets' => $names]);
                 return;
             }
 
@@ -23,7 +23,7 @@ class ChordSetController {
                 $name = trim($_GET['name'] ?? '');
                 if (!$name) { Response::error('Thiếu name'); return; }
                 $chords = ChordSetService::loadSet($songId, $name);
-                echo json_encode(['success' => true, 'chords' => $chords]);
+                Response::ok(['chords' => $chords]);
                 return;
             }
 
@@ -41,13 +41,13 @@ class ChordSetController {
             if ($action === 'save') {
                 $chords = $body['chords'] ?? [];
                 $ok = ChordSetService::saveSet($songId, $name, $chords);
-                echo json_encode(['success' => $ok]);
+                $ok ? Response::ok() : Response::error('Lỗi lưu chord set');
                 return;
             }
 
             if ($action === 'delete') {
                 ChordSetService::deleteSet($songId, $name);
-                echo json_encode(['success' => true]);
+                Response::ok();
                 return;
             }
 

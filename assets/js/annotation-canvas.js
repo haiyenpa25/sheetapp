@@ -48,12 +48,12 @@ const AnnotationCanvas = (() => {
     if (!songId) return;
 
     try {
-      const annotations = await window.ApiService?.annotations?.load?.(songId);
-      if (Array.isArray(annotations)) {
-        annotations.forEach(a => {
-          _notes[`${a.measureIdx}_${a.noteIdx}`] = a;
-        });
-      }
+      const res = await window.ApiService?.annotations?.load?.(songId);
+      // AnnotationController trả {success:true, annotations:[...]} via Response::ok()
+      const list = res?.annotations ?? (Array.isArray(res) ? res : []);
+      list.forEach(a => {
+        _notes[`${a.measureIdx}_${a.noteIdx}`] = a;
+      });
     } catch(e) {
       console.warn('Load annotation error:', e);
     }

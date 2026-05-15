@@ -13,7 +13,7 @@ class UserController {
         try {
             switch ($method) {
                 case 'GET':
-                    Response::ok(UserService::getAll());
+                    Response::ok(['users' => UserService::getAll()]);
                     break;
 
                 case 'POST':

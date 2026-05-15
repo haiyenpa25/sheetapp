@@ -4,6 +4,8 @@
  * Quản lý lifecycle: init → load → render → zoom → transpose.
  */
 const OSMDRenderer = (() => {
+  'use strict';
+
   let osmd = null;
   let containerId = null;
   let currentXmlString = null;
@@ -32,10 +34,10 @@ const OSMDRenderer = (() => {
       coloringEnabled: true,
       pageFormat: 'Endless',  // Scroll vertically, no page breaks
       engravingRules: {
-        // Chord symbols
+        // Chord symbols — size to hơn, cao hơn
         ChordSymbolFontFamily: "OSMDChordFont, sans-serif",
-        ChordSymbolTextHeight: 2.2,
-        ChordSymbolYOffset: 0.8,
+        ChordSymbolTextHeight: 2.6,
+        ChordSymbolYOffset: 1.2,
         DefaultColorChordSymbol: '#dc2626',
         // Sheet layout
         StaffLineWidth: 0.1,
@@ -81,8 +83,8 @@ const OSMDRenderer = (() => {
         if (window.DisplaySettings) prefs = DisplaySettings.getChordPrefs();
 
         osmd.rules.DefaultColorChordSymbol = prefs.color;
-        osmd.rules.ChordSymbolTextHeight   = prefs.size;
-        osmd.rules.ChordSymbolYOffset      = prefs.yOffset;
+        osmd.rules.ChordSymbolTextHeight   = prefs.size   ?? 2.6;
+        osmd.rules.ChordSymbolYOffset      = prefs.yOffset ?? 1.2;
         
         // --- ÉP KHOẢNG CÁCH HỢP ÂM CỐ ĐỊNH, KHÔNG BỊ ĐẨY LÊN CAO ---
         osmd.rules.ChordSymbolYPadding = 0.0;

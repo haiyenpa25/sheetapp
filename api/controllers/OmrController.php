@@ -15,7 +15,7 @@ class OmrController {
             switch ($method) {
                 case 'GET':
                     $jobs = OmrService::getAll();
-                    echo json_encode($jobs, JSON_UNESCAPED_UNICODE);
+                    Response::ok(['jobs' => $jobs]);
                     break;
 
                 case 'POST':

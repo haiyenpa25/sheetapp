@@ -6,6 +6,7 @@
  *  3. URL trực tiếp đến file XML
  */
 const Importer = (() => {
+  'use strict';
 
   let selectedFile  = null;
   let onSuccessCb   = null;
