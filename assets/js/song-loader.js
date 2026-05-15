@@ -14,12 +14,14 @@ const SongLoader = (() => {
     Store.set('currentTranspose', transposeOverride ?? 0);
     Store.set('capoLevel', 0);
 
+    // Reset nhanh các state cũ
     _resetCapoUI();
     SheetAudioPlayer.stop();
     if (window.AutoScroller) AutoScroller.stop();
     if (window.ChordCanvas?.resetSet) ChordCanvas.resetSet();
     if (window.InstrumentMixer?.clearState) InstrumentMixer.clearState();
 
+    // Load chord canvas và annotation song song (không block UI)
     ChordCanvas.loadSong(song.id, profileOverride);
     AnnotationCanvas.loadSong(song.id);
     PageNav.reset();
@@ -29,37 +31,39 @@ const SongLoader = (() => {
     _autoCloseSidebar();
 
     try {
-      // INTENTIONAL EXCEPTION: fetch() tĩnh được phép cho static asset (file XML trên server).
-      // Đây không phải API call mà là tải file tĩnh → không cần qua ApiService.
-      // Tham khảo: CODING_STANDARDS.md §2.1 — ngoại lệ fetch() cho static asset.
-      const res = await fetch(song.xmlPath);
+      // ── Fetch XML + session settings song song (tiết kiệm 1 round-trip) ──
+      AppUI.setLoadingText('Đang tải dữ liệu...');
+      const [res, settings] = await Promise.all([
+        fetch(song.xmlPath),
+        ApiService.sessions.load(song.id).catch(() => ({}))
+      ]);
       if (!res.ok) throw new Error(`Không thể tải file: ${res.status}`);
       const xml = await res.text();
       Store.set('originalXml', xml);
 
-      const settings = await ApiService.sessions.load(song.id);
       const transpose = transposeOverride ?? 0;
-      const zoom = settings.userSettings?.zoomLevel || 1.0;
+      const zoom = settings?.userSettings?.zoomLevel || 1.0;
       Store.set('currentTranspose', transpose);
       Store.set('currentZoom', zoom);
 
-      AppUI.setLoadingText('Đang xử lý hồ sơ...');
-      const processedXml = _injectChords(xml);
-
+      // ── Render OSMD ──
       AppUI.setLoadingText('Đang vẽ bản nhạc...');
+      const processedXml = _injectChords(xml);
       OSMDRenderer.setZoomSilent(zoom);
       await OSMDRenderer.load(processedXml, transpose);
 
+      // ── Post-render tasks (song song) ──
       _syncZoomUI(zoom);
-      if (!settings.userSettings?.zoomLevel) setTimeout(() => _autoFitZoom(), 100);
+      if (!settings?.userSettings?.zoomLevel) setTimeout(_autoFitZoom, 80);
 
       SheetAudioPlayer.setup(OSMDRenderer.getInstance());
       AppUI.updateTransposeDisplay(transpose);
       AppUI.updateSongInfo(song, transpose);
       _updateCapoBadge(xml);
 
+      // Các task phụ — không cần await
       if (window.SongInfoBar) SongInfoBar.loadSong(xml, song);
-      if (window.PerformanceNotes) await PerformanceNotes.loadSong(song.id);
+      if (window.PerformanceNotes) PerformanceNotes.loadSong(song.id); // bỏ await
 
       _enableAudioControls();
       AppUI.showOSMD();
@@ -67,12 +71,15 @@ const SongLoader = (() => {
       if (window.ChordCanvas?.onOSMDRendered) ChordCanvas.onOSMDRendered();
       if (window.AnnotationCanvas?.onOSMDRendered) AnnotationCanvas.onOSMDRendered();
       if (window.ChordCanvas?.refreshSetDropdown) {
-        setTimeout(() => { ChordCanvas.refreshSetDropdown(); setTimeout(() => SongInfoBar?.refreshChordChip?.(), 150); }, 200);
+        setTimeout(() => {
+          ChordCanvas.refreshSetDropdown();
+          setTimeout(() => SongInfoBar?.refreshChordChip?.(), 100);
+        }, 150);
       }
 
       AppUI.updateSessionPanel(transpose, []);
       _showLoadToast(song, transpose);
-      if (window.URLState) await _restoreFromURL();
+      if (window.URLState) _restoreFromURL(); // bỏ await
       if (window.HistoryManager) HistoryManager.trackView(song);
 
       document.getElementById('btn-print')?.removeAttribute('disabled');
@@ -191,11 +198,12 @@ const SongLoader = (() => {
     const svg = document.getElementById('osmd-container')?.querySelector('svg');
     const wrapper = document.querySelector('.sheet-viewer-wrapper');
     if (!svg || !wrapper) return;
-    const avail = wrapper.clientWidth - 40;
+    const avail = wrapper.clientWidth - 20; // 20px = padding
     if (avail <= 0 || !svg.clientWidth) return;
     const ratio = avail / svg.clientWidth;
-    const snap  = Math.round(Math.max(0.5, Math.min(1.5, ratio)) * 10) * 10;
-    if (Store.get('currentZoom') === 1.0) window.App?.setZoom?.(snap);
+    // Snap sang bước zoom gần nhất (10%, 15%, ..., 200%)
+    const pct = Math.round(Math.max(0.1, Math.min(2.0, ratio)) * 20) * 5; // bước 5%
+    if (Store.get('currentZoom') === 1.0) window.App?.setZoom?.(pct);
   }
 
   function _resetCapoUI() {
@@ -207,8 +215,13 @@ const SongLoader = (() => {
 
   function _autoCloseSidebar() {
     if (window.innerWidth <= 900) {
-      document.getElementById('sidebar')?.classList.add('mobile-hidden');
-      document.getElementById('sidebar-overlay')?.classList.add('hidden');
+      // Dùng helper từ toolbar-controller nếu có (đồng bộ overlay)
+      if (typeof window._closeSidebar === 'function') {
+        window._closeSidebar();
+      } else {
+        document.getElementById('sidebar')?.classList.add('mobile-hidden');
+        document.getElementById('sidebar-overlay')?.classList.add('hidden');
+      }
     }
   }
 

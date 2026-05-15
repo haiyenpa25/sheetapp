@@ -3,6 +3,19 @@
    Sidebar, Toolbar, Main Layout
    ============================================= */
 
+/* ── iOS 300ms tap delay fix ──
+   touch-action: manipulation trên mọi element tương tác
+   → Safari không đợi double-tap nữa */
+a, button, [role="button"],
+select, input, label,
+.song-item, .recent-item, .setlist-item,
+.icon-btn, .btn, .icon-btn-xs,
+.quick-jump-btn, .sidebar-tab, .song-fav-btn,
+.chord-set-select, .zoom-select {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* ---- SIDEBAR ---- */
 .sidebar {
   width: var(--sidebar-w);
