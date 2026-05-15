@@ -265,11 +265,23 @@ const ChordCanvas = (() => {
 
     const mapped = _mapNotes(notes, rawChordMap);
 
+    // ── DEDUP: loại bỏ các note trùng key (measureIdx_noteIdx)
+    // Xảy ra khi bài SATB có nhiều voice/notehead tại cùng 1 vị trí nhịp-nốt.
+    // Giữ lại phần tử ĐẦU TIÊN (voice cao nhất = primary) để tránh render 2 badge.
+    const seenKeys = new Set();
+    const dedupedMapped = mapped.filter(m => {
+      // Dedup TẤT CẢ theo key — kể cả nút "+" (không chord) để tránh click zone chồng nhau
+      const key = `${m.measureIdx}_${m.noteIdx}`;
+      if (seenKeys.has(key)) return false;
+      seenKeys.add(key);
+      return true;
+    });
+
     // ── Xây dựng map: vị trí chord text SVG → để đặt badge PHÍA TRÊN chữ hợp âm
     // getBoundingClientRect() trả về viewport px → zoom-safe, luôn đúng sau mỗi re-render
-    const chordTextPositions = _buildChordTextPositions(mapped, container);
+    const chordTextPositions = _buildChordTextPositions(dedupedMapped, container);
 
-    mapped.forEach(m => _placeDot(m, chordTextPositions));
+    dedupedMapped.forEach(m => _placeDot(m, chordTextPositions));
 
     // Canh thẳng hàng ngang các hợp âm trên cùng một dòng (tránh nhảy múa lên xuống theo nốt)
     _alignDOMChords();
