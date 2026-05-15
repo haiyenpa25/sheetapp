@@ -43,12 +43,53 @@
     </div>
   </div>
 
-  <!-- LOADING SPINNER -->
-  <div id="loading-screen" class="loading-screen hidden">
-    <div class="spinner-wrap">
-      <div class="spinner"></div>
-      <p id="loading-text">Đang tải sheet nhạc...</p>
+  <!-- SKELETON LOADING — hiện trong khi OSMD đang render -->
+  <div id="loading-screen" class="loading-screen hidden" aria-label="Đang tải sheet nhạc" role="status">
+    <div class="skeleton-sheet" aria-hidden="true">
+      <!-- Title skeleton -->
+      <div class="skeleton-title">
+        <div class="skeleton-bar w-40 h-6 mx-auto"></div>
+        <div class="skeleton-bar w-24 h-4 mx-auto mt-2"></div>
+      </div>
+      <!-- Staff lines skeleton x3 -->
+      <div class="skeleton-staff-row">
+        <div class="skeleton-clef"></div>
+        <div class="skeleton-lines">
+          <div class="skeleton-bar w-full h-px"></div>
+          <div class="skeleton-bar w-full h-px mt-3"></div>
+          <div class="skeleton-bar w-full h-px mt-3"></div>
+          <div class="skeleton-bar w-full h-px mt-3"></div>
+          <div class="skeleton-bar w-full h-px mt-3"></div>
+        </div>
+        <div class="skeleton-notes">
+          <div class="skeleton-note"></div>
+          <div class="skeleton-note delay-1"></div>
+          <div class="skeleton-note delay-2"></div>
+          <div class="skeleton-note delay-3"></div>
+          <div class="skeleton-note delay-1"></div>
+          <div class="skeleton-note delay-2"></div>
+        </div>
+      </div>
+      <div class="skeleton-staff-row mt-8">
+        <div class="skeleton-clef"></div>
+        <div class="skeleton-lines">
+          <div class="skeleton-bar w-full h-px"></div>
+          <div class="skeleton-bar w-full h-px mt-3"></div>
+          <div class="skeleton-bar w-full h-px mt-3"></div>
+          <div class="skeleton-bar w-full h-px mt-3"></div>
+          <div class="skeleton-bar w-full h-px mt-3"></div>
+        </div>
+        <div class="skeleton-notes">
+          <div class="skeleton-note delay-2"></div>
+          <div class="skeleton-note delay-3"></div>
+          <div class="skeleton-note"></div>
+          <div class="skeleton-note delay-1"></div>
+          <div class="skeleton-note delay-3"></div>
+          <div class="skeleton-note delay-2"></div>
+        </div>
+      </div>
     </div>
+    <p id="loading-text" class="skeleton-loading-text">Đang tải sheet nhạc...</p>
   </div>
 
   <!-- OSMD PAGE BAR -->
