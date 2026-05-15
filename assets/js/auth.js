@@ -6,7 +6,7 @@ const Auth = (() => {
   'use strict';
 
   let _currentUser = null;
-  let _role = 'viewer'; // mặc định là viewer
+  let _role = 'viewer'; // viewer | banhat | admin
 
   async function checkSession() {
     try {
@@ -74,27 +74,35 @@ const Auth = (() => {
       formPanel?.classList.add('hidden');
       loggedInPanel?.classList.remove('hidden');
       const roleDisplay = document.getElementById('auth-role-display');
-      if (roleDisplay) roleDisplay.textContent = (_role === 'admin' ? 'Quản Trị' : 'Xem');
+      if (roleDisplay) {
+        const roleLabel = { admin: 'Quản Trị', banhat: 'Ban Hát', viewer: 'Xem' };
+        roleDisplay.textContent = roleLabel[_role] || 'Xem';
+      }
     } else {
       formPanel?.classList.remove('hidden');
       loggedInPanel?.classList.add('hidden');
     }
 
     // Phân quyền:
-    //  - canEdit (isAdmin): thao tác nâng cao (ghi chú, xoá bộ hợp âm, import...)
-    //  - loggedIn: thao tác cơ bản (thêm hợp âm, tạo bộ hợp âm mới)
-    const canEdit  = isAdmin();
-    const loggedIn = isLoggedIn();
+    //  viewer  — chỉ được xem
+    //  banhat  — thêm/sửa hợp âm
+    //  admin   — toàn quyền
+    const canEdit       = isAdmin();       // admin only
+    const canEditChords = _canEditChords(); // banhat + admin
+    const loggedIn      = isLoggedIn();
 
-    // Thêm hợp âm — CHỈ CẦN đăng nhập
-    document.getElementById('btn-add-chord-mode')?.classList.toggle('hidden', !loggedIn);
-    // Tạo bộ hợp âm mới — CHỈ CẦN đăng nhập
-    document.getElementById('btn-new-chord-set')?.classList.toggle('hidden', !loggedIn);
+    // Thêm hợp âm — cần quyền Ban Hát trở lên
+    document.getElementById('btn-add-chord-mode')?.classList.toggle('hidden', !canEditChords);
+    document.getElementById('btn-add-chord-mode-bar')?.classList.toggle('hidden', !canEditChords);
+    // Nút Nổi bật hợp âm — cần ít nhất Ban Hát
+    document.getElementById('btn-chord-highlight')?.classList.toggle('hidden', !canEditChords);
+    // Tạo bộ hợp âm mới — cần quyền Ban Hát trở lên
+    document.getElementById('btn-new-chord-set')?.classList.toggle('hidden', !canEditChords);
     // Ghi chú — Admin only
     document.getElementById('btn-add-annotate-mode')?.classList.toggle('hidden', !canEdit);
 
-    // FAB items — đồng bộ với quyền của từng nút
-    document.getElementById('fab-chord')?.classList.toggle('hidden', !loggedIn);
+    // FAB items
+    document.getElementById('fab-chord')?.classList.toggle('hidden', !canEditChords);
     document.getElementById('fab-annotate')?.classList.toggle('hidden', !canEdit);
 
     // Nút thùng rác chord set — admin only
@@ -102,10 +110,8 @@ const Auth = (() => {
     if (delBtn && !canEdit) delBtn.style.display = 'none';
 
     // Tắt mode khi mất quyền
-    if (!loggedIn) {
-      if (document.getElementById('btn-add-chord-mode')?.classList.contains('active')) {
-          window.ChordCanvas?.setAddMode(false);
-      }
+    if (!canEditChords) {
+      window.ChordCanvas?.setAddMode(false);
     }
     if (!canEdit) {
       if (document.getElementById('btn-add-annotate-mode')?.classList.contains('active')) {
@@ -113,11 +119,11 @@ const Auth = (() => {
       }
     }
 
-    // Nút import chỉ admin mới có
+    // Nút import/admin chỉ admin mới có
     document.getElementById('btn-admin-console')?.classList.toggle('hidden', !canEdit);
     document.getElementById('btn-omr-upload')?.classList.toggle('hidden', !canEdit);
 
-    // Xử lý các nút add to setlist được render động
+    // Setlist add button — admin only
     document.querySelectorAll('.song-add-setlist-btn').forEach(btn => {
       btn.classList.toggle('hidden', !canEdit);
     });
@@ -169,7 +175,17 @@ const Auth = (() => {
     return _currentUser !== null;
   }
 
-  return { init, checkSession, isAdmin, isLoggedIn, getUser: () => _currentUser };
+  /** Ban Hát hoặc Admin đều có quyền chỉnh sửa hợp âm */
+  function _canEditChords() {
+    return _role === 'banhat' || _role === 'admin';
+  }
+
+  return {
+    init, checkSession, isAdmin, isLoggedIn,
+    isBanhat: () => _canEditChords(),
+    getUser: () => _currentUser,
+    getRole: () => _role
+  };
 })();
 
 window.Auth = Auth;

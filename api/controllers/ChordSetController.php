@@ -29,6 +29,9 @@ class ChordSetController {
 
             Response::error('action không hợp lệ');
         } elseif ($method === 'POST') {
+            // Yêu cầu ít nhất quyền Ban Hát để lưu/xóa hợp âm
+            Auth::requireBanhat();
+
             $body = json_decode(file_get_contents('php://input'), true);
             if (!$body) { Response::error('Body không hợp lệ'); return; }
 

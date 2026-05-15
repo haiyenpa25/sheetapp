@@ -173,7 +173,14 @@ const ChordCanvas = (() => {
     }
   }
 
-  function toggleAddMode() { setAddMode(!_editEnabled); }
+  function toggleAddMode() {
+    // Kiểm tra quyền — cần ít nhất role "banhat"
+    if (!_editEnabled && !window.Auth?.isBanhat?.()) {
+      window.App?.showToast?.('⚠️ Cần đăng nhập với quyền Ban Hát để thêm hợp âm', 'error');
+      return;
+    }
+    setAddMode(!_editEnabled);
+  }
 
   /* ─── Highlight Mode ─────────────────────────────────────────── */
   /**

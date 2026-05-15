@@ -241,7 +241,8 @@ const AdminUI = (() => {
             <td><strong>${u.username}</strong></td>
             <td>
               <select class="form-input" ${amIOwner ? 'disabled' : ''} style="padding:0.2rem; font-size:0.8rem;" onchange="AdminUI.updateUserRole(${u.id}, this.value)">
-                <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin (Ban Quản Trị)</option>
+                <option value="admin"  ${u.role === 'admin'  ? 'selected' : ''}>Admin (Quản Trị)</option>
+                <option value="banhat" ${u.role === 'banhat' ? 'selected' : ''}>Ban Hát (thêm hợp âm)</option>
                 <option value="viewer" ${u.role === 'viewer' ? 'selected' : ''}>Viewer (Khách)</option>
               </select>
             </td>
