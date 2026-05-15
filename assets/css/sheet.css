@@ -586,13 +586,44 @@ body.dark-mode .chord-edit-hint {
   .osmd-container svg { width: 100% !important; height: auto !important; }
   .osmd-container svg path, .osmd-container svg line { stroke: #000 !important; }
   .osmd-container svg text { fill: #000 !important; }
-  /* Chord overlay — giữ nguyên để in */
-  .chord-dot-layer { display: block !important; }
+
+  /* ── Custom chord badges (DOM Overlay) ── */
   .cc-dot { display: block !important; }
+
+  /* Edit badge ✎ — ẩn khi in (không cần) */
+  .cc-edit-badge, .cc-dot-btn { display: none !important; }
+
+  /* View mode badge (pill đỏ nhạt) — in với màu đỏ rõ ràng */
+  .cc-custom-chord-text {
+    display: block !important;
+    color: #c00 !important;
+    background: transparent !important;
+    border: 1px solid rgba(192,0,0,0.4) !important;
+    border-radius: 4px !important;
+    padding: 0 4px !important;
+    font-weight: 700 !important;
+    font-size: 11pt !important;
+    box-shadow: none !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  /* Highlight mode badge (tím) — in với màu tím đậm */
+  .cc-custom-chord-text[style*="rgba(109,40,217"] {
+    color: #5b21b6 !important;
+    background: transparent !important;
+    border-color: #5b21b6 !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  /* Chord text (legacy default set) */
   .chord-dot-text { color: #c00 !important; font-weight: 700 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+
   /* Annotation in ra — ẩn edit icon, giữ text */
   .annotation-layer { display: block !important; }
   .ann-note-edit-btn { display: none !important; }
+
   /* Capo hint in ra nếu có */
   #capo-wrap { display: flex !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }

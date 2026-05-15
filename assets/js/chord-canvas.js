@@ -302,53 +302,58 @@ const ChordCanvas = (() => {
     const cRect = container.getBoundingClientRect();
     const GAP_PX = 22; // px từ top staff line lên badge — KHÔNG đổi khi zoom
 
-    // ── 1. Tìm tất cả đường kẻ ngang SVG (staff lines) ──────────────
+    // ── 1. Tìm top Y của mỗi khuông nhạc (stave) qua g.vf-stave ──────────────
+    // g.vf-stave.getBoundingClientRect().top === đường kẻ TRÊN CÙNG của khuông đó
+    // Đây là cách đáng tin hơn scan <line>/<path> từng phần tử.
     const svg = container.querySelector('svg');
     if (!svg) return;
 
-    // OSMD vẽ staff lines bằng <line> hoặc <path> trong group .vf-stave
-    // Cũng có thể là path d="M x1 y H x2" — dùng getBoundingClientRect() để lấy Y thực
     let staffLineRects = [];
-    const staveGroups = Array.from(svg.querySelectorAll('g.vf-stave, g[class*="stave"]'));
+    const staveGroups = Array.from(svg.querySelectorAll('g.vf-stave'));
+
     if (staveGroups.length) {
       staveGroups.forEach(g => {
-        // Lấy các line/path con là đường ngang (width >> height)
-        Array.from(g.querySelectorAll('line, path')).forEach(el => {
-          const r = el.getBoundingClientRect();
-          if (r.width > 40 && r.height < 4 && r.top > 0) {
-            staffLineRects.push(r.top - cRect.top); // Y trong container coords
-          }
-        });
+        const r = g.getBoundingClientRect();
+        if (r.width > 40 && r.height > 0 && r.top > 0) {
+          staffLineRects.push(r.top - cRect.top);
+        }
       });
     }
 
-    // Fallback: tìm tất cả <line> ngang trong SVG
+    // Fallback: scan <line> ngang trong SVG (OSMD không có vf-stave)
     if (!staffLineRects.length) {
       Array.from(svg.querySelectorAll('line')).forEach(el => {
         const r = el.getBoundingClientRect();
-        if (r.width > 40 && r.height < 4 && r.top > 0) {
+        if (r.width > 60 && r.height < 3 && r.top > 0) {
           staffLineRects.push(r.top - cRect.top);
         }
       });
     }
 
     if (!staffLineRects.length) {
-      // Không tìm được staff lines — fallback về align theo minTop trong mỗi dải
       _alignDOMChordsFallback(container);
       return;
     }
 
-    // ── 2. Nhóm staff lines thành hệ (system) ──────────────────────
-    // Mỗi hệ 5 dòng kẻ, cách nhau ~4px. Giữa các hệ, gap lớn hơn nhiều.
+    // ── 2. Nhóm thành hệ (system) ─────────────────────────────────
+    // SATB: treble+bass cùng system, gap ~80-100px. Giữa 2 system gap ~180px+
+    // Dùng SYS_GAP = 150px: lớn hơn treble-bass gap, nhỏ hơn inter-system gap
     staffLineRects.sort((a, b) => a - b);
-
-    const systems = [];  // [{topY, bottomY}]
-    let sysStart = staffLineRects[0];
-    let prev = staffLineRects[0];
-    const SYS_GAP = 30; // gap tối thiểu giữa 2 system (px)
-
+    // Loại bỏ duplicate (cùng Y ± 3px — có thể do border của g.vf-stave)
+    const deduped = [staffLineRects[0]];
     for (let i = 1; i < staffLineRects.length; i++) {
-      const curr = staffLineRects[i];
+      if (staffLineRects[i] - deduped[deduped.length - 1] > 3) {
+        deduped.push(staffLineRects[i]);
+      }
+    }
+
+    const systems = [];
+    let sysStart = deduped[0];
+    let prev = deduped[0];
+    const SYS_GAP = 150; // px — đủ lớn để phân biệt inter-system, đủ nhỏ để gom SATB staves
+
+    for (let i = 1; i < deduped.length; i++) {
+      const curr = deduped[i];
       if (curr - prev > SYS_GAP) {
         systems.push({ topY: sysStart, bottomY: prev });
         sysStart = curr;
@@ -702,6 +707,14 @@ const ChordCanvas = (() => {
       btn.addEventListener('mouseenter', () => { btn.style.transform = 'scale(1.15)'; btn.style.background = 'rgba(109,40,217,1)'; });
       btn.addEventListener('mouseleave', () => { btn.style.transform = 'scale(1)'; btn.style.background = 'rgba(109,40,217,0.8)'; });
       btn.addEventListener('click', e => { e.stopPropagation(); _showPopup(btn, measureIdx, noteIdx, ''); });
+      // F6: Touch long-press (500ms) để mở popup trên mobile/tablet
+      let _touchTimer = null;
+      btn.addEventListener('touchstart', e => {
+        e.preventDefault();
+        _touchTimer = setTimeout(() => { _showPopup(btn, measureIdx, noteIdx, ''); }, 500);
+      }, { passive: false });
+      btn.addEventListener('touchend',   () => clearTimeout(_touchTimer));
+      btn.addEventListener('touchmove',  () => clearTimeout(_touchTimer));
       container.appendChild(btn);
     }
   }
@@ -720,6 +733,23 @@ const ChordCanvas = (() => {
       },
       onClose: () => _closePopup()
     });
+    // F5: Auto-save khi click ra ngoài popup (blur) sau 400ms
+    if (_popup) {
+      const inp = _popup.querySelector('input[type="text"], input:not([type])') || _popup.querySelector('input');
+      if (inp) {
+        let _blurTimer = null;
+        inp.addEventListener('blur', () => {
+          _blurTimer = setTimeout(() => {
+            const val = inp.value.trim();
+            if (val && val !== existing && _popup) {
+              _closePopup();
+              _saveChord(measureIdx, noteIdx, val);
+            }
+          }, 400);
+        });
+        inp.addEventListener('focus', () => clearTimeout(_blurTimer));
+      }
+    }
   }
 
   function openNextPopup(curMeasureIdx, curNoteIdx) {
@@ -809,10 +839,14 @@ const ChordCanvas = (() => {
     if (_currentSet === 'default') {
       await ChordCanvasXML.removeXml(measureIdx, noteIdx);
     } else {
+      const deleted = _customChords[`${measureIdx}_${noteIdx}`] || '';
       delete _customChords[`${measureIdx}_${noteIdx}`];
       await _saveCustomSet();
-      // Rebuild dots tại chỗ — không reload OSMD
       setTimeout(() => requestAnimationFrame(_build), 80);
+      // U3: toast hint undo
+      if (deleted) {
+        window.App?.showToast?.(`Đã xóa "${deleted}" — Ctrl+Z để hoàn tác`, 'info');
+      }
     }
   }
 
