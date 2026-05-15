@@ -11,6 +11,7 @@
       <button id="btn-auth" class="sidebar-auth-btn" title="Đăng nhập / Phân quyền">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <span id="auth-username" class="sidebar-auth-name">Khách</span>
+        <span id="auth-role-badge" class="sidebar-role-badge hidden"></span>
       </button>
       <button id="btn-toggle-sidebar" class="icon-btn" title="Ẩn/Hiện sidebar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>

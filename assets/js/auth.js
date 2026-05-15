@@ -61,15 +61,31 @@ const Auth = (() => {
   }
 
   function _updateUI() {
+    // ── Sidebar auth button ──
     const btnText = document.getElementById('auth-username');
-    if (btnText) {
-      btnText.textContent = _currentUser ? _currentUser : 'Khách';
+    if (btnText) btnText.textContent = _currentUser ?? 'Khách';
+
+    // Role badge (hiện kế tên user)
+    const roleBadge = document.getElementById('auth-role-badge');
+    if (roleBadge) {
+      const badgeInfo = {
+        admin:  { text: 'Quản Trị', cls: 'role-badge-admin' },
+        banhat: { text: 'Ban Hát',   cls: 'role-badge-banhat' },
+        viewer: { text: '',            cls: '' }
+      }[_role] ?? { text: '', cls: '' };
+
+      if (_currentUser && badgeInfo.text) {
+        roleBadge.textContent = badgeInfo.text;
+        roleBadge.className = 'sidebar-role-badge ' + badgeInfo.cls;
+      } else {
+        roleBadge.className = 'sidebar-role-badge hidden';
+      }
     }
 
-    // Modal UI
-    const formPanel = document.getElementById('auth-login-form');
+    // ── Modal auth panel ──
+    const formPanel    = document.getElementById('auth-login-form');
     const loggedInPanel = document.getElementById('auth-logged-in');
-    
+
     if (_currentUser) {
       formPanel?.classList.add('hidden');
       loggedInPanel?.classList.remove('hidden');
@@ -77,6 +93,16 @@ const Auth = (() => {
       if (roleDisplay) {
         const roleLabel = { admin: 'Quản Trị', banhat: 'Ban Hát', viewer: 'Xem' };
         roleDisplay.textContent = roleLabel[_role] || 'Xem';
+      }
+      // Cập nhật tóm tắt quyền trong modal
+      const permSummary = document.getElementById('auth-perm-summary');
+      if (permSummary) {
+        const perms = {
+          admin:  '✅ Xem • ✅ Thêm/sửa hợp âm • ✅ Ghi chú • ✅ Quản lý hệ thống',
+          banhat: '✅ Xem • ✅ Thêm/sửa hợp âm • ❌ Ghi chú • ❌ Quản lý',
+          viewer: '✅ Xem • ❌ Thêm hợp âm • ❌ Ghi chú • ❌ Quản lý'
+        };
+        permSummary.textContent = perms[_role] ?? perms.viewer;
       }
     } else {
       formPanel?.classList.remove('hidden');

@@ -209,3 +209,26 @@ body.dark .fab-item-label { color: #c4b5fd; }
   text-overflow: ellipsis;
 }
 
+/* ── Role badge (hiện ngay sau tên user) ── */
+.sidebar-role-badge {
+  display: inline-block;
+  padding: .1rem .4rem;
+  border-radius: 99px;
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  white-space: nowrap;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+.sidebar-role-badge.role-badge-admin {
+  background: rgba(109,40,217,.15);
+  color: var(--accent);
+  border: 1px solid rgba(109,40,217,.3);
+}
+.sidebar-role-badge.role-badge-banhat {
+  background: rgba(5,150,105,.12);
+  color: #059669;
+  border: 1px solid rgba(5,150,105,.25);
+}
+

@@ -69,7 +69,8 @@
       </div>
       <div id="auth-logged-in" class="hidden text-center">
         <p class="text-muted mb-1">Đang đăng nhập với quyền <strong id="auth-role-display"></strong></p>
-        <button id="btn-do-logout" class="btn btn-danger w-full mt-1">Đăng Xuất</button>
+        <p id="auth-perm-summary" class="text-xs text-muted" style="line-height:1.7; margin-bottom:.75rem; text-align:left; padding:.5rem .75rem; background:var(--bg-overlay); border-radius:var(--radius-sm); border:1px solid var(--border);"></p>
+        <button id="btn-do-logout" class="btn btn-danger w-full">Đăng Xuất</button>
       </div>
     </div>
   </div>
