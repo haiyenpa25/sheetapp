@@ -665,6 +665,11 @@ const ChordCanvas = (() => {
           });
           textBadge.addEventListener('click', e => {
             e.stopPropagation();
+            // Kiểm tra quyền trước khi mở popup sửa
+            if (!window.Auth?.isBanhat?.()) {
+              window.App?.showToast?.('⚠️ Cần đăng nhập với quyền Ban Hát để sửa hợp âm', 'error');
+              return;
+            }
             setAddMode(true);
             _showPopup(textBadge, measureIdx, noteIdx, chord);
           });
@@ -690,7 +695,11 @@ const ChordCanvas = (() => {
           });
           textBadge.addEventListener('click', e => {
             e.stopPropagation();
-            // Bật edit mode rồi mở popup
+            // Chỉ mở popup sửa nếu có quyền Ban Hát trở lên
+            if (!window.Auth?.isBanhat?.()) {
+              window.App?.showToast?.('⚠️ Cần đăng nhập với quyền Ban Hát để sửa hợp âm', 'error');
+              return;
+            }
             setAddMode(true);
             _showPopup(textBadge, measureIdx, noteIdx, chord);
           });
@@ -728,6 +737,11 @@ const ChordCanvas = (() => {
 
   /* ─── Popup ─────────────────────────────────────────────────── */
   function _showPopup(anchor, measureIdx, noteIdx, existing) {
+    // Safety net: không bao giờ hiện popup sửa nếu không có quyền
+    if (!window.Auth?.isBanhat?.()) {
+      window.App?.showToast?.('⚠️ Cần đăng nhập với quyền Ban Hát để sửa hợp âm', 'error');
+      return;
+    }
     _closePopup();
     _popup = ChordCanvasUI.createPopup(anchor, measureIdx, noteIdx, existing, _currentSet, {
       onSave: async (val) => {
