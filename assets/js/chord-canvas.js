@@ -814,32 +814,15 @@ const ChordCanvas = (() => {
     _closePopup();
     _popup = ChordCanvasUI.createPopup(anchor, measureIdx, noteIdx, existing, _currentSet, {
       onSave: async (val) => {
-        _closePopup();
+        // onClose đã được gọi bởi doSave() trong UI trước khi onSave
+        // Nên KHÔNG gọi _closePopup() ở đây nữa (sẽ null _popup đúng lúc)
         await _saveChord(measureIdx, noteIdx, val);
       },
       onDelete: async () => {
-        _closePopup();
         await _deleteChord(measureIdx, noteIdx);
       },
       onClose: () => _closePopup()
     });
-    // F5: Auto-save khi click ra ngoài popup (blur) sau 400ms
-    if (_popup) {
-      const inp = _popup.querySelector('input[type="text"], input:not([type])') || _popup.querySelector('input');
-      if (inp) {
-        let _blurTimer = null;
-        inp.addEventListener('blur', () => {
-          _blurTimer = setTimeout(() => {
-            const val = inp.value.trim();
-            if (val && val !== existing && _popup) {
-              _closePopup();
-              _saveChord(measureIdx, noteIdx, val);
-            }
-          }, 400);
-        });
-        inp.addEventListener('focus', () => clearTimeout(_blurTimer));
-      }
-    }
   }
 
   function openNextPopup(curMeasureIdx, curNoteIdx) {

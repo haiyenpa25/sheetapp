@@ -1,7 +1,7 @@
-﻿/**
+/**
  * library-ui.js — Thư viện bài hát
- * Tối ưu iPad: dùng event delegation + touchstart để tránh 300ms delay
- * Tối ưu DOM: DocumentFragment + ít listener hơn
+ * v3: pointerdown instant, không preventDefault trên action buttons,
+ *     visual feedback qua CSS :active (không cần JS), dedup bằng pointerId
  */
 'use strict';
 const LibraryUI = (() => {
@@ -42,46 +42,50 @@ const LibraryUI = (() => {
     // Category filter
     _buildCategoryFilter();
 
-    // ── Event Delegation: MỌI tương tác trong song-list xử lý ở đây ──
-    // Dùng pointerdown thay vì click — phản hồi ngay lập tức trên iOS/iPad (không có 300ms)
+    // ── Event Delegation ──
+    // GIẢI PHÁP DỨT ĐIỂM CHO iOS 300ms:
+    // Dùng touchstart + pointerdown. touchstart phản hồi ngay (0ms), 
+    // click bị block bằng e.preventDefault() trên touchend (implicit via pointerdown).
+    // KHÔNG dùng e.preventDefault() trên touchstart vì sẽ ngăn scroll.
     const list = listEl();
     if (list) {
-      list.addEventListener('pointerdown', _onListPointer);
-      // Giữ click làm fallback cho các trường hợp pointer events không có
-      list.addEventListener('click', _onListClickFallback);
+      // Track xem song nào vừa được chọn bằng touch để dedup với click sau đó
+      let _lastTouchId = '';
+      let _lastTouchTime = 0;
+
+      // touchstart = 0ms delay, phản hồi NGAY
+      list.addEventListener('touchstart', (e) => {
+        const item = e.target.closest('.song-item');
+        if (!item?.dataset.id) return;
+
+        // Bỏ qua action buttons — chúng cần click để hoạt động đúng
+        if (e.target.closest('.song-delete-btn,.song-add-setlist-btn,.song-fav-btn')) return;
+
+        _lastTouchId   = item.dataset.id;
+        _lastTouchTime = Date.now();
+        selectSong(item.dataset.id);
+      }, { passive: true }); // passive: KHÔNG gọi preventDefault → scroll vẫn hoạt động
+
+      // click = fallback cho desktop và trường hợp touch không fire
+      list.addEventListener('click', (e) => {
+        const btn = e.target.closest('.song-delete-btn');
+        if (btn) { e.stopPropagation(); _handleDelete(btn); return; }
+
+        const addSetBtn = e.target.closest('.song-add-setlist-btn');
+        if (addSetBtn) { e.stopPropagation(); _promptAddToSetlist(addSetBtn.closest('.song-item')?.dataset.id); return; }
+
+        const favBtn = e.target.closest('.song-fav-btn');
+        if (favBtn) { e.stopPropagation(); _handleFav(favBtn); return; }
+
+        const item = e.target.closest('.song-item');
+        if (!item?.dataset.id) return;
+
+        // Nếu touchstart đã xử lý item này trong vòng 600ms → bỏ qua (tránh double-fire)
+        if (item.dataset.id === _lastTouchId && Date.now() - _lastTouchTime < 600) return;
+
+        selectSong(item.dataset.id);
+      });
     }
-  }
-
-
-  // Pointerdown handler - instant tap tren iOS/iPad (0ms delay)
-  let _lastPointerTime = 0;
-
-  function _onListPointer(e) {
-    if (e.button !== undefined && e.button !== 0) return;
-
-    const btn = e.target.closest('.song-delete-btn');
-    if (btn) { e.stopPropagation(); e.preventDefault(); _handleDelete(btn); return; }
-
-    const addSetBtn = e.target.closest('.song-add-setlist-btn');
-    if (addSetBtn) { e.stopPropagation(); e.preventDefault(); _promptAddToSetlist(addSetBtn.closest('.song-item')?.dataset.id); return; }
-
-    const favBtn = e.target.closest('.song-fav-btn');
-    if (favBtn) { e.stopPropagation(); e.preventDefault(); _handleFav(favBtn); return; }
-
-    const item = e.target.closest('.song-item');
-    if (!item?.dataset.id) return;
-
-    e.preventDefault();
-    _lastPointerTime = Date.now();
-    selectSong(item.dataset.id);
-  }
-
-  // Fallback click - chi chay neu pointerdown chua xu ly
-  function _onListClickFallback(e) {
-    if (Date.now() - _lastPointerTime < 400) return;
-    const item = e.target.closest('.song-item');
-    if (!item?.dataset.id) return;
-    selectSong(item.dataset.id);
   }
 
   function _handleDelete(btn) {
@@ -153,13 +157,11 @@ const LibraryUI = (() => {
     if (activeSongId) _highlightActive(activeSongId);
   }
 
-  /** Tạo DOM node một song item — không dùng innerHTML để tránh XSS */
+  /** Tạo DOM node một song item */
   function _createSongItem(song, canAdmin, canEdit) {
     const div = document.createElement('div');
     div.className   = 'song-item';
     div.dataset.id  = song.id;
-    // touch-action: manipulation = iOS không delay 300ms
-    div.style.touchAction = 'manipulation';
     div.title = song.title;
 
     // Số thứ tự
@@ -277,16 +279,17 @@ const LibraryUI = (() => {
     ];
     const frag = document.createDocumentFragment();
 
-    // Nút "Tất cả"
+    // Nút "Tất cả" — dùng touchstart để instant
     const allBtn = document.createElement('button');
     allBtn.className   = 'quick-jump-btn quick-jump-all';
     allBtn.textContent = 'Tất cả';
-    allBtn.addEventListener('pointerdown', e => {
-      e.preventDefault();
+    const allHandler = () => {
       container.querySelectorAll('.quick-jump-btn').forEach(b => b.classList.remove('active'));
       allBtn.classList.add('active');
       render(songs);
-    });
+    };
+    allBtn.addEventListener('touchstart', allHandler, { passive: true });
+    allBtn.addEventListener('click', allHandler);
     frag.appendChild(allBtn);
 
     ranges.forEach(([label, min, max]) => {
@@ -295,12 +298,13 @@ const LibraryUI = (() => {
       const btn = document.createElement('button');
       btn.className   = 'quick-jump-btn';
       btn.textContent = label;
-      btn.addEventListener('pointerdown', e => {
-        e.preventDefault();
+      const handler = () => {
         container.querySelectorAll('.quick-jump-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         render(songs.filter(s => (s.httlvnId || 0) >= min && (s.httlvnId || 0) <= max));
-      });
+      };
+      btn.addEventListener('touchstart', handler, { passive: true });
+      btn.addEventListener('click', handler);
       frag.appendChild(btn);
     });
 
@@ -328,10 +332,16 @@ const LibraryUI = (() => {
         </div>`).join('')
     }</div>`;
 
-    // recent-item: dùng pointerdown cho instant tap
+    // recent-item: touchstart instant
+    let _rLastId = '', _rLastTime = 0;
     section.querySelectorAll('.recent-item').forEach(item => {
-      item.addEventListener('pointerdown', e => {
-        e.preventDefault();
+      item.addEventListener('touchstart', () => {
+        _rLastId   = item.dataset.id;
+        _rLastTime = Date.now();
+        selectSong(item.dataset.id);
+      }, { passive: true });
+      item.addEventListener('click', () => {
+        if (item.dataset.id === _rLastId && Date.now() - _rLastTime < 600) return;
         selectSong(item.dataset.id);
       });
     });
@@ -381,8 +391,9 @@ const LibraryUI = (() => {
 
   // ── Select Song ──────────────────────────────────────────────
   function selectSong(songId, updateUrl = true) {
-    activeSongId = songId;
-    _highlightActive(songId);
+    if (!songId) return;
+    activeSongId = String(songId);
+    _highlightActive(activeSongId);
 
     if (updateUrl) {
       if (window.URLState?.resetForNewSong) {
@@ -405,9 +416,8 @@ const LibraryUI = (() => {
     const active = el.querySelector(`.song-item[data-id="${CSS.escape(String(id))}"]`);
     if (active) {
       active.classList.add('active');
-      // Scroll item vào view (smooth trên desktop, instant trên mobile)
-      const isMobile = window.innerWidth <= 900;
-      active.scrollIntoView({ behavior: isMobile ? 'instant' : 'smooth', block: 'nearest' });
+      // Scroll: behavior instant trên mobile để không giật
+      active.scrollIntoView({ behavior: 'instant', block: 'nearest' });
     }
   }
 

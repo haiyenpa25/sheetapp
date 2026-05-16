@@ -286,21 +286,61 @@ const ChordCanvasUI = (() => {
     // iOS cần delay 100ms+ để virtual keyboard mở sau khi popup animate vào
     setTimeout(() => { inp?.focus(); inp?.select(); }, isMobile ? 350 : 80);
 
+    // _saved: guard chống double-fire (blur + button cùng lúc)
+    let _saved = false;
+    let _blurTimer = null;
+
     const doSave = () => {
-      let val = formatChord(inp.value.trim());
+      if (_saved) return;
+      _saved = true;
+      clearTimeout(_blurTimer);
+      const val = formatChord(inp.value.trim());
       if (document.activeElement === inp) inp.blur();
+      // onSave TRƯỚC onClose — tránh popup bị remove trước khi save chạy
+      if (val)      { _pushHist(val); callbacks.onSave(val); }
+      else if (existing) { callbacks.onDelete(); }
       callbacks.onClose();
-      if (val) { _pushHist(val); callbacks.onSave(val); }
-      else if (existing) callbacks.onDelete();
     };
 
-    // Dùng pointerdown trên nút Lưu/Xóa/Hủy — instant trên touch
-    pop.querySelector('#cc-pop-save')?.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); doSave(); });
-    pop.querySelector('#cc-pop-del')?.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (document.activeElement===inp) inp.blur(); callbacks.onClose(); callbacks.onDelete(); });
-    pop.querySelector('#cc-pop-cancel')?.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); callbacks.onClose(); });
+    // Blur auto-save (desktop: user bấm ra ngoài mà không bấm Lưu)
+    inp.addEventListener('blur', () => {
+      if (_saved) return;
+      _blurTimer = setTimeout(() => {
+        if (_saved) return;
+        const val = formatChord(inp.value.trim());
+        if (val && val !== existing) doSave();
+        else callbacks.onClose();
+      }, 400);
+    });
+    inp.addEventListener('focus', () => clearTimeout(_blurTimer));
+
+    // Nút Lưu: pointerdown (instant) + click (fallback desktop)
+    const saveBtn = pop.querySelector('#cc-pop-save');
+    if (saveBtn) {
+      saveBtn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); doSave(); });
+      saveBtn.addEventListener('click', e => { e.stopPropagation(); doSave(); });
+    }
+
+    // Nút Xóa
+    pop.querySelector('#cc-pop-del')?.addEventListener('pointerdown', e => {
+      e.preventDefault(); e.stopPropagation();
+      if (_saved) return; _saved = true; clearTimeout(_blurTimer);
+      if (document.activeElement === inp) inp.blur();
+      callbacks.onDelete();
+      callbacks.onClose();
+    });
+
+    // Nút Hủy
+    pop.querySelector('#cc-pop-cancel')?.addEventListener('pointerdown', e => {
+      e.preventDefault(); e.stopPropagation();
+      _saved = true; clearTimeout(_blurTimer);
+      callbacks.onClose();
+    });
 
     const doSaveNext = () => {
-      let val = formatChord(inp.value.trim());
+      if (_saved) return;
+      _saved = true; clearTimeout(_blurTimer);
+      const val = formatChord(inp.value.trim());
       if (document.activeElement === inp) inp.blur();
       callbacks.onClose();
       if (val) {
@@ -312,23 +352,24 @@ const ChordCanvasUI = (() => {
 
     inp?.addEventListener('keydown', e => {
       if (e.key==='Enter')  { e.stopPropagation(); doSave(); e.preventDefault(); }
-      if (e.key==='Escape') { e.stopPropagation(); callbacks.onClose(); e.preventDefault(); }
+      if (e.key==='Escape') { e.stopPropagation(); _saved=true; clearTimeout(_blurTimer); callbacks.onClose(); e.preventDefault(); }
       if (e.key==='Tab'||e.key==='ArrowRight') { e.stopPropagation(); e.preventDefault(); doSaveNext(); }
     });
-    // Ngăn pointerdown bên trong popup lan ra ngoài
+
+    // Ngăn event lan ra ngoài popup
     pop.addEventListener('pointerdown', e => e.stopPropagation());
     pop.addEventListener('click', e => e.stopPropagation());
 
-    // Outside click — chỉ dùng 1 event (pointerdown), không cần click
+    // Outside-click đóng popup (delay 300ms để tránh đóng ngay khi vừa mở trên iPad)
     const outside = ev => {
       if (pop.contains(ev.target)) return;
-      if (ev.target===anchor || anchor.contains(ev.target)) return;
-      if (document.activeElement===inp) inp.blur();
+      if (ev.target === anchor || anchor.contains(ev.target)) return;
+      _saved = true; clearTimeout(_blurTimer);
+      if (document.activeElement === inp) inp.blur();
       callbacks.onClose();
       document.removeEventListener('pointerdown', outside, true);
     };
-    // Delay 200ms để tránh đóng ngay khi vừa mở
-    setTimeout(() => document.addEventListener('pointerdown', outside, true), 200);
+    setTimeout(() => document.addEventListener('pointerdown', outside, true), 300);
 
     return pop;
   }
