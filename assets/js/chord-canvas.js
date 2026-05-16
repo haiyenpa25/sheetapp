@@ -1141,12 +1141,16 @@ const ChordCanvas = (() => {
       const doc = new DOMParser().parseFromString(xml, 'text/xml');
       const origFifths = parseInt(doc.querySelector('key > fifths')?.textContent ?? '0');
 
-      // Circle of Fifths delta: mỗi semitone thêm tương ương bẩy bước trong vòng quáy
-      // Bảng tra: semitone 0..11 → fifths offset
-      const UP   = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5];
-      const DOWN = [0, 5,10, 3, 8,  1, 6,11, 4, 9,  2, 7]; // = UP ngược
-      const absS = ((semitones % 12) + 12) % 12;
-      const delta = semitones >= 0 ? UP[absS] : -DOWN[absS];
+      // Circle of Fifths: mỗi semitone tương ứng với bao nhiêu bước trên vòng fifths
+      // UP[n] = số bước fifths khi chuyển lên n semitones
+      // Đặc điểm: UP[12-n] = âm của UP[n] (vì lên n = xuống 12-n)
+      // Dùng 1 bảng UP duy nhất + mod 12 (tránh bảng DOWN không đối xứng)
+      const UP = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5];
+      // normalize semitones về 0..11 (semitones âm = chuyển đổi mod 12)
+      const norm = ((semitones % 12) + 12) % 12;
+      // delta trong vòng fifths (0..11), rồi trừ 12 nếu > 6 để về -6..6
+      let delta = UP[norm];
+      if (delta > 6) delta -= 12; // ví dụ: lên 7 semitones = -5 fifths (xuống 5 fifths)
       let newF = origFifths + delta;
       // Normalize -6..6
       while (newF > 6)  newF -= 12;
