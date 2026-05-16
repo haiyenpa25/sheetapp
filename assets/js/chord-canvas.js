@@ -1092,7 +1092,7 @@ const ChordCanvas = (() => {
   function _getKeyFifths() {
     try {
       const xml = window.OSMDRenderer?.getCurrentXml?.() || window.App?.getOriginalXml?.();
-      if (!xml) return 0;
+      if (!xml) return null; // null = XML chưa sẵn, KHÔNG cache
       const doc    = new DOMParser().parseFromString(xml, 'text/xml');
       const fifths = parseInt(doc.querySelector('key > fifths')?.textContent ?? 'NaN');
       if (!isNaN(fifths)) return fifths;
@@ -1105,8 +1105,8 @@ const ChordCanvas = (() => {
         if (ra < 0) flat++; else if (ra > 0) sharp++;
         if (ba < 0) flat++; else if (ba > 0) sharp++;
       });
-      return flat > sharp ? -1 : 0; // -1 = dùng flat convention, 0 = sharp
-    } catch { return 0; }
+      return flat > sharp ? -1 : 0;
+    } catch { return null; }
   }
 
   /** fifths < 0 → flat, ngược lại → sharp */
@@ -1143,7 +1143,9 @@ const ChordCanvas = (() => {
    */
   function _getKeyUseFlats() {
     if (_songUseFlats !== null) return _songUseFlats;
-    _songUseFlats = _fifthsToUseFlats(_getKeyFifths());
+    const fifths = _getKeyFifths();
+    if (fifths === null) return false; // XML chưa sẵn: trả về false nhưng KHÔNG cache
+    _songUseFlats = _fifthsToUseFlats(fifths); // cache chỉ khi biết chắc
     return _songUseFlats;
   }
 
@@ -1153,7 +1155,7 @@ const ChordCanvas = (() => {
    *     Eb trưởng (fifths=-3) + lên 3 st → F# trưởng (fifths=+6) → useFlats=false
    */
   function _getTransposedKeyUseFlats(semitones) {
-    const orig = _getKeyFifths();
+    const orig = _getKeyFifths() ?? 0; // nếu chưa có XML, giả sử C major
     return _fifthsToUseFlats(_calcTransposedFifths(orig, semitones));
   }
 
