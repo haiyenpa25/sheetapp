@@ -83,14 +83,9 @@ const ChordCanvasUI = (() => {
   /* ─── Popup Hợp âm ─────────────────────────────────────────── */
   function createPopup(anchor, measureIdx, noteIdx, existing, currentSet, callbacks) {
     const ar  = anchor.getBoundingClientRect();
+    const isMobile = window.innerWidth <= 600;
     const pop = document.createElement('div');
     pop.className = 'cc-popup';
-
-    let popLeft = ar.left + window.scrollX + ar.width / 2;
-    const hw = 130;
-    if (popLeft < hw) popLeft = hw;
-    if (popLeft > document.documentElement.scrollWidth - hw) popLeft = document.documentElement.scrollWidth - hw;
-    const popTop = ar.top + window.scrollY - 12;
 
     const keyInfo  = _detectKey();
     const keyLabel = keyInfo ? keyInfo.label : '';
@@ -99,19 +94,46 @@ const ChordCanvasUI = (() => {
     const keyHint    = semitones !== 0
       ? `<span style="font-size:.6rem;color:#f59e0b;font-weight:600;margin-left:4px;">(tông ${semitones>0?'+':''}${semitones})</span>` : '';
 
-    pop.style.cssText = [
-      'position:absolute', `left:${popLeft}px`, `top:${popTop}px`,
-      'transform:translateX(-50%) translateY(10px)', 'z-index:99999',
-      'background:var(--bg-surface, #fff)', 'border:1px solid rgba(109,40,217,0.3)', 'border-radius:var(--radius, 12px)',
-      'padding:.8rem', 'box-shadow:var(--shadow, 0 8px 28px rgba(109,40,217,.22))',
-      'min-width:260px', 'max-width:320px', 'pointer-events:auto',
-      'opacity:0', 'transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease'
-    ].join(';');
-
-    setTimeout(() => {
-        pop.style.transform = 'translateX(-50%) translateY(-100%)';
-        pop.style.opacity = '1';
-    }, 10);
+    if (isMobile) {
+      // Mobile: bottom sheet cố định — không bị ảnh hưởng bởi scroll hay keyboard
+      pop.style.cssText = [
+        'position:fixed', 'left:0', 'right:0', 'bottom:0',
+        'z-index:99999', 'border-radius:16px 16px 0 0',
+        'background:var(--bg-surface,#fff)',
+        'border-top:1px solid rgba(109,40,217,0.3)',
+        'padding:1rem 1rem .5rem',
+        'box-shadow:0 -8px 32px rgba(109,40,217,.18)',
+        'pointer-events:auto',
+        'transform:translateY(100%)',
+        'transition:transform .25s cubic-bezier(.32,.72,0,1)',
+        'max-height:75vh', 'overflow-y:auto',
+        '-webkit-overflow-scrolling:touch'
+      ].join(';');
+      requestAnimationFrame(() => { pop.style.transform = 'translateY(0)'; });
+    } else {
+      // Desktop / iPad: popup float gần chord
+      let popLeft = ar.left + ar.width / 2;
+      const vw = window.innerWidth;
+      const hw = 145;
+      if (popLeft < hw) popLeft = hw;
+      if (popLeft > vw - hw) popLeft = vw - hw;
+      const popTop = ar.top - 12;
+      pop.style.cssText = [
+        'position:fixed', `left:${popLeft}px`, `top:${popTop}px`,
+        'transform:translateX(-50%) translateY(-100%)',
+        'z-index:99999',
+        'background:var(--bg-surface,#fff)',
+        'border:1px solid rgba(109,40,217,0.3)',
+        'border-radius:var(--radius,12px)',
+        'padding:.8rem',
+        'box-shadow:0 8px 28px rgba(109,40,217,.22)',
+        'min-width:260px', 'max-width:320px',
+        'pointer-events:auto',
+        'opacity:0',
+        'transition:opacity .15s ease'
+      ].join(';');
+      requestAnimationFrame(() => { pop.style.opacity = '1'; });
+    }
 
     pop.innerHTML = `
       <div style="font-size:.65rem;font-weight:700;color:#6d28d9;text-transform:uppercase;
@@ -156,22 +178,23 @@ const ChordCanvasUI = (() => {
     const libChips = pop.querySelector('#cc-lib-chips');
     let   activeGrp = 0;
 
-    /* helper: make a chip */
+    /* helper: make a chip — touch-action + pointerdown để instant tap trên iOS */
     const makeChip = (label, isHist, onClick) => {
       const b = document.createElement('button');
       b.type = 'button';
       b.textContent = label;
-      b.style.cssText = [
-        'padding:1px 7px','border-radius:99px','font-size:.72rem','font-weight:700',
-        'font-family:monospace','border:1px solid','cursor:pointer','white-space:nowrap',
+      const baseStyle = [
+        'padding:4px 10px', 'border-radius:99px', 'font-size:.72rem', 'font-weight:700',
+        'font-family:monospace', 'border:1px solid', 'cursor:pointer', 'white-space:nowrap',
+        'touch-action:manipulation', '-webkit-tap-highlight-color:transparent',
+        'min-height:28px',  // đủ lớn để tap trên mobile
         isHist
           ? 'background:#fef3c7;color:#92400e;border-color:#fde68a'
           : 'background:#f3f0ff;color:#6d28d9;border-color:#ddd6fe'
-      ].join(';');
-      b.addEventListener('mouseenter', () => b.style.background = isHist ? '#d97706' : '#6d28d9');
-      b.addEventListener('mouseenter', () => b.style.color = '#fff');
-      b.addEventListener('mouseleave', () => { b.style.background = isHist ? '#fef3c7' : '#f3f0ff'; b.style.color = isHist ? '#92400e' : '#6d28d9'; });
-      b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); onClick(label); });
+      ];
+      b.style.cssText = baseStyle.join(';');
+      // pointerdown = instant, không có 300ms delay iOS
+      b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); onClick(label); });
       return b;
     };
 
@@ -259,7 +282,8 @@ const ChordCanvasUI = (() => {
       if (pop.querySelector('#cc-lib-det[open]')) renderLib(activeGrp);
     });
 
-    setTimeout(() => { inp?.focus(); inp?.select(); }, 20);
+    // iOS cần delay 100ms+ để virtual keyboard mở sau khi popup animate vào
+    setTimeout(() => { inp?.focus(); inp?.select(); }, isMobile ? 350 : 80);
 
     const doSave = () => {
       let val = formatChord(inp.value.trim());
@@ -269,11 +293,12 @@ const ChordCanvasUI = (() => {
       else if (existing) callbacks.onDelete();
     };
 
-    pop.querySelector('#cc-pop-save')?.addEventListener('click', doSave);
-    pop.querySelector('#cc-pop-del')?.addEventListener('click', () => { if (document.activeElement===inp) inp.blur(); callbacks.onClose(); callbacks.onDelete(); });
-    pop.querySelector('#cc-pop-cancel')?.addEventListener('click', callbacks.onClose);
+    // Dùng pointerdown trên nút Lưu/Xóa/Hủy — instant trên touch
+    pop.querySelector('#cc-pop-save')?.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); doSave(); });
+    pop.querySelector('#cc-pop-del')?.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (document.activeElement===inp) inp.blur(); callbacks.onClose(); callbacks.onDelete(); });
+    pop.querySelector('#cc-pop-cancel')?.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); callbacks.onClose(); });
 
-    const doSaveNext = async () => {
+    const doSaveNext = () => {
       let val = formatChord(inp.value.trim());
       if (document.activeElement === inp) inp.blur();
       callbacks.onClose();
@@ -287,22 +312,22 @@ const ChordCanvasUI = (() => {
     inp?.addEventListener('keydown', e => {
       if (e.key==='Enter')  { e.stopPropagation(); doSave(); e.preventDefault(); }
       if (e.key==='Escape') { e.stopPropagation(); callbacks.onClose(); e.preventDefault(); }
-      if (e.key==='Tab'||e.code==='Space'||e.key==='ArrowRight') { e.stopPropagation(); e.preventDefault(); doSaveNext(); }
+      if (e.key==='Tab'||e.key==='ArrowRight') { e.stopPropagation(); e.preventDefault(); doSaveNext(); }
     });
+    // Ngăn pointerdown bên trong popup lan ra ngoài
+    pop.addEventListener('pointerdown', e => e.stopPropagation());
     pop.addEventListener('click', e => e.stopPropagation());
 
+    // Outside click — chỉ dùng 1 event (pointerdown), không cần click
     const outside = ev => {
       if (pop.contains(ev.target)) return;
       if (ev.target===anchor || anchor.contains(ev.target)) return;
       if (document.activeElement===inp) inp.blur();
       callbacks.onClose();
       document.removeEventListener('pointerdown', outside, true);
-      document.removeEventListener('click', outside, true);
     };
-    setTimeout(() => {
-      document.addEventListener('pointerdown', outside, true);
-      document.addEventListener('click', outside, true);
-    }, 150);
+    // Delay 200ms để tránh đóng ngay khi vừa mở
+    setTimeout(() => document.addEventListener('pointerdown', outside, true), 200);
 
     return pop;
   }
