@@ -148,19 +148,90 @@ const ChordCanvasXML = (() => {
       const a = doc.createElement('root-alter'); a.textContent='-1'; r.appendChild(a);
     }
     h.appendChild(r);
-    
+
     const k = doc.createElement('kind');
-    const km = {
-      m:'minor', min:'minor', 'm7':'minor-seventh', '7':'dominant',
-      maj7:'major-seventh', M7:'major-seventh', M:'major',
-      dim:'diminished', 'dim7':'diminished-seventh', aug:'augmented', '+': 'augmented',
-      sus4:'suspended-fourth', sus2:'suspended-second', add9:'major', m7b5:'half-diminished',
-      'm9':'minor-ninth', '9':'dominant-ninth', 'maj9':'major-ninth', '11':'dominant-11th', '13':'dominant-13th'
-    };
-    k.textContent = km[suf] || 'major';
+
+    // ── Bảng ánh xạ suffix → MusicXML kind ──────────────────────────────
+    // Bao gồm: cơ bản, jazz nâng cao, altered, dim/aug, sus, add
+    // Thứ tự: dài trước ngắn để tránh false-match (vd: 'maj7' trước 'm', 'dim7' trước 'dim')
+    const KIND_MAP = [
+      // Major extensions
+      ['maj13',        'major-13th'],
+      ['maj11',        'major-11th'],
+      ['maj9',         'major-ninth'],
+      ['maj7#11',      'major-seventh'],   // OSMD không có kind riêng, fallback
+      ['maj7',         'major-seventh'],
+      ['M7',           'major-seventh'],
+      ['M13',          'major-13th'],
+      ['M9',           'major-ninth'],
+      // Minor extensions
+      ['m13',          'minor-13th'],
+      ['m11',          'minor-11th'],
+      ['m9',           'minor-ninth'],
+      ['m7b5',         'half-diminished'],
+      ['m7',           'minor-seventh'],
+      ['min7',         'minor-seventh'],
+      ['m6',           'minor-sixth'],
+      ['min',          'minor'],
+      ['m',            'minor'],
+      // Dominant extensions (7th-based)
+      ['13b9',         'dominant-13th'],
+      ['13#9',         'dominant-13th'],
+      ['13#11',        'dominant-13th'],
+      ['13',           'dominant-13th'],
+      ['11',           'dominant-11th'],
+      ['9#11',         'dominant-ninth'],  // #11 = lydian dominant, fallback dominant-ninth
+      ['9b5',          'dominant-ninth'],
+      ['9#5',          'dominant-ninth'],
+      ['9',            'dominant-ninth'],
+      ['7b13',         'dominant'],
+      ['7#11',         'dominant'],
+      ['7#9',          'dominant'],
+      ['7b9',          'dominant'],
+      ['7#5',          'augmented-seventh'],
+      ['7b5',          'dominant'],
+      ['7alt',         'dominant'],
+      ['7sus4',        'suspended-fourth'],
+      ['7sus2',        'suspended-second'],
+      ['7',            'dominant'],
+      // Diminished / Augmented
+      ['dim7',         'diminished-seventh'],
+      ['dim',          'diminished'],
+      ['aug7',         'augmented-seventh'],
+      ['augmaj7',      'major-seventh'],   // fallback
+      ['aug',          'augmented'],
+      ['+',            'augmented'],
+      // Suspended / Add
+      ['sus4',         'suspended-fourth'],
+      ['sus2',         'suspended-second'],
+      ['add11',        'major'],
+      ['add9',         'major'],
+      ['add2',         'major'],
+      // Power / Special
+      ['5',            'power'],
+      ['6/9',          'major-sixth'],
+      ['6',            'major-sixth'],
+      ['2',            'major'],           // major add9 shorthand
+      // Major / fallback
+      ['M',            'major'],
+      ['maj',          'major'],
+    ];
+
+    // Tìm kind phù hợp nhất (so sánh case-sensitive trước, insensitive fallback)
+    let kindText = 'major';
+    const sufLower = suf.toLowerCase();
+    for (const [pattern, kind] of KIND_MAP) {
+      if (suf === pattern || sufLower === pattern.toLowerCase()) {
+        kindText = kind;
+        break;
+      }
+    }
+
+    k.textContent = kindText;
+    // Luôn lưu suffix gốc vào attribute text để round-trip đọc lại đúng
     if (suf) k.setAttribute('text', suf);
     h.appendChild(k);
-    
+
     if (bass) {
       const b = doc.createElement('bass');
       const bs = doc.createElement('bass-step');
@@ -173,7 +244,7 @@ const ChordCanvasXML = (() => {
       }
       h.appendChild(b);
     }
-    
+
     return h;
   }
 
