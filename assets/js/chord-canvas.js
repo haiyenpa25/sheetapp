@@ -1,4 +1,4 @@
-/**
+﻿/**
  * chord-canvas.js — Multi-Set Chord Manager (Core)
  *
  * Hỗ trợ:
@@ -272,15 +272,23 @@ const ChordCanvas = (() => {
 
     const mapped = _mapNotes(notes, rawChordMap);
 
-    // ── DEDUP: loại bỏ các note trùng key (measureIdx_noteIdx)
-    // Xảy ra khi bài SATB có nhiều voice/notehead tại cùng 1 vị trí nhịp-nốt.
-    // Giữ lại phần tử ĐẦU TIÊN (voice cao nhất = primary) để tránh render 2 badge.
+    // ── DEDUP 1: theo key (measureIdx_noteIdx) ─────────────────────────
+    // S và A cùng beat sẽ có cùng key → loại bỏ Alto/Bass voice
     const seenKeys = new Set();
+    // ── DEDUP 2: theo vị trí X (cùng nhịp + X gần nhau ±8px) ──────────
+    // Safety net cho SATB fallback (khi OSMD map không có) và bất kỳ edge case
+    const seenBeat = []; // [{mIdx, cx}]
     const dedupedMapped = mapped.filter(m => {
-      // Dedup TẤT CẢ theo key — kể cả nút "+" (không chord) để tránh click zone chồng nhau
       const key = `${m.measureIdx}_${m.noteIdx}`;
       if (seenKeys.has(key)) return false;
       seenKeys.add(key);
+
+      // Dedup theo X trong cùng mập — tránh 2 dot tại cùng beat khác khuông nhạc
+      const cx = m.rect.left + m.rect.width / 2;
+      const tooClose = seenBeat.some(p => p.mIdx === m.measureIdx && Math.abs(p.cx - cx) < 8);
+      if (tooClose) return false;
+      seenBeat.push({ mIdx: m.measureIdx, cx });
+
       return true;
     });
 
@@ -453,10 +461,20 @@ const ChordCanvas = (() => {
       .sort((a, b) => a.measureIdx - b.measureIdx || a.noteIdx - b.noteIdx);
     if (!chordNotes.length) return result;
 
-    // Match 1-1: chordNote[i] ↔ chordTextEl[i]
-    const count = Math.min(chordTextEls.length, chordNotes.length);
+    // X-proximity dedup cho vị trí text hợp âm (tránh mapping sai khi text quá sát nhau)
+    const dedupedChordTextEls = [];
+    chordTextEls.forEach(el => {
+      const rect = el.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const isDuplicate = dedupedChordTextEls.some(p => Math.abs(p.cx - cx) < 10 && Math.abs(p.cy - cy) < 10);
+      if (!isDuplicate) dedupedChordTextEls.push({ el, cx, cy });
+    });
+
+    // Match 1-1
+    const count = Math.min(dedupedChordTextEls.length, chordNotes.length);
     for (let i = 0; i < count; i++) {
-      const rect = chordTextEls[i].getBoundingClientRect();
+      const rect = dedupedChordTextEls[i].el.getBoundingClientRect();
       const key  = `${chordNotes[i].measureIdx}_${chordNotes[i].noteIdx}`;
       result.set(key, {
         bx: rect.left - cRect.left,
@@ -470,47 +488,67 @@ const ChordCanvas = (() => {
 
 
 
-  /* ─── Map notes ─────────────────────────────────────────────── */
+  /* ─── Map notes ─────────────────────────────────────── */
   function _mapNotes(noteEls, chordMap) {
     const osmd = window.OSMDRenderer?.getInstance?.();
     const ml   = osmd?.graphic?.measureList;
 
     if (ml) {
       try {
-        const result = [], byEl = new Map();
+        const byEl = new Map();
         for (let mi = 0; mi < ml.length; mi++) {
           const staves = ml[mi];
           if (!staves?.length) continue;
-          const staff = staves[0];
-          if (!staff?.staffEntries) continue;
-          const src  = staff.ParentSourceMeasure ?? staves[0].parentSourceMeasure;
+          const primaryStaff = staves[0];
+          if (!primaryStaff?.staffEntries) continue;
+          const src  = primaryStaff.ParentSourceMeasure ?? primaryStaff.parentSourceMeasure;
           const mIdx = src?.measureListIndex ?? mi;
+          // Primary stave (treble) — se tao dot
           let nIdx = 0;
-          for (const se of staff.staffEntries) {
-            if (!se) continue;
+          for (const se of primaryStaff.staffEntries) {
+            if (!se) { nIdx++; continue; }
             for (const ve of (se.graphicalVoiceEntries || [])) {
               for (const gn of (ve.notes || [])) {
                 const svgG = gn.getSVGGElement?.();
-                if (svgG) byEl.set(svgG, { mIdx, nIdx });
+                if (svgG) byEl.set(svgG, { mIdx, nIdx, primary: true });
               }
             }
             nIdx++;
           }
+          // Secondary staves (bass clef 1+) — danh dau primary=false
+          for (let si = 1; si < staves.length; si++) {
+            const secStaff = staves[si];
+            if (!secStaff?.staffEntries) continue;
+            let sIdx = 0;
+            for (const se of secStaff.staffEntries) {
+              if (!se) { sIdx++; continue; }
+              for (const ve of (se.graphicalVoiceEntries || [])) {
+                for (const gn of (ve.notes || [])) {
+                  const svgG = gn.getSVGGElement?.();
+                  if (svgG) byEl.set(svgG, { mIdx, nIdx: sIdx, primary: false });
+                }
+              }
+              sIdx++;
+            }
+          }
         }
         if (byEl.size > 0) {
+          const result = [];
           for (const el of noteEls) {
-            const m    = byEl.get(el) || byEl.get(el.parentElement);
+            const m = byEl.get(el) || byEl.get(el.parentElement);
+            if (!m || !m.primary) continue; // bo qua bass clef
             result.push({
               el, rect: el.getBoundingClientRect(),
-              measureIdx: m?.mIdx ?? -1, noteIdx: m?.nIdx ?? result.length,
-              chord: m ? (chordMap[`${m.mIdx}_${m.nIdx}`] || '') : ''
+              measureIdx: m.mIdx, noteIdx: m.nIdx,
+              chord: chordMap[`${m.mIdx}_${m.nIdx}`] || ''
             });
           }
           if (result.some(r => r.measureIdx >= 0)) return result;
         }
-      } catch(e) {}
+      } catch(e) { console.warn('[ChordCanvas._mapNotes]', e); }
     }
 
+    // Fallback: khong co OSMD structure
     const absMap = ChordCanvasXML.buildAbsMap();
     return noteEls.map((el, i) => ({
       el, rect: el.getBoundingClientRect(),
@@ -1073,3 +1111,4 @@ const ChordCanvas = (() => {
 })();
 
 window.ChordCanvas = ChordCanvas;
+
