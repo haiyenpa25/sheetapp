@@ -1,4 +1,4 @@
-﻿/**
+/**
  * chord-canvas.js — Multi-Set Chord Manager (Core)
  *
  * Hỗ trợ:
@@ -14,6 +14,7 @@ const ChordCanvas = (() => {
   let _highlightMode = false; // Chế độ nổi bật: badge tím đậm ngay cả khi không edit
   let _popup         = null;
   let _currentSet    = 'default';
+  let _prevSet       = 'default'; // Track set tr\u01b0\u1edbc \u0111\u1ec3 quy\u1ebft \u0111\u1ecbnh reload OSMD
   let _customChords  = {};
   let _noteEls       = [];
   let _ro            = null;
@@ -37,7 +38,18 @@ const ChordCanvas = (() => {
     // Cả 2 nút: hidden compat + visible bar button đều trigger toggleAddMode
     document.getElementById('btn-add-chord-mode')?.addEventListener('click', toggleAddMode);
     document.getElementById('btn-add-chord-mode-bar')?.addEventListener('click', toggleAddMode);
-    document.getElementById('btn-cancel-add-chord')?.addEventListener('click', () => setAddMode(false));
+
+    // Nút Hoàn tất: lưu set hiện tại rồi tắt edit mode
+    const doneBtn = document.getElementById('btn-cancel-add-chord');
+    if (doneBtn) {
+      doneBtn.addEventListener('click', async () => {
+        // Nếu đang sửa custom set (HD, ...) — đảm bảo đã được lưu
+        if (_currentSet !== 'default' && Object.keys(_customChords).length > 0) {
+          await _saveCustomSet();
+        }
+        setAddMode(false);
+      });
+    }
 
     // Nút highlight mode
     document.getElementById('btn-chord-highlight')?.addEventListener('click', toggleHighlight);
@@ -789,9 +801,14 @@ const ChordCanvas = (() => {
 
   /* ─── Popup ─────────────────────────────────────────────────── */
   function _showPopup(anchor, measureIdx, noteIdx, existing) {
-    // Safety net: không bao giờ hiện popup sửa nếu không có quyền
+    // Guard 1: cần quyền banhat
     if (!window.Auth?.isBanhat?.()) {
       window.App?.showToast?.('⚠️ Cần đăng nhập với quyền Ban Hát để sửa hợp âm', 'error');
+      return;
+    }
+    // Guard 2: TLH (default) là bản gốc — không cho sửa, chỉ đọc
+    if (_currentSet === 'default') {
+      window.App?.showToast?.('🔒 Bộ TLH là bản gốc, không thể sửa. Vui lòng chọn bộ HD hoặc tạo bộ mới.', 'info');
       return;
     }
     _closePopup();
@@ -940,6 +957,7 @@ const ChordCanvas = (() => {
 
   /* ─── Switch / Create chord sets ────────────────────────────── */
   async function switchSet(name) {
+    _closePopup();
     _currentSet   = name;
     _customChords = {};
     if (name !== 'default') {
@@ -953,14 +971,21 @@ const ChordCanvas = (() => {
         } catch(e) {}
       }
     }
-    if (window.App?.reloadCurrentXML) {
-       AppUI.setLoadingText('Đang nạp hồ sơ...');
-       await window.App.reloadCurrentXML();
+    // Với custom set (HD, ...): chỉ cần rebuild dots, KHÔNG cần reload toàn bộ OSMD
+    // Chỉ reload OSMD khi đổi sang/từ 'default' (cần render lại harmony trong SVG)
+    if (name === 'default' || _prevSet === 'default') {
+      if (window.App?.reloadCurrentXML) {
+        AppUI?.setLoadingText?.('Đang nạp hồ sơ...');
+        await window.App.reloadCurrentXML();
+      } else {
+        _build();
+      }
     } else {
-       _build();
+      // Custom ⇒ custom: chỉ rebuild dots (nhanh, không mất scroll)
+      setTimeout(() => requestAnimationFrame(_build), 80);
     }
+    _prevSet = name;
     _updateSetUI();
-    // Lưu chord set vào URL
     window.URLState?.update?.({ set: name });
   }
 
