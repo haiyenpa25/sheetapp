@@ -1072,93 +1072,89 @@ const ChordCanvas = (() => {
     _refreshSetDropdown(); // refreshSetDropdown đã cover toàn bộ UI sync
   }
 
-  /* ─── Accidental Preference Detection ───────────────────────────────── */
+  /* ─── Accidental Preference Detection ──────────────────────────────────
+   * NGUỒN CHÂN LÝ: <fifths> trong MusicXML (khóa biểu)
+   *
+   * Quy tắc nhạc lý:
+   *   fifths < 0  → flat key  (F, Bb, Eb, Ab, Db, Gb, Cb)
+   *   fifths = 0  → C major / A minor → sharp (trung lập, dùng # theo quy ước)
+   *   fifths > 0  → sharp key (G, D, A, E, B, F#, C#)
+   *
+   * Bảng đầy đủ:
+   *  -6=Gb  -5=Db  -4=Ab  -3=Eb  -2=Bb  -1=F  0=C
+   *  +1=G   +2=D   +3=A   +4=E   +5=B   +6=F#
+   * ─────────────────────────────────────────────────────────────────────── */
+
   /**
-   * Phân tích toàn bộ hợp âm trong XML để xác định bài nhạc dùng flat hay sharp.
-   *
-   * Thuật toán (đáng tin cậy hơn <fifths>):
-   *   1. Đếm root có alter=-1 (giáng: Bb, Eb, Ab, Db, Gb) → flatCount
-   *   2. Đếm root có alter=+1 (thăng: F#, C#, G#, D#, A#) → sharpCount
-   *   3. Nếu flatCount > sharpCount → flat hệ
-   *   4. Nếu bằng nhau → fallback thành <fifths> (key signature XML)
-   *
-   * Kết quả được cache trong _songUseFlats — chỉ phân tích 1 lần/bài.
+   * Đọc <fifths> từ XML — nguồn duy nhất, đáng tin cậy nhất.
+   * Fallback: quét harmony chords nếu XML không có key signature.
    */
-  function _analyzeSongAccidentals() {
-    if (_songUseFlats !== null) return _songUseFlats; // cache hit
+  function _getKeyFifths() {
     try {
       const xml = window.OSMDRenderer?.getCurrentXml?.() || window.App?.getOriginalXml?.();
-      if (!xml) { _songUseFlats = false; return false; }
+      if (!xml) return 0;
+      const doc    = new DOMParser().parseFromString(xml, 'text/xml');
+      const fifths = parseInt(doc.querySelector('key > fifths')?.textContent ?? 'NaN');
+      if (!isNaN(fifths)) return fifths;
 
-      const doc = new DOMParser().parseFromString(xml, 'text/xml');
-      let flatCount = 0, sharpCount = 0;
-
-      // Quét tất cả <harmony>: cả root và bass đều được tính
+      // Fallback: XML không có key sig → quét chords
+      let flat = 0, sharp = 0;
       doc.querySelectorAll('harmony').forEach(h => {
-        const rootAlter = parseFloat(h.querySelector('root > root-alter')?.textContent || '0');
-        const bassAlter = parseFloat(h.querySelector('bass > bass-alter')?.textContent || '0');
-        if (rootAlter < 0) flatCount++;
-        else if (rootAlter > 0) sharpCount++;
-        if (bassAlter < 0) flatCount++;
-        else if (bassAlter > 0) sharpCount++;
+        const ra = parseFloat(h.querySelector('root > root-alter')?.textContent || '0');
+        const ba = parseFloat(h.querySelector('bass > bass-alter')?.textContent || '0');
+        if (ra < 0) flat++; else if (ra > 0) sharp++;
+        if (ba < 0) flat++; else if (ba > 0) sharp++;
       });
+      return flat > sharp ? -1 : 0; // -1 = dùng flat convention, 0 = sharp
+    } catch { return 0; }
+  }
 
-      // Tiebreaker: dùng <fifths> khi số flat = số sharp (hoặc bài không có hợp âm nào)
-      if (flatCount === sharpCount) {
-        const fifths = parseInt(doc.querySelector('key > fifths')?.textContent ?? '0');
-        _songUseFlats = fifths < 0;
-      } else {
-        _songUseFlats = flatCount > sharpCount;
-      }
-      return _songUseFlats;
-    } catch {
-      _songUseFlats = false;
-      return false;
-    }
+  /** fifths < 0 → flat, ngược lại → sharp */
+  function _fifthsToUseFlats(f) { return f < 0; }
+
+  /**
+   * Tính fifths của KEY SAU KHI transpose n semitones.
+   *
+   * Dùng bảng Semitone → Fifths Offset (Circle of Fifths):
+   *   Lên 1 st  → -5 fifths  (C→Db, G→Ab, A→Bb)
+   *   Lên 2 st  → +2 fifths  (C→D)
+   *   Lên 3 st  → -3 fifths  (C→Eb)
+   *   Lên 5 st  → -1 fifths  (C→F)
+   *   Lên 7 st  → +1 fifths  (C→G)
+   *   Lên 10 st → -2 fifths  (C→Bb)
+   *
+   * Quy tắc: OFFSET[n] + OFFSET[12-n] = 0 (tính đối xứng).
+   * Dùng normalize mod 12 để xử lý semitones âm.
+   */
+  const _SEMITONE_FIFTHS_OFFSET = [0, -5, 2, -3, 4, -1, 6, 1, -4, 3, -2, 5];
+
+  function _calcTransposedFifths(origFifths, semitones) {
+    const norm  = ((semitones % 12) + 12) % 12;
+    let   newF  = origFifths + _SEMITONE_FIFTHS_OFFSET[norm];
+    // Normalize về khoảng -6..6
+    while (newF >  6) newF -= 12;
+    while (newF < -6) newF += 12;
+    return newF;
   }
 
   /**
-   * Lấy flat preference của KEY GỐC (trước khi transpose).
-   * Dùng khi lưu hợp âm: user gõ ở tông C (transpose +2 từ Bb), ta phải lưu "Bb" (flat).
+   * Lấy flat/sharp preference của KEY GỐC.
+   * VD: Eb trưởng (fifths=-3) → useFlats=true → Bb, Ab, Eb (không phải A#, G#, D#)
    */
   function _getKeyUseFlats() {
-    return _analyzeSongAccidentals();
+    if (_songUseFlats !== null) return _songUseFlats;
+    _songUseFlats = _fifthsToUseFlats(_getKeyFifths());
+    return _songUseFlats;
   }
 
   /**
-   * Lấy flat preference của KEY SAU KHI transpose (dùng khi hiển thị badge).
-   * VD: Bài Bb, transpose +2 → C trưởng → useFlats = false (C không dùng giáng)
-   *     Bài G,  transpose -2 → F trưởng → useFlats = true  (F có 1 giáng: Bb)
-   *
-   * Thuật toán: dùng bảng Circle of Fifths (đúnh hơn linear scale factor).
-   * mỗi semitone lên = +7 trong circle of fifths (mod 12, normalize -6..6).
+   * Lấy flat/sharp preference của KEY SAU KHI transpose.
+   * VD: A trưởng (fifths=+3) + lên 1 st → Bb trưởng (fifths=-2) → useFlats=true
+   *     Eb trưởng (fifths=-3) + lên 3 st → F# trưởng (fifths=+6) → useFlats=false
    */
   function _getTransposedKeyUseFlats(semitones) {
-    try {
-      const xml = window.OSMDRenderer?.getCurrentXml?.() || window.App?.getOriginalXml?.();
-      if (!xml) return _analyzeSongAccidentals();
-
-      const doc = new DOMParser().parseFromString(xml, 'text/xml');
-      const origFifths = parseInt(doc.querySelector('key > fifths')?.textContent ?? '0');
-
-      // Circle of Fifths: mỗi semitone tương ứng với bao nhiêu bước trên vòng fifths
-      // UP[n] = số bước fifths khi chuyển lên n semitones
-      // Đặc điểm: UP[12-n] = âm của UP[n] (vì lên n = xuống 12-n)
-      // Dùng 1 bảng UP duy nhất + mod 12 (tránh bảng DOWN không đối xứng)
-      const UP = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5];
-      // normalize semitones về 0..11 (semitones âm = chuyển đổi mod 12)
-      const norm = ((semitones % 12) + 12) % 12;
-      // delta trong vòng fifths (0..11), rồi trừ 12 nếu > 6 để về -6..6
-      let delta = UP[norm];
-      if (delta > 6) delta -= 12; // ví dụ: lên 7 semitones = -5 fifths (xuống 5 fifths)
-      let newF = origFifths + delta;
-      // Normalize -6..6
-      while (newF > 6)  newF -= 12;
-      while (newF < -6) newF += 12;
-      return newF < 0;
-    } catch {
-      return _analyzeSongAccidentals();
-    }
+    const orig = _getKeyFifths();
+    return _fifthsToUseFlats(_calcTransposedFifths(orig, semitones));
   }
 
   function _applyTranspose(chordMap) {
