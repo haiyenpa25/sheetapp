@@ -558,12 +558,13 @@ const ChordCanvas = (() => {
           'color:#fff', 'font-size:' + fSize + 'px', 'line-height:1',
           'box-shadow:0 2px 7px rgba(109,40,217,0.55)',
           'pointer-events:auto', 'cursor:pointer', 'user-select:none', 'z-index:12',
+          'touch-action:manipulation', '-webkit-tap-highlight-color:transparent',
           'transform: translateX(-50%) translateY(-100%)',
           'transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease'
         ]);
         badge.addEventListener('mouseenter', () => { badge.style.transform = 'translateX(-50%) translateY(-100%) scale(1.15)'; badge.style.background = 'rgba(109,40,217,1)'; badge.style.boxShadow = '0 4px 12px rgba(109,40,217,0.7)'; });
         badge.addEventListener('mouseleave', () => { badge.style.transform = 'translateX(-50%) translateY(-100%) scale(1)'; badge.style.background = 'rgba(109,40,217,0.87)'; badge.style.boxShadow = '0 2px 7px rgba(109,40,217,0.55)'; });
-        badge.addEventListener('click', e => { e.stopPropagation(); _showPopup(badge, measureIdx, noteIdx, chord); });
+        badge.addEventListener('pointerdown', e => { e.stopPropagation(); _showPopup(badge, measureIdx, noteIdx, chord); });
         container.appendChild(badge);
 
         const span = document.createElement('span');
@@ -639,7 +640,8 @@ const ChordCanvas = (() => {
             textBadge.style.transform = 'translateX(-50%) scale(1)';
             textBadge.style.boxShadow = `0 2px 8px rgba(${cr},${cg},${cb},0.22)`;
           });
-          textBadge.addEventListener('click', e => { e.stopPropagation(); _showPopup(textBadge, measureIdx, noteIdx, chord); });
+          // pointerdown = phản hồi ngay lập tức trên touch
+          textBadge.addEventListener('pointerdown', e => { e.stopPropagation(); _showPopup(textBadge, measureIdx, noteIdx, chord); });
         } else if (_highlightMode) {
           // Chế độ nổi bật: badge tím đậm — như edit mode nhưng không cần chỉnh sửa
           baseStyle.push(
@@ -663,9 +665,8 @@ const ChordCanvas = (() => {
             textBadge.style.background = 'rgba(109,40,217,0.9)';
             textBadge.style.boxShadow = '0 3px 10px rgba(109,40,217,0.4)';
           });
-          textBadge.addEventListener('click', e => {
+          textBadge.addEventListener('pointerdown', e => {
             e.stopPropagation();
-            // Kiểm tra quyền trước khi mở popup sửa
             if (!window.Auth?.isBanhat?.()) {
               window.App?.showToast?.('⚠️ Cần đăng nhập với quyền Ban Hát để sửa hợp âm', 'error');
               return;
@@ -693,9 +694,8 @@ const ChordCanvas = (() => {
             textBadge.style.background = `rgba(${cr},${cg},${cb},0.06)`;
             textBadge.style.transform = 'translateX(-50%) scale(1)';
           });
-          textBadge.addEventListener('click', e => {
+          textBadge.addEventListener('pointerdown', e => {
             e.stopPropagation();
-            // Chỉ mở popup sửa nếu có quyền Ban Hát trở lên
             if (!window.Auth?.isBanhat?.()) {
               window.App?.showToast?.('⚠️ Cần đăng nhập với quyền Ban Hát để sửa hợp âm', 'error');
               return;
@@ -713,24 +713,33 @@ const ChordCanvas = (() => {
       const btn = document.createElement('div');
       btn.className = DOT_CLASS + ' ' + BTN_CLASS;
       btn.textContent = '+';
+      const minTouchSize = Math.max(dotSize, 36); // tối thiểu 36px cho touch
       ChordCanvasUI.applyAbsolute(btn, cx, cy, [
         'display:' + (_editEnabled ? 'flex' : 'none'), 'align-items:center', 'justify-content:center',
-        `width:${dotSize}px`, `height:${dotSize}px`, 'border-radius:50%', 'background:rgba(109,40,217,0.8)',
-        'color:#fff', `font-size:${fSize}px`, 'line-height:1', 'box-shadow:0 1px 4px rgba(109,40,217,0.4)',
+        `width:${minTouchSize}px`, `height:${minTouchSize}px`, 'border-radius:50%',
+        'background:rgba(109,40,217,0.8)',
+        'color:#fff', `font-size:${fSize}px`, 'line-height:1',
+        'box-shadow:0 1px 4px rgba(109,40,217,0.4)',
         'pointer-events:auto', 'cursor:pointer', 'user-select:none',
+        'touch-action:manipulation',           // loại 300ms iOS delay
+        '-webkit-tap-highlight-color:transparent',
         'transition: transform 0.15s ease, background 0.15s ease'
       ]);
       btn.addEventListener('mouseenter', () => { btn.style.transform = 'scale(1.15)'; btn.style.background = 'rgba(109,40,217,1)'; });
       btn.addEventListener('mouseleave', () => { btn.style.transform = 'scale(1)'; btn.style.background = 'rgba(109,40,217,0.8)'; });
-      btn.addEventListener('click', e => { e.stopPropagation(); _showPopup(btn, measureIdx, noteIdx, ''); });
-      // F6: Touch long-press (500ms) để mở popup trên mobile/tablet
-      let _touchTimer = null;
-      btn.addEventListener('touchstart', e => {
-        e.preventDefault();
-        _touchTimer = setTimeout(() => { _showPopup(btn, measureIdx, noteIdx, ''); }, 500);
-      }, { passive: false });
-      btn.addEventListener('touchend',   () => clearTimeout(_touchTimer));
-      btn.addEventListener('touchmove',  () => clearTimeout(_touchTimer));
+      // Dùng pointerdown thay vì click/touchstart — phản hồi ngay lập tức cả touch và mouse
+      let _pointerHandled = false;
+      btn.addEventListener('pointerdown', e => {
+        e.stopPropagation();
+        _pointerHandled = true;
+        _showPopup(btn, measureIdx, noteIdx, '');
+      });
+      // Fallback click (trường hợp pointer events không supported)
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (_pointerHandled) { _pointerHandled = false; return; } // đã xử lý rồi
+        _showPopup(btn, measureIdx, noteIdx, '');
+      });
       container.appendChild(btn);
     }
   }

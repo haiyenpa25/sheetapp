@@ -19,11 +19,12 @@ class SongController {
                     break;
 
                 case 'POST':
-                    Auth::requireAdmin();
                     $action = $_GET['action'] ?? '';
                     $body = json_decode(file_get_contents('php://input'), true) ?? [];
-                    
+
                     if ($action === 'save_xml') {
+                        // Lưu hợp âm vào XML gốc — Ban Hát và Admin đều có quyền
+                        Auth::requireBanhat();
                         if (empty($body['filepath']) || empty($body['xml'])) {
                             Response::error('Lỗi: Thiếu tham số filepath hoặc xml.');
                             return;
@@ -37,6 +38,8 @@ class SongController {
                         return;
                     }
 
+                    // Thêm bài hát mới — chỉ Admin
+                    Auth::requireAdmin();
                     echo json_encode(SongService::add($body), JSON_UNESCAPED_UNICODE);
                     break;
 
