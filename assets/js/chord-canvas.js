@@ -886,7 +886,16 @@ const ChordCanvas = (() => {
   async function _saveChord(measureIdx, noteIdx, chordInput, refreshLayout = true) {
     _pushUndo();
     const semitones = window.App?.getCurrentTranspose?.() ?? 0;
-    const chordOriginalKey = semitones !== 0 ? TransposeEngine.transposeChord(chordInput, -semitones) : chordInput;
+    let chordOriginalKey;
+    if (semitones !== 0) {
+      // Khi lưu về original key: dùng flat preference của KEY GỐC
+      // (không dùng flat preference của input — vì input có thể không có giáng)
+      // VD: bài Bb, transpose +2 → C, user gõ "C" → lưu phải là "Bb" (không phải "A#")
+      const useFlatsOriginal = _getKeyUseFlats();
+      chordOriginalKey = TransposeEngine.transposeChord(chordInput, -semitones, useFlatsOriginal);
+    } else {
+      chordOriginalKey = chordInput;
+    }
 
     // Đảm bảo màu hợp âm luôn đúng (tránh màu đen sau khi reload)
     window.OSMDRenderer?.refreshRules?.();
@@ -1061,12 +1070,54 @@ const ChordCanvas = (() => {
     _refreshSetDropdown(); // refreshSetDropdown đã cover toàn bộ UI sync
   }
 
+  /**
+   * Detect xem key gốc của bài nhạc có dùng giáng (flat) hay thăng (sharp).
+   * Dựa vào giá trị <fifths> trong MusicXML:
+   *   fifths < 0  → flat key  (F, Bb, Eb, Ab, Db, Gb...)
+   *   fifths >= 0 → sharp key (C, G, D, A, E, B, F#...)
+   */
+  function _getKeyUseFlats() {
+    try {
+      const xml = window.OSMDRenderer?.getCurrentXml?.() || window.App?.getOriginalXml?.();
+      if (!xml) return false;
+      const doc    = new DOMParser().parseFromString(xml, 'text/xml');
+      const fifths = parseInt(doc.querySelector('key > fifths')?.textContent ?? '0');
+      return fifths < 0; // âm = giáng, dương/0 = thăng hoặc trung lập
+    } catch { return false; }
+  }
+
+  /**
+   * Detect useFlats cho KEY SAU KHI transpose.
+   * VD: Bb (fifths=-2) transpose +2 → C (fifths=0) → useFlats=false
+   *     G  (fifths=+1) transpose -2 → F (fifths=-1) → useFlats=true
+   */
+  function _getTransposedKeyUseFlats(semitones) {
+    try {
+      const xml = window.OSMDRenderer?.getCurrentXml?.() || window.App?.getOriginalXml?.();
+      if (!xml) return false;
+      const doc       = new DOMParser().parseFromString(xml, 'text/xml');
+      const origFifths = parseInt(doc.querySelector('key > fifths')?.textContent ?? '0');
+      // Circle of fifths: mỗi semitone ≈ 7 fifths steps (circle là 12 bước 12 semitones = 7*12 = 84 = 7 mod 12)
+      // Công thức gần đúng: newFifths = origFifths + semitones * 7 / 12
+      // Dùng bảng từ transposeEngine (chính xác hơn)
+      const semToFifths = [0,7,2,9,4,11,6,1,8,3,10,5]; // semitone → circle-of-fifths offset
+      const absS = ((semitones % 12) + 12) % 12;
+      let newF = origFifths + (semitones >= 0 ? semToFifths[absS] : -semToFifths[(12-absS)%12]);
+      // Normalize -6..6
+      while (newF > 6)  newF -= 12;
+      while (newF < -6) newF += 12;
+      return newF < 0;
+    } catch { return false; }
+  }
+
   function _applyTranspose(chordMap) {
     const semitones = window.App?.getCurrentTranspose?.() ?? 0;
     if (semitones === 0) return chordMap;
+    // Detect flat/sharp preference của key đích (sau khi transpose)
+    const useFlats = _getTransposedKeyUseFlats(semitones);
     const out = {};
     for (const [k, chord] of Object.entries(chordMap)) {
-      out[k] = TransposeEngine.transposeChord(chord, semitones);
+      out[k] = TransposeEngine.transposeChord(chord, semitones, useFlats);
     }
     return out;
   }
