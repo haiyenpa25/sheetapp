@@ -19,7 +19,8 @@ const ChordCanvasUI = (() => {
   }
 
   function getDotSize(scale) {
-    return Math.max(12, Math.round(16 * scale));
+    // Vi\u1ec3u d\u1ea5u '+': nh\u1ecf g\u1ecdn, scale theo zoom, t\u1ed1i thi\u1ec3u 10px \u2014 touch area m\u1edf r\u1ed9ng qua CSS ::after
+    return Math.max(10, Math.round(14 * scale));
   }
 
   function applyAbsolute(el, cx, cy, extras) {

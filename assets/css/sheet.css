@@ -527,24 +527,41 @@
 /* z-index: 80 được set inline trong JS */
 .cc-dot { position: absolute !important; }
 
-/* Nút tròn "+" — chỉ hiện khi edit mode */
+/* Nút tròn "+" — visual scale theo zoom (JS set width/height inline)
+   Touch area mở rộng qua ::after để đạt 44px tối thiểu (Apple HIG)
+   mà KHÔNG làm visual button to hơn */
 .cc-dot-btn {
   display: none;
-  width: 20px; height: 20px;
   border-radius: 50%;
-  background: rgba(109, 40, 217, 0.80);
+  background: rgba(109, 40, 217, 0.82);
   border: none;
   color: #fff;
-  font-size: 16px; line-height: 18px;
+  font-weight: 700;
   text-align: center;
+  line-height: 1;
   transition: background .15s, transform .15s;
-  box-shadow: 0 1px 5px rgba(109,40,217,.45);
-  /* Tăng touch target trên mobile */
+  box-shadow: 0 1px 5px rgba(109,40,217,.40);
   cursor: pointer;
+  /* Stacking context cho ::after */
+  position: absolute;
+  isolation: isolate;
 }
-.cc-dot-btn:hover {
+
+/* Touch area invisible — mở rộng hit zone mà không làm visual to */
+.cc-dot-btn::after {
+  content: '';
+  position: absolute;
+  /* 44px tối thiểu theo Apple HIG — inset âm để mở rộng ra ngoài */
+  top: 50%; left: 50%;
+  width: 44px; height: 44px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+}
+
+.cc-dot-btn:hover,
+.cc-dot-btn:active {
   background: rgba(109, 40, 217, 1);
-  transform: translateX(-50%) scale(1.25) !important;
+  transform: translateX(-50%) scale(1.2) !important;
 }
 
 /* Edit badge ✎ */

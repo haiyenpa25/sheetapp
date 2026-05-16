@@ -369,9 +369,9 @@ const ChordCanvas = (() => {
     }
     systems.push({ topY: sysStart, bottomY: prev });
 
-    // ── 3. Gom badge theo system, ép về Y cố định ──────────────────
+    // ── 3. Gom badge + dot-btn theo system, ép về Y cố định ──
     const allBadges = Array.from(
-      container.querySelectorAll('.cc-edit-badge, .cc-chord-text, .cc-custom-chord-text')
+      container.querySelectorAll('.cc-edit-badge, .cc-chord-text, .cc-custom-chord-text, .cc-dot-btn')
     );
     if (!allBadges.length) return;
 
@@ -710,34 +710,39 @@ const ChordCanvas = (() => {
         container.appendChild(textBadge);
       }
     } else {
+      // Nút '+' thêm hợp âm — visual nhỏ theo zoom, touch area mở rộng qua CSS
       const btn = document.createElement('div');
       btn.className = DOT_CLASS + ' ' + BTN_CLASS;
       btn.textContent = '+';
-      const minTouchSize = Math.max(dotSize, 36); // tối thiểu 36px cho touch
+      // Visual = dotSize (scale với zoom), không ép tối thiểu 36px nữa
+      // Touch area mở rộng qua CSS class cc-dot-btn::after (xem sheet.css)
+      // cy đồng hướng với chord badge — sẽ được _alignDOMChords ớ về cùng dòng
       ChordCanvasUI.applyAbsolute(btn, cx, cy, [
-        'display:' + (_editEnabled ? 'flex' : 'none'), 'align-items:center', 'justify-content:center',
-        `width:${minTouchSize}px`, `height:${minTouchSize}px`, 'border-radius:50%',
-        'background:rgba(109,40,217,0.8)',
-        'color:#fff', `font-size:${fSize}px`, 'line-height:1',
-        'box-shadow:0 1px 4px rgba(109,40,217,0.4)',
+        'display:' + (_editEnabled ? 'flex' : 'none'),
+        'align-items:center', 'justify-content:center',
+        `width:${dotSize}px`, `height:${dotSize}px`,
+        'border-radius:50%',
+        'background:rgba(109,40,217,0.82)',
+        'color:#fff', `font-size:${Math.round(dotSize * 0.65)}px`,
+        'line-height:1', 'font-weight:700',
+        'box-shadow:0 1px 4px rgba(109,40,217,0.35)',
         'pointer-events:auto', 'cursor:pointer', 'user-select:none',
-        'touch-action:manipulation',           // loại 300ms iOS delay
+        'touch-action:manipulation',
         '-webkit-tap-highlight-color:transparent',
-        'transition: transform 0.15s ease, background 0.15s ease'
+        'transition:transform 0.15s ease, background 0.15s ease',
+        'position:absolute'  // đảm bảo ::after works
       ]);
-      btn.addEventListener('mouseenter', () => { btn.style.transform = 'scale(1.15)'; btn.style.background = 'rgba(109,40,217,1)'; });
-      btn.addEventListener('mouseleave', () => { btn.style.transform = 'scale(1)'; btn.style.background = 'rgba(109,40,217,0.8)'; });
-      // Dùng pointerdown thay vì click/touchstart — phản hồi ngay lập tức cả touch và mouse
+      btn.addEventListener('mouseenter', () => { btn.style.transform = 'translateX(-50%) scale(1.2)'; btn.style.background = 'rgba(109,40,217,1)'; });
+      btn.addEventListener('mouseleave', () => { btn.style.transform = 'translateX(-50%) scale(1)';   btn.style.background = 'rgba(109,40,217,0.82)'; });
       let _pointerHandled = false;
       btn.addEventListener('pointerdown', e => {
         e.stopPropagation();
         _pointerHandled = true;
         _showPopup(btn, measureIdx, noteIdx, '');
       });
-      // Fallback click (trường hợp pointer events không supported)
       btn.addEventListener('click', e => {
         e.stopPropagation();
-        if (_pointerHandled) { _pointerHandled = false; return; } // đã xử lý rồi
+        if (_pointerHandled) { _pointerHandled = false; return; }
         _showPopup(btn, measureIdx, noteIdx, '');
       });
       container.appendChild(btn);
