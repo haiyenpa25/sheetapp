@@ -1095,9 +1095,8 @@ const ChordCanvas = (() => {
       if (!xml) return null; // null = XML chưa sẵn, KHÔNG cache
       const doc    = new DOMParser().parseFromString(xml, 'text/xml');
       const fifths = parseInt(doc.querySelector('key > fifths')?.textContent ?? 'NaN');
-      if (!isNaN(fifths)) return fifths;
 
-      // Fallback: XML không có key sig → quét chords
+      // Đếm flat/sharp trong harmony để cross-check
       let flat = 0, sharp = 0;
       doc.querySelectorAll('harmony').forEach(h => {
         const ra = parseFloat(h.querySelector('root > root-alter')?.textContent || '0');
@@ -1105,7 +1104,16 @@ const ChordCanvas = (() => {
         if (ra < 0) flat++; else if (ra > 0) sharp++;
         if (ba < 0) flat++; else if (ba > 0) sharp++;
       });
-      return flat > sharp ? -1 : 0;
+
+      if (!isNaN(fifths)) {
+        // Nếu fifths = 0 (C major) NHƯNG chord-scan rõ ràng là flat → OMR sai
+        // VD: bài Bb nhưng OMR xuất fifths=0, trong khi có Bb,Eb,Ab chords
+        if (fifths === 0 && flat > 0 && flat > sharp) return -1; // chord-scan thắng
+        return fifths; // tin vào key sig
+      }
+
+      // Không có key sig trong XML → dùng chord scan
+      return flat > sharp ? -1 : (sharp > flat ? 1 : 0);
     } catch { return null; }
   }
 
