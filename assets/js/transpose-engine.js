@@ -32,21 +32,34 @@ const TransposeEngine = (() => {
   }
 
   /**
+   * Auto-detect xem hợp âm/nốt có dùng b (giáng) không.
+   * Quy tắc: nếu root chứa 'b' (Bb, Eb, Ab...) → useFlats = true.
+   * Điều này đảm bảo "Bb" không bao giờ bị đổi thành "A#".
+   */
+  function _hasFlat(chordName) {
+      if (!chordName) return false;
+      // Match root (1-2 chars): A-G kèm b hoặc #
+      const root = chordName.match(/^[A-G]([#b])/)?.[1];
+      return root === 'b';
+  }
+
+  /**
    * Dịch giọng một hợp âm hoàn chỉnh (có tính cả bass notes như Cmaj7/G).
    */
   /**
    * Transpose thủ công (không cần Tonal.js) — dùng bảng chromatic nội bộ.
    * Xử lý: chords đơn (Am, D7), slash chords (C/E), enharmonics (#/b).
    */
-  function _manualTranspose(chordName, semitones, useFlats = false) {
+  function _manualTranspose(chordName, semitones, useFlats = null) {
       if (!chordName) return chordName;
-      const m = chordName.match(/^([A-G][#b]?)([^/]*)(\/([A-G][#b]?))?$/);
+      const m = chordName.match(/^([A-G][#b]?)([^\/]*)(\/([A-G][#b]?))?$/);
       if (!m) return chordName;
       const root    = m[1];
       const suffix  = m[2] || '';
       const bass    = m[4] || null;
+      // Auto-detect nếu không truyền — giữ nguyên flat preference của user
+      if (useFlats === null) useFlats = _hasFlat(chordName);
       const arr     = useFlats ? NOTES_FLAT : NOTES_SHARP;
-      // Tìm index trong SHARP hoặc FLAT
       let idx = NOTES_SHARP.indexOf(root);
       if (idx === -1) idx = NOTES_FLAT.indexOf(root);
       if (idx === -1) return chordName;
@@ -61,8 +74,13 @@ const TransposeEngine = (() => {
       return result;
   }
 
-  function transposeChord(chordName, semitones, useFlats = false) {
+  function transposeChord(chordName, semitones, useFlats = null) {
       if (!chordName || semitones === 0) return chordName;
+
+      // AUTO-DETECT: nếu không truyền useFlats, tự detect từ input chord
+      // "Bb" → useFlats=true → kết quả luôn là flat (Bb, Eb, Ab...)
+      // "C#" → useFlats=false → kết quả luôn là sharp (C#, F#, G#...)
+      if (useFlats === null) useFlats = _hasFlat(chordName);
 
       // Nếu Tonal không load được → dùng fallback nội bộ
       if (!window.Tonal) {
