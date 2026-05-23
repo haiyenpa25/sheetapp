@@ -80,7 +80,7 @@ const AppUI = (() => {
      'btn-chord-highlight',
      'chord-set-selector', 'btn-play-audio',
      'btn-auto-scroll','scroll-speed','btn-dark-mode',
-     'btn-perf-notes'].forEach(id => {
+     'btn-perf-notes', 'btn-toolbar-metronome'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.disabled = !enabled;
     });

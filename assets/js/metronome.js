@@ -57,6 +57,12 @@ const Metronome = (() => {
       togglePanel();
     });
 
+    // Toggler chính trên Thanh công cụ (Toolbar)
+    document.getElementById('btn-toolbar-metronome')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePanel();
+    });
+
     // Nút đóng ở Floating Panel
     document.getElementById('btn-close-metronome')?.addEventListener('click', () => {
       hidePanel();
@@ -333,6 +339,18 @@ const Metronome = (() => {
       toolbarBtn.classList.toggle('active', _isPlaying);
       toolbarBtn.innerHTML = _isPlaying ? '⏸ Dừng' : '🔊 Bật';
       toolbarBtn.style.color = _isPlaying ? 'var(--danger)' : '';
+    }
+
+    // 3. Sync button chính trên thanh công cụ lớn
+    const mainToolbarBtn = document.getElementById('btn-toolbar-metronome');
+    if (mainToolbarBtn) {
+      mainToolbarBtn.classList.toggle('active', _isPlaying);
+      mainToolbarBtn.style.color = _isPlaying ? 'var(--danger)' : '';
+      if (_isPlaying) {
+        mainToolbarBtn.classList.add('btn-active');
+      } else {
+        mainToolbarBtn.classList.remove('btn-active');
+      }
     }
   }
 

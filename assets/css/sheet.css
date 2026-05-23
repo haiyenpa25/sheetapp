@@ -1745,6 +1745,28 @@ body.dark-mode .metronome-slider {
   background: #374151;
 }
 
+/* Hiệu ứng kim gõ nhịp lắc lư khi đang chạy */
+#btn-toolbar-metronome.active svg {
+  animation: metronome-swing 0.8s ease-in-out infinite alternate;
+  transform-origin: 12px 18px; /* Trục xoay ở đế kim */
+  color: var(--danger, #dc2626) !important;
+}
+
+@keyframes metronome-swing {
+  0% { transform: rotate(-18deg); }
+  100% { transform: rotate(18deg); }
+}
+
+/* Nút hoạt động trên toolbar */
+#btn-toolbar-metronome.active {
+  background: rgba(220, 38, 38, 0.1) !important;
+  border-color: rgba(220, 38, 38, 0.2) !important;
+}
+body.dark-mode #btn-toolbar-metronome.active {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
 /* Responsive di động & iPad dọc */
 @media (max-width: 500px) {
   .metronome-panel {

@@ -111,6 +111,18 @@
       </select>
     </div>
 
+    <!-- DEDICATED METRONOME (GIỮ NHỊP) -->
+    <div class="control-group">
+      <button id="btn-toolbar-metronome" class="btn btn-ghost btn-sm" disabled title="Mở bộ Giữ Nhịp & Tạo Tempo (Metronome)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="metronome-icon-pulse" style="width: 15px; height: 15px; transition: transform 0.2s ease;">
+          <path d="M12 2L2 22h20L12 2z" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 5l-2 10" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="12" cy="18" r="1.5" fill="currentColor"/>
+        </svg>
+        <span class="btn-text">Gõ Nhịp</span>
+      </button>
+    </div>
+
     <!-- COMPACT MODE + SETTINGS -->
     <div class="control-group" style="position: relative;">
       <button id="btn-compact-mode" class="btn btn-ghost btn-sm" title="Bật/Tắt chế độ Gọn Nhẹ">
