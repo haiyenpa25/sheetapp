@@ -97,6 +97,61 @@ echo cssTag('fab.css');
 <?php require_once __DIR__ . '/includes/modals.php'; ?>
 <?php require_once __DIR__ . '/includes/admin_console.php'; ?>
 
+<!-- ===== FLOATING METRONOME PANEL (Máy Giữ Nhịp & Tạo Tempo) ===== -->
+<div id="metronome-panel" class="metronome-panel hidden">
+  <div class="metronome-header">
+    <div class="metronome-header-left">
+      <span class="metronome-icon-pulse">⚡</span>
+      <span class="metronome-title">Giữ Nhịp (Tempo)</span>
+    </div>
+    <button id="btn-close-metronome" class="metronome-close-btn" title="Ẩn bộ giữ nhịp">&times;</button>
+  </div>
+  
+  <div class="metronome-body">
+    <!-- Visual Beat LED Flasher -->
+    <div class="metronome-beats" id="metronome-beats-container" title="Đèn nháy báo phách nhịp">
+      <!-- Sẽ được tạo động bằng JS, ví dụ nhịp 4/4 sẽ có 4 đèn nháy -->
+    </div>
+    
+    <!-- Large Tempo Control -->
+    <div class="metronome-tempo-control">
+      <button id="btn-metronome-dec" class="tempo-btn" title="Giảm 1 BPM">−</button>
+      <div class="tempo-display-wrapper">
+        <span id="metronome-bpm-val" class="tempo-value">80</span>
+        <span class="tempo-unit">BPM</span>
+      </div>
+      <button id="btn-metronome-inc" class="tempo-btn" title="Tăng 1 BPM">+</button>
+    </div>
+    
+    <!-- BPM Slider -->
+    <div class="metronome-row">
+      <input type="range" id="metronome-bpm-slider" class="metronome-slider" min="30" max="250" value="80" title="Kéo để điều chỉnh BPM">
+    </div>
+    
+    <!-- Metronome Controls: Play & TAP Tempo -->
+    <div class="metronome-actions">
+      <button id="btn-metronome-toggle-play" class="btn-metronome-play" title="Bật/Tắt âm gõ nhịp">🔊 Bật nhịp</button>
+      <button id="btn-metronome-tap" class="btn-metronome-tap" title="Gõ liên tục theo tốc độ để tính BPM">TAP</button>
+    </div>
+    
+    <!-- Metronome Volume & Sound Select -->
+    <div class="metronome-settings">
+      <div class="metronome-setting-row">
+        <span class="metronome-setting-label">Âm lượng:</span>
+        <input type="range" id="metronome-volume-slider" class="metronome-slider volume-slider" min="0" max="100" value="60" title="Âm lượng tiếng gõ">
+      </div>
+      <div class="metronome-setting-row">
+        <span class="metronome-setting-label">Tiếng gõ:</span>
+        <select id="metronome-sound-select" class="metronome-select" title="Loại nhạc cụ gõ nhịp">
+          <option value="woodblock" selected>Woodblock (Mõ gỗ)</option>
+          <option value="cowbell">Cowbell (Chuông bò)</option>
+          <option value="beep">Digital Beep (Bíp)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Nút thoát Sheet-Only Mode (fixed, luôn ở góc trên phải) -->
 <button id="btn-exit-sheet-only" title="Thoát chế độ toàn màn hình (Esc)" aria-label="Thoát">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
@@ -147,6 +202,7 @@ echo jsTag('annotation-canvas.js');
 echo jsTag('performance-notes.js');
 echo jsTag('instruments.js');
 echo jsTag('audio-player.js');
+echo jsTag('metronome.js');
 echo jsTag('auto-scroller.js');
 echo jsTag('page-nav.js');
 echo jsTag('app-ui.js');

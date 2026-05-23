@@ -80,6 +80,11 @@
                    title="Âm lượng (+18 dB mặc định — kéo sang phải để to hơn)">
           </label>
         </div>
+
+        <div class="audio-panel-row" style="border-top: 1px solid var(--border); padding-top: .6rem; margin-top: .2rem;">
+          <span class="audio-panel-label">Gõ Nhịp (Metronome):</span>
+          <button id="btn-metronome" class="btn btn-ghost btn-xs" title="Bật/Tắt máy gõ nhịp giữ nhịp cho trống">🔊 Bật</button>
+        </div>
       </div>
 
       <!-- Hidden select giữ lại để JS legacy đọc được -->

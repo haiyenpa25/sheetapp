@@ -31,6 +31,7 @@ const App = (() => {
     if (window.DisplaySettings)  DisplaySettings.init();
     if (window.PerformanceNotes) PerformanceNotes.init();
     if (window.SongInfoBar)      SongInfoBar.init();
+    if (window.Metronome)        Metronome.init();
 
     ToolbarController.init();
     KeyboardHandler.init();
@@ -44,7 +45,9 @@ const App = (() => {
         ChordCanvas.clearSong();
         AnnotationCanvas.clearSong();
         SheetAudioPlayer.stop();
+        if (window.Metronome) Metronome.stop();
         PageNav.reset();
+        EventBus.emit('song:cleared');
       }
     });
 
