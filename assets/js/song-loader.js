@@ -54,7 +54,7 @@ const SongLoader = (() => {
 
       // ── Post-render tasks (song song) ──
       _syncZoomUI(zoom);
-      if (!settings?.userSettings?.zoomLevel) setTimeout(_autoFitZoom, 80);
+      if (!settings?.userSettings?.zoomLevel || window.innerWidth < 768) setTimeout(_autoFitZoom, 80);
 
       SheetAudioPlayer.setup(OSMDRenderer.getInstance());
       AppUI.updateTransposeDisplay(transpose);
@@ -68,8 +68,7 @@ const SongLoader = (() => {
       _enableAudioControls();
       AppUI.showOSMD();
 
-      if (window.ChordCanvas?.onOSMDRendered) ChordCanvas.onOSMDRendered();
-      if (window.AnnotationCanvas?.onOSMDRendered) AnnotationCanvas.onOSMDRendered();
+      // INTENTIONAL: Không gọi thủ công onOSMDRendered nữa vì OSMDRenderer.load đã tự kích hoạt thông qua onReady callback.
       if (window.ChordCanvas?.refreshSetDropdown) {
         setTimeout(() => {
           ChordCanvas.refreshSetDropdown();
@@ -121,8 +120,7 @@ const SongLoader = (() => {
       await OSMDRenderer.reload(processedXml, transpose);
       SessionTracker.setTranspose(transpose);
       _updateCapoBadge(processedXml);
-      if (window.ChordCanvas)     ChordCanvas.onOSMDRendered();
-      if (window.AnnotationCanvas) AnnotationCanvas.onOSMDRendered();
+      // INTENTIONAL: Không gọi thủ công onOSMDRendered nữa vì OSMDRenderer.reload đã tự kích hoạt thông qua onReady callback.
     } catch (err) {
       console.warn('[SongLoader] reload lỗi:', err.message);
     } finally {
@@ -199,8 +197,28 @@ const SongLoader = (() => {
     const wrapper = document.querySelector('.sheet-viewer-wrapper');
     if (!svg || !wrapper) return;
     const avail = wrapper.clientWidth - 20; // 20px = padding
-    if (avail <= 0 || !svg.clientWidth) return;
-    const ratio = avail / svg.clientWidth;
+    if (avail <= 0) return;
+
+    let svgW = svg.clientWidth || svg.getBoundingClientRect().width;
+    if (!svgW) {
+      const viewBox = svg.getAttribute('viewBox');
+      if (viewBox) {
+        const parts = viewBox.split(' ');
+        if (parts.length >= 3) svgW = parseFloat(parts[2]);
+      }
+    }
+
+    if (!svgW) {
+      if (!window._autoFitRetryCount) window._autoFitRetryCount = 0;
+      if (window._autoFitRetryCount < 5) {
+        window._autoFitRetryCount++;
+        setTimeout(_autoFitZoom, 50);
+      }
+      return;
+    }
+    window._autoFitRetryCount = 0; // reset
+
+    const ratio = avail / svgW;
     // Snap sang bước zoom gần nhất (10%, 15%, ..., 200%)
     const pct = Math.round(Math.max(0.1, Math.min(2.0, ratio)) * 20) * 5; // bước 5%
     if (Store.get('currentZoom') === 1.0) window.App?.setZoom?.(pct);

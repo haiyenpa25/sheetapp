@@ -59,8 +59,17 @@ const OSMDRenderer = (() => {
     }
 
     // Resize observer để auto-reflow khi container thay đổi kích thước
+    let lastWidth = container.clientWidth;
     const resizeObserver = new ResizeObserver(_debounce(async () => {
       if (isLoaded) {
+          const currentWidth = container.clientWidth;
+          // iPad/iPhone address bar co giãn thay đổi height nhưng giữ nguyên width.
+          // Chỉ kích hoạt render lại khi chiều rộng thực tế thay đổi > 8px (tránh giật lag khi cuộn).
+          if (currentWidth > 0 && Math.abs(currentWidth - lastWidth) < 8) {
+              return;
+          }
+          lastWidth = currentWidth;
+
           if (window.ChordCanvas?.isPopupOpen?.()) return; // KHÔNG re-render nếu đang nhập popup hợp âm (tránh mất focus)
           await osmd.render();
           _titleCompacted = false; // reset để compact lại sau resize

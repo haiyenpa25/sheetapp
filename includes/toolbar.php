@@ -17,7 +17,7 @@
   <div class="toolbar-controls" id="toolbar-controls">
 
     <!-- PLAY AUDIO -->
-    <div class="control-group">
+    <div class="control-group" style="position: relative;">
       <button id="btn-play-audio" class="btn btn-ghost btn-sm" disabled title="Phát nhạc đệm (Audio)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg>
         <span class="btn-text">Phát</span>
@@ -27,34 +27,61 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12" fill="currentColor"/></svg>
         <span class="btn-text">Dừng</span>
       </button>
-      <!-- AUDIO SPEED -->
-      <select id="audio-speed" class="select-toolbar" disabled title="Tốc độ phát">
-        <option value="0.5">0.5×</option>
-        <option value="0.75">0.75×</option>
-        <option value="1.0" selected>1.0×</option>
-        <option value="1.25">1.25×</option>
-        <option value="1.5">1.5×</option>
-      </select>
-      <!-- VOLUME SLIDER — Âm lượng phát -->
-      <label class="volume-label" title="Âm lượng">
-        <span class="volume-icon">🔊</span>
-        <input id="audio-volume" type="range" class="audio-volume-slider"
-               min="-20" max="24" step="1" value="18" disabled
-               title="Âm lượng (+18 dB mặc định — kéo sang phải để to hơn)">
-      </label>
-      <!-- Voice Selector: 5 chế độ phát bè SATB -->
-      <div class="voice-selector" id="voice-selector" role="group" aria-label="Chọn bè phát">
-        <button class="voice-btn voice-s" data-voice="soprano"
-                title="Soprano — Nữ Cao&#10;Giai điệu chính (Khóa Sol, nốt trên)" disabled>S</button>
-        <button class="voice-btn voice-a" data-voice="alto"
-                title="Alto — Nữ Trầm&#10;Hòa âm (Khóa Sol, nốt dưới)" disabled>A</button>
-        <button class="voice-btn voice-t" data-voice="tenor"
-                title="Tenor — Nam Cao&#10;Dẫn âm (Khóa Fa, nốt trên)" disabled>T</button>
-        <button class="voice-btn voice-b" data-voice="bass"
-                title="Bass — Nam Trầm&#10;Nền hòa âm (Khóa Fa, nốt dưới)" disabled>B</button>
-        <button class="voice-btn voice-all active" data-voice="satb"
-                title="Hòa âm — Phát cả 4 bè cùng lúc" disabled>♪</button>
+
+      <!-- AUDIO SETTINGS TOGGLER -->
+      <button id="btn-audio-settings" class="icon-btn" disabled title="Tùy chỉnh Âm thanh & Bè phát">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+          <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+          <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/>
+          <line x1="17" y1="16" x2="23" y2="16"/>
+        </svg>
+      </button>
+
+      <!-- AUDIO SETTINGS PANEL DROPDOWN -->
+      <div id="audio-settings-panel" class="dropdown-menu audio-settings-panel hidden">
+        <div class="audio-panel-row">
+          <span class="audio-panel-label">Bè Phát:</span>
+          <!-- Voice Selector: 5 chế độ phát bè SATB -->
+          <div class="voice-selector" id="voice-selector" role="group" aria-label="Chọn bè phát">
+            <button class="voice-btn voice-s" data-voice="soprano"
+                    title="Soprano — Nữ Cao&#10;Giai điệu chính (Khóa Sol, nốt trên)" disabled>S</button>
+            <button class="voice-btn voice-a" data-voice="alto"
+                    title="Alto — Nữ Trầm&#10;Hòa âm (Khóa Sol, nốt dưới)" disabled>A</button>
+            <button class="voice-btn voice-t" data-voice="tenor"
+                    title="Tenor — Nam Cao&#10;Dẫn âm (Khóa Fa, nốt trên)" disabled>T</button>
+            <button class="voice-btn voice-b" data-voice="bass"
+                    title="Bass — Nam Trầm&#10;Nền hòa âm (Khóa Fa, nốt dưới)" disabled>B</button>
+            <button class="voice-btn voice-all active" data-voice="satb"
+                    title="Hòa âm — Phát cả 4 bè cùng lúc" disabled>♪</button>
+          </div>
+        </div>
+
+        <div class="audio-panel-row">
+          <span class="audio-panel-label">Tốc Độ:</span>
+          <!-- AUDIO SPEED -->
+          <select id="audio-speed" class="select-toolbar" disabled title="Tốc độ phát">
+            <option value="0.5">0.5×</option>
+            <option value="0.75">0.75×</option>
+            <option value="1.0" selected>1.0×</option>
+            <option value="1.25">1.25×</option>
+            <option value="1.5">1.5×</option>
+          </select>
+        </div>
+
+        <div class="audio-panel-row">
+          <span class="audio-panel-label">Âm Lượng:</span>
+          <!-- VOLUME SLIDER — Âm lượng phát -->
+          <label class="volume-label" title="Âm lượng">
+            <span class="volume-icon">🔊</span>
+            <input id="audio-volume" type="range" class="audio-volume-slider"
+                   min="-20" max="24" step="1" value="18" disabled
+                   title="Âm lượng (+18 dB mặc định — kéo sang phải để to hơn)">
+          </label>
+        </div>
       </div>
+
       <!-- Hidden select giữ lại để JS legacy đọc được -->
       <select id="audio-playback-mode" style="display:none" aria-hidden="true">
         <option value="satb" selected>SATB</option>

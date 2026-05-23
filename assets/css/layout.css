@@ -89,6 +89,31 @@ select, input, label,
   flex-shrink: 0;
 }
 
+/* ---- AUDIO SETTINGS PANEL ---- */
+.audio-settings-panel {
+  padding: .75rem 1rem;
+  width: max-content;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+  font-size: .82rem;
+}
+.audio-panel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+}
+.audio-panel-label {
+  color: var(--text-secondary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.audio-settings-panel .audio-volume-slider {
+  width: 120px !important;
+}
+
 /* ---- AUTH USERNAME ---- */
 .auth-username { margin-left: 4px; font-weight: 600; font-size: .8rem; }
 
@@ -140,7 +165,7 @@ select, input, label,
 .main-content { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
 
 /* ---- TOOLBAR ---- */
-.toolbar { height: var(--toolbar-h); background: var(--bg-surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 .75rem; gap: .5rem; flex-shrink: 0; backdrop-filter: blur(10px); position: relative; z-index: 50; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.toolbar { height: var(--toolbar-h); background: rgba(255, 255, 255, 0.78); border-bottom: 1px solid rgba(109, 40, 217, 0.08); display: flex; align-items: center; padding: 0 .75rem; gap: .5rem; flex-shrink: 0; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); position: relative; z-index: 50; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.02); }
 .toolbar::-webkit-scrollbar { display: none; }
 /* toolbar-left — chỉ chứa logo/hamburger, không có flex:1 để tránh phần trống */
 .toolbar-left { flex-shrink: 0; display: flex; align-items: center; gap: 0.35rem; }

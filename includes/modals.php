@@ -182,3 +182,41 @@
   });
 });})();
 </script>
+
+<!-- ===== PWA INSTALL INSTRUCTION MODAL ===== -->
+<div id="pwa-install-modal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width: 420px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(109, 40, 217, 0.12); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);">
+    <div class="modal-header">
+      <div style="display:flex; align-items:center; gap:.75rem;">
+        <span style="font-size: 1.5rem;">📲</span>
+        <h3 style="margin:0; font-size:1.1rem; font-weight: 700; color: var(--accent);">Cài đặt Ứng Dụng SheetApp</h3>
+      </div>
+      <button id="btn-close-pwa-modal" class="icon-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" style="padding: 1rem 0 0;">
+      <p style="font-size: 0.9rem; line-height: 1.6; color: var(--text-secondary); margin-bottom: 1.25rem;">
+        Cài đặt **SheetApp** lên màn hình chính để mở nhạc nhanh chóng, chạy ngoại tuyến (Offline) ngay cả khi không có mạng Internet.
+      </p>
+      
+      <!-- Hướng dẫn iOS Safari -->
+      <div id="pwa-ios-instructions" class="hidden">
+        <h4 style="font-size: 0.85rem; text-transform: uppercase; color: var(--accent); margin-bottom: 0.75rem; font-weight: 700; letter-spacing: 0.5px;">Hướng dẫn trên iPad / iPhone (Safari)</h4>
+        <ol style="padding-left: 1.25rem; font-size: 0.88rem; color: var(--text-secondary); line-height: 1.85; display: flex; flex-direction: column; gap: 0.5rem;">
+          <li>Nhấn vào biểu tượng <strong>Chia sẻ (Share)</strong> <span style="font-size: 1.1rem;">⎋</span> ở trên thanh công cụ của Safari.</li>
+          <li>Cuộn xuống dưới và chọn mục <strong>Thêm vào MH chính (Add to Home Screen)</strong> <span style="font-size: 1.1rem;">⊞</span>.</li>
+          <li>Nhấn <strong>Thêm (Add)</strong> ở góc trên bên phải để hoàn tất cài đặt.</li>
+        </ol>
+      </div>
+
+      <!-- Hướng dẫn Desktop/Android -->
+      <div id="pwa-general-instructions" class="hidden">
+        <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.7;">
+          Nhấn nút <strong>Cài đặt</strong> bên dưới để tự động cài đặt ứng dụng vào màn hình chính của bạn.
+        </p>
+        <button id="btn-pwa-prompt-trigger" class="btn btn-primary w-full mt-1" style="background: linear-gradient(135deg, #10b981, #059669); border: none; font-weight: 700; height: 40px;">Cài Đặt Ngay</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -84,7 +84,7 @@ const ChordCanvasUI = (() => {
   /* ─── Popup Hợp âm ─────────────────────────────────────────── */
   function createPopup(anchor, measureIdx, noteIdx, existing, currentSet, callbacks) {
     const ar  = anchor.getBoundingClientRect();
-    const isMobile = window.innerWidth <= 600;
+    const isMobile = window.innerWidth <= 900;
     const pop = document.createElement('div');
     pop.className = 'cc-popup';
 
@@ -96,21 +96,9 @@ const ChordCanvasUI = (() => {
       ? `<span style="font-size:.6rem;color:#f59e0b;font-weight:600;margin-left:4px;">(tông ${semitones>0?'+':''}${semitones})</span>` : '';
 
     if (isMobile) {
-      // Mobile: bottom sheet cố định — không bị ảnh hưởng bởi scroll hay keyboard
-      pop.style.cssText = [
-        'position:fixed', 'left:0', 'right:0', 'bottom:0',
-        'z-index:99999', 'border-radius:16px 16px 0 0',
-        'background:var(--bg-surface,#fff)',
-        'border-top:1px solid rgba(109,40,217,0.3)',
-        'padding:1rem 1rem .5rem',
-        'box-shadow:0 -8px 32px rgba(109,40,217,.18)',
-        'pointer-events:auto',
-        'transform:translateY(100%)',
-        'transition:transform .25s cubic-bezier(.32,.72,0,1)',
-        'max-height:75vh', 'overflow-y:auto',
-        '-webkit-overflow-scrolling:touch'
-      ].join(';');
-      requestAnimationFrame(() => { pop.style.transform = 'translateY(0)'; });
+      // Mobile: bottom sheet cố định — sử dụng class CSS
+      pop.classList.add('cc-popup-mobile');
+      requestAnimationFrame(() => { pop.classList.add('active'); });
     } else {
       // Desktop / iPad: popup float gần chord
       let popLeft = ar.left + ar.width / 2;
@@ -184,16 +172,7 @@ const ChordCanvasUI = (() => {
       const b = document.createElement('button');
       b.type = 'button';
       b.textContent = label;
-      const baseStyle = [
-        'padding:4px 10px', 'border-radius:99px', 'font-size:.72rem', 'font-weight:700',
-        'font-family:monospace', 'border:1px solid', 'cursor:pointer', 'white-space:nowrap',
-        'touch-action:manipulation', '-webkit-tap-highlight-color:transparent',
-        'min-height:28px',  // đủ lớn để tap trên mobile
-        isHist
-          ? 'background:#fef3c7;color:#92400e;border-color:#fde68a'
-          : 'background:#f3f0ff;color:#6d28d9;border-color:#ddd6fe'
-      ];
-      b.style.cssText = baseStyle.join(';');
+      b.className = isHist ? 'cc-chip cc-chip-hist' : 'cc-chip cc-chip-dia';
       // pointerdown = instant, không có 300ms delay iOS
       b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); onClick(label); });
       return b;

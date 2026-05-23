@@ -114,6 +114,48 @@ const DisplaySettings = (() => {
             }, { passive: true });
         }
 
+        // Gắn sự kiện cho Audio Settings Dropdown
+        const btnAudioSettings = document.getElementById('btn-audio-settings');
+        const audioPanel = document.getElementById('audio-settings-panel');
+        if (btnAudioSettings && audioPanel) {
+            btnAudioSettings.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isHidden = audioPanel.classList.contains('hidden');
+                if (isHidden) {
+                    if (audioPanel.parentNode !== document.body) {
+                        document.body.appendChild(audioPanel);
+                    }
+                    audioPanel.classList.remove('hidden');
+                    // Position under the button
+                    const rect = btnAudioSettings.getBoundingClientRect();
+                    const menuW = audioPanel.offsetWidth || 240;
+                    let left = rect.right - menuW;
+                    if (left < 8) left = 8;
+                    if (left + menuW > window.innerWidth - 8) left = window.innerWidth - menuW - 8;
+                    
+                    audioPanel.style.position = 'fixed';
+                    audioPanel.style.top = (rect.bottom + 8) + 'px';
+                    audioPanel.style.left = left + 'px';
+                    audioPanel.style.right = 'auto';
+                    audioPanel.style.zIndex = '99999';
+                } else {
+                    audioPanel.classList.add('hidden');
+                }
+            });
+            // Click ra ngoài để ẩn
+            document.addEventListener('click', (e) => {
+                if (!btnAudioSettings.contains(e.target) && !audioPanel.contains(e.target)) {
+                    audioPanel.classList.add('hidden');
+                }
+            });
+            // Ẩn khi scroll
+            window.addEventListener('scroll', () => {
+                if (!audioPanel.classList.contains('hidden')) {
+                    audioPanel.classList.add('hidden');
+                }
+            }, { passive: true });
+        }
+
         const chkBass = document.getElementById('chk-compact-bass');
         const chkVoices = document.getElementById('chk-compact-voices');
         const chkChordNotes = document.getElementById('chk-compact-chordnotes');

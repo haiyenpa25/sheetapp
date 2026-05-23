@@ -41,6 +41,12 @@
   </div>
 
   <div class="sidebar-actions">
+    <!-- PWA INSTALL BUTTON -->
+    <button id="btn-pwa-install" class="btn btn-sm w-full hidden" style="background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; margin-bottom: 0.5rem;" title="Cài đặt ứng dụng lên màn hình chính để dùng offline">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Cài Đặt Ngoại Tuyến (App)
+    </button>
+
     <!-- OMR UPLOAD BUTTON -->
     <input type="file" id="omr-file-input" class="hidden" accept=".jpg,.jpeg,.png,.pdf">
     <button id="btn-omr-upload" class="btn btn-sm w-full hidden" style="background: linear-gradient(135deg, #2563eb, #1e40af); color: #fff; border: none; margin-bottom: 0.5rem;" title="Upload ảnh/PDF để AI nhận diện thành MusicXML">

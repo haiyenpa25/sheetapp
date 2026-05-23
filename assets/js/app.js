@@ -116,7 +116,7 @@ const App = (() => {
     if (lbl) lbl.textContent = percent + '%';
     await OSMDRenderer.setZoom(zoom);
     SessionTracker?.setZoom?.(zoom);
-    if (window.ChordCanvas) setTimeout(() => ChordCanvas.onOSMDRendered(), 200);
+    // INTENTIONAL: Không gọi thủ công onOSMDRendered nữa vì OSMDRenderer.setZoom đã tự kích hoạt thông qua onReady callback.
     const lvc = document.getElementById('lyric-view-container');
     if (lvc) lvc.style.fontSize = `${percent}%`;
   }

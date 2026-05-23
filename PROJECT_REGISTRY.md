@@ -319,6 +319,18 @@ SheetApp/
 > AI Agent cập nhật mục này sau mỗi phiên làm việc
 
 ```
+[2026-05-23] — Mobile optimization, Toolbar declutter & Chord entry bottom-sheet
+  ~ Sửa: includes/toolbar.php             (Gộp Tốc độ/Volume/Voice Selector vào Audio settings panel dropdown)
+  ~ Sửa: assets/css/layout.css            (Thêm styles cho .audio-settings-panel và .audio-panel-row)
+  ~ Sửa: assets/css/sheet.css             (Thêm styles cho .cc-popup-mobile và .cc-chip gợi ý, Dark Mode hỗ trợ)
+  ~ Sửa: assets/js/display-settings.js    (Tích hợp toggler cho #btn-audio-settings, đóng khi scroll/click ngoài)
+  ~ Sửa: assets/js/audio-player.js       (Bao gồm #btn-audio-settings trong enableBtn)
+  ~ Sửa: assets/js/song-loader.js         (Gia cố _autoFitZoom với viewBox fallback + retry loop, lock zoom di động)
+  ~ Sửa: assets/js/chord-canvas-ui.js     (Tăng ngưỡng isMobile lên 900px cho iPad, gán class thay vì inline styles)
+  ✅ Toolbar tinh gọn hơn 200px, không còn bị tràn/cuộn ngang trên di động.
+  ✅ Zoom tự động co giãn 100% cực kỳ bền bỉ trên các dòng iPad/iPhone.
+  ✅ Trình nhập hợp âm trên iPad chuyển thành Bottom Sheet không lo bị bàn phím ảo che khuất.
+
 [2026-05-15] — Audit round 3: Consumer compatibility + 'use strict' 9 modules
   ~ Sửa: assets/js/annotation-canvas.js  (loadSong: parse res.annotations thay vì Array.isArray(res))
   ~ Sửa: assets/js/display-settings.js   (+ 'use strict')

@@ -339,9 +339,11 @@ const SheetAudioPlayer = (() => {
     const btn = document.getElementById('btn-play-audio');
     const spd = document.getElementById('audio-speed');
     const vol = document.getElementById('audio-volume');
+    const set = document.getElementById('btn-audio-settings');
     if (btn) btn.disabled = !enabled;
     if (spd) spd.disabled = !enabled;
     if (vol) vol.disabled = !enabled;
+    if (set) set.disabled = !enabled;
     document.querySelectorAll('.voice-btn').forEach(b => { b.disabled = !enabled; });
     if (!enabled) {
       stop();

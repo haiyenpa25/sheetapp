@@ -97,7 +97,23 @@ const ToolbarController = (() => {
       _lastW = w;
       if (wDelta > 100 && OSMDRenderer?.getIsLoaded?.()) {
         setTimeout(async () => {
-          try { await OSMDRenderer.getInstance()?.render?.(); ChordCanvas?.reposition?.(); } catch(e) {}
+          try {
+            const osmdInstance = OSMDRenderer.getInstance();
+            const svg = document.getElementById('osmd-container')?.querySelector('svg');
+            const wrapper = document.querySelector('.sheet-viewer-wrapper');
+            if (svg && wrapper && osmdInstance) {
+              const avail = wrapper.clientWidth - 24;
+              if (avail > 0 && svg.clientWidth > 0) {
+                const ratio = avail / svg.clientWidth;
+                const currentZoom = Store.get('currentZoom') || 1.0;
+                const pct = Math.round(Math.max(0.3, Math.min(2.5, ratio * currentZoom)) * 20) * 5;
+                await App.setZoom(pct);
+              }
+            } else {
+              await osmdInstance?.render?.();
+              ChordCanvas?.reposition?.();
+            }
+          } catch(e) {}
         }, 350);
       }
     }, 250));
@@ -108,7 +124,23 @@ const ToolbarController = (() => {
         if (window.innerWidth <= 900) _closeSidebar();
         setTimeout(async () => {
           if (!OSMDRenderer?.getIsLoaded?.()) return;
-          try { await OSMDRenderer.getInstance()?.render?.(); ChordCanvas?.reposition?.(); } catch(e) {}
+          try {
+            const osmdInstance = OSMDRenderer.getInstance();
+            const svg = document.getElementById('osmd-container')?.querySelector('svg');
+            const wrapper = document.querySelector('.sheet-viewer-wrapper');
+            if (svg && wrapper && osmdInstance) {
+              const avail = wrapper.clientWidth - 24;
+              if (avail > 0 && svg.clientWidth > 0) {
+                const ratio = avail / svg.clientWidth;
+                const currentZoom = Store.get('currentZoom') || 1.0;
+                const pct = Math.round(Math.max(0.3, Math.min(2.5, ratio * currentZoom)) * 20) * 5;
+                await App.setZoom(pct);
+              }
+            } else {
+              await osmdInstance?.render?.();
+              ChordCanvas?.reposition?.();
+            }
+          } catch(e) {}
         }, 500);
       });
     }
