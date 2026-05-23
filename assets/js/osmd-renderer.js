@@ -80,6 +80,64 @@ const OSMDRenderer = (() => {
     }, 400));
     resizeObserver.observe(container);
 
+    // Pinch-to-Zoom (Multi-touch) using GPU scale transform for buttery 60fps feeling on iPad/Mobile
+    let initTouchDist = 0;
+    let initZoom = 1.0;
+    let isPinching = false;
+    let currentScaleRatio = 1.0;
+
+    container.addEventListener('touchstart', e => {
+      if (e.touches.length === 2 && isLoaded) {
+        isPinching = true;
+        initTouchDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        initZoom = currentZoom;
+        currentScaleRatio = 1.0;
+        
+        const svg = container.querySelector('svg');
+        if (svg) {
+          svg.style.transition = 'none';
+          svg.style.transformOrigin = 'top center';
+        }
+      }
+    }, { passive: true });
+
+    container.addEventListener('touchmove', e => {
+      if (isPinching && e.touches.length === 2 && isLoaded) {
+        e.preventDefault(); // prevent native browser zoom
+        const dist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        if (initTouchDist > 0) {
+          currentScaleRatio = dist / initTouchDist;
+          const svg = container.querySelector('svg');
+          if (svg) {
+            svg.style.transform = `scale(${currentScaleRatio})`;
+          }
+        }
+      }
+    }, { passive: false });
+
+    container.addEventListener('touchend', async e => {
+      if (isPinching) {
+        isPinching = false;
+        const svg = container.querySelector('svg');
+        if (svg) {
+          svg.style.transform = '';
+        }
+        
+        // Calculate the final target zoom level (Snap to 5% steps)
+        const finalZoomPercent = Math.round(Math.max(0.3, Math.min(2.5, initZoom * currentScaleRatio)) * 20) * 5;
+        
+        if (window.App?.setZoom) {
+          await App.setZoom(finalZoomPercent);
+        }
+      }
+    });
+
     return osmd;
   }
 

@@ -19,6 +19,17 @@ const KeyboardHandler = (() => {
     switch (e.key) {
       case 'ArrowDown': e.preventDefault(); App?.navigateNext?.(); break;
       case 'ArrowUp':   e.preventDefault(); App?.navigatePrev?.(); break;
+      case ' ':
+        e.preventDefault();
+        const wrapper = document.querySelector('.sheet-viewer-wrapper') || document.documentElement;
+        if (wrapper) {
+          const scrollAmount = wrapper.clientHeight * 0.7;
+          wrapper.scrollBy({
+            top: e.shiftKey ? -scrollAmount : scrollAmount,
+            behavior: 'smooth'
+          });
+        }
+        break;
       case 'ArrowRight':
         if (!e.ctrlKey && !e.metaKey && xml) { e.preventDefault(); App?.transposeBy?.(+1); }
         break;
