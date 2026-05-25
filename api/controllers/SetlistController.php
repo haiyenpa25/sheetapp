@@ -39,7 +39,7 @@ class SetlistController {
                 $data = json_decode(file_get_contents('php://input'), true) ?? [];
                 $setlist_id = $data['setlist_id'] ?? 0;
                 $song_id = $data['song_id'] ?? '';
-                $chord_profile = $data['chord_profile'] ?? 'default';
+                $chord_profile = $data['chord_profile'] ?? 'HD';
                 $transpose_key = isset($data['transpose_key']) ? (int)$data['transpose_key'] : 0;
                 
                 SetlistService::addItem($setlist_id, $song_id, $chord_profile, $transpose_key);

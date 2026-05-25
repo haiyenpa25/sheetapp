@@ -9,6 +9,7 @@ const LibraryUI = (() => {
   let songs        = [];
   let activeSongId = null;
   let onSelectCb   = null;
+  let onDeleteCb   = null;
   let _searchDebounce = null;
 
   const listEl     = () => document.getElementById('song-list');
@@ -380,7 +381,8 @@ const LibraryUI = (() => {
     opts.querySelectorAll('.song-item').forEach(item => {
       item.addEventListener('click', async () => {
         modal.classList.add('hidden');
-        const result = await ApiService.setlists.addItem({ setlist_id: parseInt(item.dataset.id), song_id: songId });
+        const currentSet = window.ChordCanvas?.getCurrentSet?.() || 'HD';
+        const result = await ApiService.setlists.addItem({ setlist_id: parseInt(item.dataset.id), song_id: songId, chord_profile: currentSet });
         if (result) window.App?.showToast('Đã thêm bài hát vào Setlist', 'success');
       });
     });
@@ -441,6 +443,7 @@ const LibraryUI = (() => {
       activeSongId = null;
       AppUI?.showWelcome?.();
     }
+    if (onDeleteCb) onDeleteCb(id);
   }
 
   // ── Helpers ───────────────────────────────────────────────────
@@ -454,10 +457,12 @@ const LibraryUI = (() => {
   }
 
   function onSelect(cb) { onSelectCb = cb; }
+  function onDelete(cb) { onDeleteCb = cb; }
   function getSongs()   { return songs; }
   function getActiveSong() { return songs.find(s => String(s.id) === String(activeSongId)) || null; }
+  function getSongObj(id) { return songs.find(s => String(s.id) === String(id)) || null; }
 
-  return { init, loadSongs, render, selectSong, addSong, deleteSong, onSelect, getSongs, getActiveSong };
+  return { init, loadSongs, render, selectSong, addSong, deleteSong, onSelect, onDelete, getSongs, getActiveSong, getSongObj };
 })();
 
 window.LibraryUI = LibraryUI;

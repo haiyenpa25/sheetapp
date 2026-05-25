@@ -11,7 +11,7 @@
 Tên dự án:   SheetApp — Ứng dụng đọc & biểu diễn bản nhạc
 Phiên bản:   v2.0-dev
 Ngày tạo:    2026-04-25
-Cập nhật:    2026-05-15
+Cập nhật:    2026-05-25
 
 Stack:
   Frontend:  Vanilla JS (ES6+ IIFE modules) + OSMD (OpenSheetMusicDisplay)
@@ -319,6 +319,28 @@ SheetApp/
 > AI Agent cập nhật mục này sau mỗi phiên làm việc
 
 ```
+[2026-05-25] — Sửa lỗi trắng trang khi chuyển bài + Full system audit
+  ~ Sửa: assets/js/song-loader.js (unhide #sheet-area TRƯỚC OSMDRenderer.load() — fix trắng trang)
+  ~ Sửa: assets/js/song-loader.js (module-scoped _autoFitRetryCount thay vì window.*)
+  ~ Sửa: api/services/SetlistService.php (SQL injection: dùng prepared statement thay vì string interpolation)
+  ~ Sửa: assets/js/setlist-ui.js (Array.isArray guard cho _setlists; ensureSongsLoaded dùng LibraryUI cache)
+  ~ Sửa: index.php (xóa duplicate SW registration — đã có ServiceWorkerManager.js)
+  ~ Sửa: assets/js/app.js (gọi ServiceWorkerManager.register() trong init)
+  ✅ Fix trắng trang hoàn chỉnh: container visible trước render OSMD → clientWidth đúng → không trắng
+  ✅ SQL injection: mọi query trong SetlistService đều dùng prepared statement
+  ✅ SQL injection: mọi query trong SetlistService đều dùng prepared statement
+  ✅ Setlist stale cache: ensureSongsLoaded tái dùng LibraryUI.getSongs() khi có
+  ✅ BUG-2 Race condition: ChordCanvas.loadSong() đưa vào Promise.all → chords ready TRƯỚC _injectChords()
+
+
+
+  ~ Sửa: api/controllers/SetlistController.php (Mặc định chord_profile là 'HD' thay vì 'default')
+  ~ Sửa: assets/js/setlist-ui.js           (Đồng bộ URLState trước khi playCurrentItem; Gửi active set khi addItem)
+  ~ Sửa: assets/js/library-ui.js           (Gửi active set khi addItem vào setlist)
+  ~ Chạy: tools/migrate_setlist_items.php  (Migrate dữ liệu cũ sang bộ 'HD' trong SQLite)
+  ✅ Giải quyết triệt để lỗi hợp âm không tải hoặc tải sai khi chuyển bài trong Setlist.
+  ✅ Đồng bộ URLState mượt mà qua các bài trong Setlist, giữ nguyên tông và set hợp âm khi F5.
+
 [2026-05-23] — Mobile optimization, Toolbar declutter & Chord entry bottom-sheet
   ~ Sửa: includes/toolbar.php             (Gộp Tốc độ/Volume/Voice Selector vào Audio settings panel dropdown)
   ~ Sửa: assets/css/layout.css            (Thêm styles cho .audio-settings-panel và .audio-panel-row)
@@ -388,4 +410,4 @@ SheetApp/
 ---
 
 *File này là "bộ nhớ" của dự án. AI Agent cập nhật sau mỗi phiên để phiên sau không phải khám phá lại từ đầu.*
-*Cập nhật: 2026-05-15*
+*Cập nhật: 2026-05-25*

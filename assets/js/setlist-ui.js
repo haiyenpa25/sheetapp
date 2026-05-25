@@ -13,7 +13,7 @@ const SetlistUI = (() => {
     try {
       const data = await window.ApiService.setlists.list();
       if (data.success) {
-        _setlists = data.data;
+        _setlists = Array.isArray(data.data) ? data.data : [];
         renderList();
       }
     } catch (e) {
@@ -177,6 +177,12 @@ const SetlistUI = (() => {
       return;
     }
 
+    // Cập nhật URL trước khi load bài hát để đồng bộ state và tránh bị _restoreFromURL ghi đè
+    if (window.URLState) {
+      URLState.resetForNewSong(songId);
+      URLState.update({ set: item.chord_profile || 'HD', t: item.transpose_key || 0 });
+    }
+
     // Đưa cả profile lẫn transpose_key qua bên App
     window.App?.loadSongWithProfile?.(songObj, item.chord_profile, item.transpose_key);
     document.querySelector('.toolbar-left')?.classList.add('in-setlist');
@@ -218,8 +224,10 @@ const SetlistUI = (() => {
     if (toneStr === null) return; // Hủy
     let transpose_key = parseInt(toneStr) || 0;
 
+    const currentSet = window.ChordCanvas?.getCurrentSet?.() || 'HD';
+
     try {
-      const data = await window.ApiService.setlists.addItem({ setlist_id: setId, song_id: songId, order_index: songIndex, transpose_key: transpose_key });
+      const data = await window.ApiService.setlists.addItem({ setlist_id: setId, song_id: songId, order_index: songIndex, transpose_key: transpose_key, chord_profile: currentSet });
       if (data.success) {
         window.App?.showToast?.('Đã thêm vào Setlist!', 'success');
         if (_currentSetlist?.id === setId) viewSetlistDetail(setId); // Refresh detail
@@ -248,6 +256,12 @@ const SetlistUI = (() => {
   let _songsPromise = null;
 
   async function ensureSongsLoaded() {
+    // Nếu LibraryUI đã có data (load xong) → dùng luôn, không gọi API thêm
+    const libSongs = window.LibraryUI?.getSongs?.();
+    if (libSongs && libSongs.length > 0) {
+      _allSongsCache = libSongs;
+      return;
+    }
     if (_allSongsCache.length > 0) return;
     if (!_songsPromise) {
       _songsPromise = window.ApiService.songs.list().then(data => {

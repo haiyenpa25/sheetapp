@@ -18,13 +18,7 @@
   <!-- iOS PWA icons -->
   <meta name="apple-mobile-web-app-title" content="SheetApp">
   <link rel="apple-touch-icon" href="/assets/img/icon-192.png">
-  <!-- Service Worker — đăng ký sớm nhất có thể để cache bắt đầu -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js', { scope: '/' })
-        .catch(() => {}); // Silent fail — không crash app nếu SW lỗi
-    }
-  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <!-- Chỉ load 2 weights cần thiết, display=swap để không block render -->

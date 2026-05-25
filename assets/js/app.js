@@ -35,6 +35,8 @@ const App = (() => {
 
     ToolbarController.init();
     KeyboardHandler.init();
+    if (window.ServiceWorkerManager) ServiceWorkerManager.register();
+
 
     // Library callbacks
     LibraryUI.onSelect(song => SongLoader.load(song));

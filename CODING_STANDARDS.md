@@ -331,7 +331,7 @@ const res = await fetch(song.xmlPath); // static XML file
 2. Không phải endpoint `api/index.php?route=...`
 3. Phải có comment `// INTENTIONAL EXCEPTION:` ngay trước dòng fetch()
 
-### 4.2 Mở rộng ApiService khi có endpoint mới
+### 4.3 Mở rộng ApiService khi có endpoint mới
 
 ```javascript
 // Trong ApiService.js, thêm vào đúng domain object:
@@ -344,6 +344,29 @@ const foo = {
 // Thêm vào return:
 return { songs, chordSets, ..., foo };
 ```
+
+### 4.4 Nguyên tắc đồng bộ State & URL
+
+**Quy tắc vàng:** Khi thay đổi thực thể chính (như chuyển bài hát qua Setlist, Library, History, v.v.), URL của trình duyệt phải được cập nhật/làm sạch **trước khi** chạy tiến trình tải dữ liệu (`SongLoader.load`).
+
+```javascript
+// ✅ ĐÚNG — Làm sạch và ghi đè tham số URL mới trước khi load
+if (window.URLState) {
+  URLState.resetForNewSong(songId);
+  URLState.update({ set: item.chord_profile || 'HD', t: item.transpose_key || 0 });
+}
+window.App?.loadSongWithProfile?.(songObj, item.chord_profile, item.transpose_key);
+
+// ❌ SAI — Không cập nhật URL, loader chạy _restoreFromURL() sẽ lấy nhầm params của bài hát cũ đè lên bài hát mới
+window.App?.loadSongWithProfile?.(songObj, item.chord_profile, item.transpose_key);
+```
+
+### 4.5 Giá trị mặc định phòng thủ (Defensive Defaults)
+
+Mọi mặc định nghiệp vụ cốt lõi (như quy tắc "Bộ hợp âm HD là mặc định") phải được thống nhất 100% xuyên suốt:
+1. **Database Schema:** Cột lưu trữ có giá trị mặc định khớp quy tắc (hoặc cho phép null/default).
+2. **PHP Controller:** Khi parse request, nếu client không truyền, phải gán fallback về đúng bộ mặc định (vd: `'HD'`).
+3. **JS Client:** Khi gửi API tạo/thêm bản ghi, chủ động truyền cấu hình đang hiển thị để bảo toàn trạng thái trực quan của người dùng.
 
 ---
 
@@ -398,4 +421,4 @@ SheetApp/
 ---
 
 *Template này áp dụng riêng cho SheetApp (PHP + SQLite + Vanilla JS + OSMD).*
-*Cập nhật: 2026-05-15*
+*Cập nhật: 2026-05-25*

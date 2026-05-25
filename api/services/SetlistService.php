@@ -13,7 +13,7 @@ class SetlistService {
         $setlist = DB::run("SELECT * FROM setlists WHERE id = ?", [$id])->fetch();
         if (!$setlist) return null;
 
-        $items = DB::query("SELECT * FROM setlist_items WHERE setlist_id = {$id} ORDER BY display_order ASC");
+        $items = DB::run("SELECT * FROM setlist_items WHERE setlist_id = ? ORDER BY display_order ASC", [$id])->fetchAll(PDO::FETCH_ASSOC);
         $setlist['items'] = $items;
         return $setlist;
     }

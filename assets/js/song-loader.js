@@ -6,6 +6,9 @@
 const SongLoader = (() => {
   'use strict';
 
+  let _isFirstLoad = true;
+  let _autoFitRetryCount = 0; // Module-scoped, không dùng window.*
+
   /* ── Load bài hát hoàn chỉnh ── */
   async function load(song, transposeOverride = null, profileOverride = 'HD') {
     if (!song?.xmlPath) { AppUI.showToast('Bài hát chưa có file sheet nhạc', 'error'); return; }
@@ -21,8 +24,7 @@ const SongLoader = (() => {
     if (window.ChordCanvas?.resetSet) ChordCanvas.resetSet();
     if (window.InstrumentMixer?.clearState) InstrumentMixer.clearState();
 
-    // Load chord canvas và annotation song song (không block UI)
-    ChordCanvas.loadSong(song.id, profileOverride);
+    // AnnotationCanvas không ảnh hưởng đến render — fire-and-forget
     AnnotationCanvas.loadSong(song.id);
     PageNav.reset();
 
@@ -31,11 +33,14 @@ const SongLoader = (() => {
     _autoCloseSidebar();
 
     try {
-      // ── Fetch XML + session settings song song (tiết kiệm 1 round-trip) ──
+      // ── Fetch XML + session + chord data SONG SONG (tiết kiệm round-trip, tránh race condition) ──
+      // FIX BUG-2: ChordCanvas.loadSong() phải hoàn thành TRƯỚC _injectChords() bên dưới.
+      // Đặt cùng Promise.all → 3 request song song, _customChords sẵn sàng khi cần.
       AppUI.setLoadingText('Đang tải dữ liệu...');
       const [res, settings] = await Promise.all([
         fetch(song.xmlPath),
-        ApiService.sessions.load(song.id).catch(() => ({}))
+        ApiService.sessions.load(song.id).catch(() => ({})),
+        ChordCanvas.loadSong(song.id, profileOverride)  // đảm bảo chords ready trước render
       ]);
       if (!res.ok) throw new Error(`Không thể tải file: ${res.status}`);
       const xml = await res.text();
@@ -50,11 +55,18 @@ const SongLoader = (() => {
       AppUI.setLoadingText('Đang vẽ bản nhạc...');
       const processedXml = _injectChords(xml);
       OSMDRenderer.setZoomSilent(zoom);
+
+      // Bắt buộc hiển thị container trước khi render để OSMD tính đúng clientWidth
+      // (nếu #sheet-area đang hidden, OSMD sẽ tính width=0 → trắng trang)
+      document.getElementById('sheet-area')?.classList.remove('hidden');
+
       await OSMDRenderer.load(processedXml, transpose);
 
-      // ── Post-render tasks (song song) ──
+      // ── Post-render tasks ──
       _syncZoomUI(zoom);
-      if (!settings?.userSettings?.zoomLevel || window.innerWidth < 768) setTimeout(_autoFitZoom, 80);
+      // Luôn chạy autoFitZoom sau mỗi lần load (kể cả khi đã có zoom từ session)
+      // để đảm bảo SVG được layout đúng sau khi container vừa được hiển thị
+      setTimeout(_autoFitZoom, 80);
 
       SheetAudioPlayer.setup(OSMDRenderer.getInstance());
       AppUI.updateTransposeDisplay(transpose);
@@ -78,7 +90,10 @@ const SongLoader = (() => {
 
       AppUI.updateSessionPanel(transpose, []);
       _showLoadToast(song, transpose);
-      if (window.URLState) _restoreFromURL(); // bỏ await
+      if (window.URLState && _isFirstLoad) {
+        _isFirstLoad = false;
+        _restoreFromURL(); // bỏ await
+      }
       if (window.HistoryManager) HistoryManager.trackView(song);
 
       document.getElementById('btn-print')?.removeAttribute('disabled');
@@ -209,18 +224,19 @@ const SongLoader = (() => {
     }
 
     if (!svgW) {
-      if (!window._autoFitRetryCount) window._autoFitRetryCount = 0;
-      if (window._autoFitRetryCount < 5) {
-        window._autoFitRetryCount++;
+      if (_autoFitRetryCount < 5) {
+        _autoFitRetryCount++;
         setTimeout(_autoFitZoom, 50);
       }
       return;
     }
-    window._autoFitRetryCount = 0; // reset
+    _autoFitRetryCount = 0; // reset
 
     const ratio = avail / svgW;
     // Snap sang bước zoom gần nhất (10%, 15%, ..., 200%)
     const pct = Math.round(Math.max(0.1, Math.min(2.0, ratio)) * 20) * 5; // bước 5%
+    // Chỉ apply autofit nếu user chưa chỉnh zoom trong session
+    // (container đã được unhide trước render nên OSMD render đúng rồi)
     if (Store.get('currentZoom') === 1.0) window.App?.setZoom?.(pct);
   }
 
