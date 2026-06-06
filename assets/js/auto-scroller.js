@@ -23,7 +23,7 @@ const AutoScroller = (() => {
 
   function _detectBpm(osmd) {
     try {
-      const measures = osmd.sheet?.SourceMeasures;
+      const measures = osmd.Sheet?.SourceMeasures;  // capital Sheet (OSMD API)
       if (!measures?.length) return 80;
       for (const meas of measures) {
         const exps = meas.staffLinkedExpressions?.[0]?.[0]?.TempoExpressions;
@@ -83,7 +83,7 @@ const AutoScroller = (() => {
         // Sprint E1 — Measure progress
         try {
           const curMeasure   = osmd.cursor.iterator.CurrentMeasureIndex ?? 0;
-          const totalMeasures = osmd.sheet?.SourceMeasures?.length ?? 1;
+          const totalMeasures = osmd.Sheet?.SourceMeasures?.length ?? 1;  // capital Sheet
           window.App?.updateMeasureProgress?.(curMeasure + 1, totalMeasures);
         } catch(e) {}
 

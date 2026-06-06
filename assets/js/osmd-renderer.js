@@ -514,7 +514,7 @@ const OSMDRenderer = (() => {
       }
 
       // KHI ĐANG BẬT GỌN NHẸ -> Đọc cấu hình
-      osmd.sheet.Instruments.forEach((ins, insIndex) => {
+      osmd.Sheet.Instruments.forEach((ins, insIndex) => {  // BUG fix: capital Sheet (OSMD API)
           if (ins.Staves) {
               if (compactPrefs.hideBass) {
                   if (ins.Staves.length >= 2) {

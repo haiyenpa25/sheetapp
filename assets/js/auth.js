@@ -151,9 +151,9 @@ const Auth = (() => {
     document.getElementById('btn-admin-console')?.classList.toggle('hidden', !canEdit);
     document.getElementById('btn-omr-upload')?.classList.toggle('hidden', !canEdit);
 
-    // Setlist add button — admin only
+    // Setlist add button — banhat + admin (matches library-ui.js canEdit logic)
     document.querySelectorAll('.song-add-setlist-btn').forEach(btn => {
-      btn.classList.toggle('hidden', !canEdit);
+      btn.classList.toggle('hidden', !canEditChords);
     });
   }
 
