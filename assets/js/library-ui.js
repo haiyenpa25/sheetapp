@@ -25,8 +25,16 @@ const LibraryUI = (() => {
 
     loadSongs();
 
-    document.getElementById('btn-prev-song')?.addEventListener('click', () => App?.navigatePrev?.());
-    document.getElementById('btn-next-song')?.addEventListener('click', () => App?.navigateNext?.());
+    document.getElementById('btn-prev-song')?.addEventListener('click', () => {
+      // Nếu đang trong setlist → nhường quyền cho SetlistUI (tránh double-fire)
+      if (window.SetlistUI?.getCurrentSetlist?.()) return;
+      App?.navigatePrev?.();
+    });
+    document.getElementById('btn-next-song')?.addEventListener('click', () => {
+      // Nếu đang trong setlist → nhường quyền cho SetlistUI (tránh double-fire)
+      if (window.SetlistUI?.getCurrentSetlist?.()) return;
+      App?.navigateNext?.();
+    });
     document.getElementById('btn-search-lyrics')?.addEventListener('click', _toggleSearchMode);
     categoryEl()?.addEventListener('change', _onSearch);
 
@@ -366,8 +374,10 @@ const LibraryUI = (() => {
   // ── Setlist ──────────────────────────────────────────────────
   async function _promptAddToSetlist(songId) {
     if (!songId) return;
-    const data = await ApiService.setlists.list();
-    if (!data?.length) { window.App?.showToast('Chưa có Setlist nào được tạo', 'error'); return; }
+    const resp = await ApiService.setlists.list();
+    // API trả về {success: true, data: [...]} không phải raw array
+    const data = Array.isArray(resp) ? resp : (resp?.data ?? []);
+    if (!data.length) { window.App?.showToast('Chưa có Setlist nào được tạo', 'error'); return; }
 
     // Hiện modal thay vì prompt()
     const modal = document.getElementById('add-to-setlist-modal');

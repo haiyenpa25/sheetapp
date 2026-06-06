@@ -17,8 +17,17 @@ const KeyboardHandler = (() => {
     const xml = Store.get('originalXml');
 
     switch (e.key) {
-      case 'ArrowDown': e.preventDefault(); App?.navigateNext?.(); break;
-      case 'ArrowUp':   e.preventDefault(); App?.navigatePrev?.(); break;
+      // BUG-8 fix: Nếu đang trong Setlist → dùng Setlist navigation, không nhảy library
+      case 'ArrowDown':
+        e.preventDefault();
+        if (window.SetlistUI?.getCurrentSetlist?.()) { SetlistUI.next(); }
+        else { App?.navigateNext?.(); }
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        if (window.SetlistUI?.getCurrentSetlist?.()) { SetlistUI.prev(); }
+        else { App?.navigatePrev?.(); }
+        break;
       case ' ':
         e.preventDefault();
         const wrapper = document.querySelector('.sheet-viewer-wrapper') || document.documentElement;

@@ -125,10 +125,10 @@ const SetlistUI = (() => {
         <button class="icon-btn-xs text-danger btn-del-item" title="Xóa khỏi list">✕</button>
       `;
       
-      el.addEventListener('click', (e) => {
+      el.addEventListener('click', async (e) => {
         if (e.target.closest('.btn-del-item')) return;
         _currentIndex = idx;
-        renderSetlistItems();
+        await renderSetlistItems(); // Phải await để DOM cập nhật active trước khi load
         playCurrentItem();
       });
       
@@ -186,9 +186,6 @@ const SetlistUI = (() => {
     // Đưa cả profile lẫn transpose_key qua bên App
     window.App?.loadSongWithProfile?.(songObj, item.chord_profile, item.transpose_key);
     document.querySelector('.toolbar-left')?.classList.add('in-setlist');
-    
-    // Đánh dấu active trong detail view
-    renderSetlistItems();
   }
 
   function promptAddSong(songId) {
@@ -241,14 +238,14 @@ const SetlistUI = (() => {
   function next() {
     if (_currentSetlist && _currentIndex >= 0 && _currentIndex < _currentSetlist.items.length - 1) {
       _currentIndex++;
-      playCurrentItem();
+      renderSetlistItems().then(() => playCurrentItem()); // await via .then() vì next() không async
     }
   }
 
   function prev() {
     if (_currentSetlist && _currentIndex > 0) {
       _currentIndex--;
-      playCurrentItem();
+      renderSetlistItems().then(() => playCurrentItem()); // await via .then() vì prev() không async
     }
   }
 
@@ -314,10 +311,10 @@ const SetlistUI = (() => {
 
     document.getElementById('btn-back-setlists')?.addEventListener('click', backToSetlists);
     
-    document.getElementById('btn-play-setlist')?.addEventListener('click', () => {
+    document.getElementById('btn-play-setlist')?.addEventListener('click', async () => {
       if (_currentSetlist && _currentSetlist.items && _currentSetlist.items.length > 0) {
         _currentIndex = 0;
-        renderSetlistItems();
+        await renderSetlistItems();
         playCurrentItem();
       }
     });

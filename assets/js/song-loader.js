@@ -16,6 +16,7 @@ const SongLoader = (() => {
     Store.set('currentSong', song);
     Store.set('currentTranspose', transposeOverride ?? 0);
     Store.set('capoLevel', 0);
+    _autoFitRetryCount = 0; // BUG-12 fix: reset retry budget cho mỗi bài mới
 
     // Reset nhanh các state cũ
     _resetCapoUI();

@@ -497,7 +497,7 @@ const OSMDRenderer = (() => {
   }
 
   function _applyCompactMode() {
-      if (!osmd || !osmd.sheet) return;
+      if (!osmd || !osmd.Sheet) return;  // BUG-11 fix: capital S (OSMD API)
       
       let compactPrefs = { hideBass: true, hideVoices: true, hideText: true };
       if (window.DisplaySettings) compactPrefs = DisplaySettings.getCompactPrefs();

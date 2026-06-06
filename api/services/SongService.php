@@ -8,7 +8,7 @@ class SongService {
     public static function getAll(): array {
         return DB::query("
             SELECT s.id, s.title, s.httlvnId, s.xmlPath, s.defaultKey, s.category_id,
-                   c.name as category_name
+                   c.name as category
             FROM songs s
             LEFT JOIN categories c ON s.category_id = c.id
             ORDER BY s.httlvnId ASC, s.title ASC
@@ -19,7 +19,7 @@ class SongService {
         $keyword = '%' . $q . '%';
         $rows = DB::run("
             SELECT s.id, s.title, s.httlvnId, s.xmlPath, s.defaultKey, s.category_id,
-                   c.name as category_name, s.lyrics_text
+                   c.name as category, s.lyrics_text
             FROM songs s
             LEFT JOIN categories c ON s.category_id = c.id
             WHERE s.lyrics_text LIKE ?
@@ -75,7 +75,12 @@ class SongService {
             $f = __DIR__ . '/../../' . $song['xmlPath'];
             if (file_exists($f)) @unlink($f);
         }
-        $sf = __DIR__ . '/../../storage/data/sessions/' . $id . '.json';
+        // BUG-6 fix: SessionService dùng {prefix}_{hash}.json, không phải {id}.json
+        // Dùng cùng logic để tìm đúng tên file session
+        $sessDir = __DIR__ . '/../../storage/data/sessions/';
+        $prefix = preg_replace('/[^a-z0-9\-]/', '', strtolower(substr($id, 0, 30)));
+        $hash   = substr(md5($id), 0, 8);
+        $sf = $sessDir . ($prefix ? "{$prefix}_{$hash}" : $hash) . '.json';
         if (file_exists($sf)) @unlink($sf);
         return ['success' => true, 'id' => $id];
     }

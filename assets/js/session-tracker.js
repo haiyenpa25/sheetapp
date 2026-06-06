@@ -117,3 +117,5 @@ const SessionTracker = (() => {
     getHistory
   };
 })();
+
+window.SessionTracker = SessionTracker;
