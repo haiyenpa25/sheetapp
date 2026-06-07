@@ -100,16 +100,17 @@ const ChordCanvasUI = (() => {
       pop.classList.add('cc-popup-mobile');
       requestAnimationFrame(() => { pop.classList.add('active'); });
     } else {
-      // Desktop / iPad: popup float gần chord
+      // Desktop / iPad: popup float bên DƯỚI chord dot
       let popLeft = ar.left + ar.width / 2;
       const vw = window.innerWidth;
       const hw = 145;
       if (popLeft < hw) popLeft = hw;
       if (popLeft > vw - hw) popLeft = vw - hw;
-      const popTop = ar.top - 12;
+      // Hiển thị bêN DƯỚI anchor (ar.bottom + 8px khoảng cách)
+      const popTop = ar.bottom + 8;
       pop.style.cssText = [
         'position:fixed', `left:${popLeft}px`, `top:${popTop}px`,
-        'transform:translateX(-50%) translateY(-100%)',
+        'transform:translateX(-50%)',
         'z-index:99999',
         'background:var(--bg-surface,#fff)',
         'border:1px solid rgba(109,40,217,0.3)',
@@ -121,7 +122,17 @@ const ChordCanvasUI = (() => {
         'opacity:0',
         'transition:opacity .15s ease'
       ].join(';');
-      requestAnimationFrame(() => { pop.style.opacity = '1'; });
+      // Sau khi render, check viewport overflow → flip lên trên nếu cần
+      requestAnimationFrame(() => {
+        const pr = pop.getBoundingClientRect();
+        const vh = window.innerHeight;
+        if (pr.bottom > vh - 8) {
+          // Không đủ chỗ bên dưới → hiển thị phía trên anchor
+          pop.style.top = (ar.top - 8) + 'px';
+          pop.style.transform = 'translateX(-50%) translateY(-100%)';
+        }
+        pop.style.opacity = '1';
+      });
     }
 
     pop.innerHTML = `
@@ -134,10 +145,12 @@ const ChordCanvasUI = (() => {
       </div>
       <input id="cc-pop-inp" type="text" maxlength="12" autocomplete="off"
              placeholder="VD: Am, D7, G…" value="${existing}"
-             style="width:100%;box-sizing:border-box;border:1px solid #ddd;border-radius:5px;
-                    padding:.3rem .55rem;font-size:.95rem;font-weight:700;font-family:monospace;
-                    color:#c00;outline:none;background:#fff;margin-bottom:.35rem;
-                    text-transform:capitalize;">
+             style="width:100%;box-sizing:border-box;border:1.5px solid #c4b5fd;border-radius:5px;
+                    padding:.35rem .55rem;font-size:.95rem;font-weight:700;font-family:monospace;
+                    color:#c00;outline:none;background:var(--bg-base,#fff);margin-bottom:.35rem;
+                    text-transform:capitalize;transition:border-color .15s;"
+             onfocus="this.style.borderColor='#6d28d9';this.style.boxShadow='0 0 0 3px rgba(109,40,217,.18)'"
+             onblur="this.style.borderColor='#c4b5fd';this.style.boxShadow='none'">
       <div id="cc-sug-hist" style="display:flex;align-items:flex-start;gap:4px;min-height:22px;margin-bottom:2px;"></div>
       <div id="cc-sug-key"  style="display:flex;align-items:flex-start;gap:4px;min-height:22px;margin-bottom:.35rem;"></div>
       <details id="cc-lib-det" style="margin-bottom:.4rem;">

@@ -247,7 +247,17 @@ const LibraryUI = (() => {
       } else {
         filtered = filtered.filter(s => {
           const num = String(s.httlvnId || '').padStart(3, '0');
-          return s.title?.toLowerCase().includes(q) || num.startsWith(q.replace(/^0+/, ''));
+          const qNum = parseInt(q, 10);
+          // Match theo tên bài
+          const titleMatch = s.title?.toLowerCase().includes(q);
+          // Match theo số: so sánh số nguyên (tìm "1" khớp bài 001)
+          const numExact = !isNaN(qNum) && s.httlvnId === qNum;
+          // Match theo chuỗi số padded ("001", "01", "1" đều tìm bài 1)
+          const numStr = num.includes(q.padStart ? q : q);
+          // Match khi q là chuỗi toàn số: so khớp cả num padded
+          const isNumQuery = /^\d+$/.test(q);
+          const numMatch = isNumQuery ? (numExact || num === q.padStart(3, '0') || num.endsWith(q.padStart(q.length, '0'))) : false;
+          return titleMatch || numMatch;
         });
       }
     }
