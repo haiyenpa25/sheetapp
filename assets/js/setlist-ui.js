@@ -4,6 +4,11 @@
 const SetlistUI = (() => {
   'use strict';
 
+  /** Escape HTML để tránh XSS khi chèn vào innerHTML */
+  function _esc(str) {
+    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
   let _setlists = [];
   let _currentSetlist = null; // object setlist hiện tại
   let _currentIndex = -1;
@@ -41,8 +46,8 @@ const SetlistUI = (() => {
       item.className = 'song-item';
       item.innerHTML = `
         <div class="song-item-info">
-          <div class="song-item-title">${sl.title}</div>
-          <div class="song-item-meta">${sl.scheduled_date} • ${sl.item_count} bài hát</div>
+          <div class="song-item-title">${_esc(sl.title)}</div>
+          <div class="song-item-meta">${_esc(sl.scheduled_date)} • ${_esc(String(sl.item_count))} bài hát</div>
         </div>
         ${window.Auth && window.Auth.isAdmin() ? `<button class="icon-btn-xs text-danger btn-del" title="Xoá">✕</button>` : ''}
       `;
@@ -112,12 +117,12 @@ const SetlistUI = (() => {
       el.className = 'song-item';
       if (_currentIndex === idx) el.classList.add('active');
       
-      const toneBadge = item.transpose_key && item.transpose_key != 0 ? `<span class="tag tag-purple">Tone: ${item.transpose_key > 0 ? '+' : ''}${item.transpose_key}</span>` : '';
-      const chordBadge = item.chord_profile !== 'default' ? `<span class="tag">🎸 ${item.chord_profile}</span>` : '';
+      const toneBadge = item.transpose_key && item.transpose_key != 0 ? `<span class="tag tag-purple">Tone: ${item.transpose_key > 0 ? '+' : ''}${parseInt(item.transpose_key)}</span>` : '';
+      const chordBadge = item.chord_profile && item.chord_profile !== 'default' ? `<span class="tag">🎸 ${_esc(item.chord_profile)}</span>` : '';
 
       el.innerHTML = `
         <div class="song-item-info">
-          <div class="song-item-title">${idx + 1}. ${title}</div>
+          <div class="song-item-title">${idx + 1}. ${_esc(title)}</div>
           <div class="song-item-meta text-xs" style="display:flex;gap:4px;margin-top:4px;">
             ${toneBadge} ${chordBadge}
           </div>
@@ -347,9 +352,9 @@ const SetlistUI = (() => {
           let html = '';
           matches.forEach(m => {
             if (!m) return;
-            const mId = m.id || '';
-            const mHtt = m.httlvnId ? m.httlvnId + ' - ' : '';
-            const mTitle = m.title || 'Bài hát';
+            const mId = _esc(m.id || '');
+            const mHtt = m.httlvnId ? _esc(String(m.httlvnId)) + ' - ' : '';
+            const mTitle = _esc(m.title || 'Bài hát');
             html += '<div class="song-item" style="cursor: pointer; padding: 0.65rem 0.75rem; border-bottom: 1px solid var(--border);" data-id="' + mId + '"><div style="font-size: 0.85rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">' + mHtt + mTitle + '</div></div>';
           });
           addResults.innerHTML = html;

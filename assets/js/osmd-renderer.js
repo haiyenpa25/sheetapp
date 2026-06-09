@@ -10,9 +10,9 @@ const OSMDRenderer = (() => {
   let containerId = null;
   let currentXmlString = null;
   let currentZoom = 1.0;
-  let currentTranspose = 0;
+  // NOTE: currentTranspose không lưu ở đây — dùng Store.get('currentTranspose')
   let isLoaded = false;
-  let onReadyCallback = null;
+  let _onReadyCallbacks = []; // BUG-C fix: array thay vì single callback
   let _isCompactMode = false;
   let _titleCompacted = false; // flag tránh compact title nhiều lần
 
@@ -303,7 +303,7 @@ const OSMDRenderer = (() => {
       _titleCompacted = false;
       _compactTitleSVG();
       isLoaded = true;
-      if (onReadyCallback) onReadyCallback(osmd);
+      _onReadyCallbacks.forEach(cb => { try { cb(osmd); } catch(e) {} });
       return osmd;
     } catch (err) {
       console.error('[OSMD] Lỗi khi load:', err);
@@ -338,7 +338,7 @@ const OSMDRenderer = (() => {
       _forceLayoutRecalc();
       _titleCompacted = false;
       _compactTitleSVG();
-      if (onReadyCallback) onReadyCallback(osmd);  // Gọi lại để ChordCanvas rebuild
+      _onReadyCallbacks.forEach(cb => { try { cb(osmd); } catch(e) {} }); // Gọi lại để ChordCanvas rebuild
       return osmd;
     } catch (err) {
       console.error('[OSMD] Lỗi reload:', err);
@@ -357,7 +357,7 @@ const OSMDRenderer = (() => {
       _forceLayoutRecalc();
       await osmd.render();
       _forceLayoutRecalc();
-      if (onReadyCallback) onReadyCallback(osmd);
+      _onReadyCallbacks.forEach(cb => { try { cb(osmd); } catch(e) {} });
     }
   }
 
@@ -381,7 +381,8 @@ const OSMDRenderer = (() => {
 
   function getCurrentXml() { return currentXmlString; }
 
-  function onReady(cb) { onReadyCallback = cb; }
+  /** Thêm callback khi OSMD render xong — hỗ trợ nhiều caller */
+  function onReady(cb) { _onReadyCallbacks.push(cb); }
 
   function destroy() {
     if (osmd) {

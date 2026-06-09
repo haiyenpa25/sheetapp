@@ -3,7 +3,8 @@
  * api/services/ChordSetService.php
  */
 class ChordSetService {
-    public const BASE_DIR = __DIR__ . '/../../data/chord_sets';
+    // BUG-B fix: lưu trong storage/ cùng với DB và sessions
+    public const BASE_DIR = __DIR__ . '/../../storage/data/chord_sets';
 
     private static function getSongDir(string $songId): string {
         $safe = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $songId);

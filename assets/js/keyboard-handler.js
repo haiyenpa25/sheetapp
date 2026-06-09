@@ -28,7 +28,7 @@ const KeyboardHandler = (() => {
         if (window.SetlistUI?.getCurrentSetlist?.()) { SetlistUI.prev(); }
         else { App?.navigatePrev?.(); }
         break;
-      case ' ':
+      case ' ': {
         e.preventDefault();
         const wrapper = document.querySelector('.sheet-viewer-wrapper') || document.documentElement;
         if (wrapper) {
@@ -39,6 +39,7 @@ const KeyboardHandler = (() => {
           });
         }
         break;
+      }
       case 'ArrowRight':
         if (!e.ctrlKey && !e.metaKey && xml) { e.preventDefault(); App?.transposeBy?.(+1); }
         break;

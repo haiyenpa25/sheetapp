@@ -95,93 +95,176 @@
   </div>
 </div>
 
-<!-- ===== HELP MODAL ===== -->
-<div id="help-modal" class="modal-overlay hidden" style="align-items:flex-start; padding: 1rem;">
-  <div class="modal-box" style="max-width:740px; width:100%; margin:auto; max-height:90vh; display:flex; flex-direction:column;">
+<!-- ===== TRANSPOSE PICK MODAL (INC-3 — thay prompt()) ===== -->
+<div id="transpose-pick-modal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:340px;">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:.6rem;">
+        <span style="font-size:1.25rem;">🎵</span>
+        <h3 style="margin:0;font-size:1rem;">Dịch Giọng Bài Hát</h3>
+      </div>
+      <button id="btn-close-transpose-pick" class="icon-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:.75rem;">Chọn số cung dịch giọng khi thêm bài vào Setlist:</p>
+      <div id="transpose-pick-song-name" style="font-weight:600;font-size:.9rem;margin-bottom:1rem;padding:.5rem .75rem;background:var(--bg-overlay);border-radius:var(--radius-sm);border:1px solid var(--border);"></div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.4rem;margin-bottom:1rem;">
+        <button class="tp-btn" data-v="-4">-4</button>
+        <button class="tp-btn" data-v="-3">-3</button>
+        <button class="tp-btn" data-v="-2">-2</button>
+        <button class="tp-btn" data-v="-1">-1</button>
+        <button class="tp-btn tp-zero active" data-v="0">0</button>
+        <button class="tp-btn" data-v="1">+1</button>
+        <button class="tp-btn" data-v="2">+2</button>
+        <button class="tp-btn" data-v="3">+3</button>
+        <button class="tp-btn" data-v="4">+4</button>
+        <button class="tp-btn" data-v="5">+5</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;">
+        <label style="font-size:.82rem;color:var(--text-secondary);white-space:nowrap;">Tùy chỉnh:</label>
+        <input id="transpose-pick-custom" type="number" min="-12" max="12" value="0"
+          class="form-input" style="width:80px;text-align:center;font-size:.95rem;font-weight:600;">
+      </div>
+      <div style="display:flex;gap:.5rem;">
+        <button id="btn-transpose-pick-cancel" class="btn btn-ghost" style="flex:1;">Hủy</button>
+        <button id="btn-transpose-pick-ok" class="btn btn-primary" style="flex:2;">✓ Xác Nhận</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== HELP MODAL (F9 upgrade — keyboard shortcuts + tiếng Việt) ===== -->
+<div id="help-modal" class="modal-overlay hidden" style="align-items:flex-start;padding:1rem;">
+  <div class="modal-box" style="max-width:760px;width:100%;margin:auto;max-height:90vh;display:flex;flex-direction:column;">
     <div class="modal-header" style="flex-shrink:0;">
-      <div style="display:flex; align-items:center; gap:.75rem;">
+      <div style="display:flex;align-items:center;gap:.75rem;">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <h3 style="margin:0; font-size:1rem;">Huong Dan Su Dung SheetApp</h3>
+        <h3 style="margin:0;font-size:1rem;">Hướng Dẫn Sử Dụng SheetApp</h3>
       </div>
       <button id="btn-close-help" class="icon-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
     <div style="display:flex;gap:.3rem;padding:.65rem 1rem .25rem;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none;">
-      <button class="help-tab active" data-tab="basics">Nhac</button>
-      <button class="help-tab" data-tab="transpose">Dich Giong</button>
-      <button class="help-tab" data-tab="chords">Hop Am</button>
-      <button class="help-tab" data-tab="lyric">Loi Nhac</button>
-      <button class="help-tab" data-tab="compact">Gon Nhe</button>
-      <button class="help-tab" data-tab="tips">Meo</button>
+      <button class="help-tab active" data-tab="basics">📖 Cơ Bản</button>
+      <button class="help-tab" data-tab="shortcuts">⌨️ Phím Tắt</button>
+      <button class="help-tab" data-tab="transpose">🎵 Dịch Giọng</button>
+      <button class="help-tab" data-tab="chords">🎸 Hợp Âm</button>
+      <button class="help-tab" data-tab="compact">📐 Gọn Nhẹ</button>
+      <button class="help-tab" data-tab="setlist">📋 Setlist</button>
     </div>
     <div class="help-body" style="flex:1;overflow-y:auto;padding:1.25rem;">
+
+      <!-- Cơ Bản -->
       <div class="help-pane active" id="help-tab-basics">
-        <p>Chon bai hat tu sidebar trai. Zoom bang thanh truot. Phat nhac MIDI bang nut Phat. Cuon tu dong bang menu Cuon.</p>
-        <h4>Tim kiem</h4>
-        <ul><li>Ten bai hat (VD: "Phuoc Nguyen")</li><li>So bai (VD: "028")</li><li>Loc danh muc qua dropdown</li></ul>
+        <p>Chọn bài hát từ sidebar trái. Dùng thanh zoom để phóng to/thu nhỏ. Phát nhạc MIDI bằng nút <strong>▶ Phát</strong>. Cuộn tự động theo nhịp bằng menu <strong>Cuộn</strong>.</p>
+        <h4>Tìm kiếm</h4>
+        <ul>
+          <li>Tìm theo <strong>tên bài</strong> — gõ tên đầy đủ hoặc một phần</li>
+          <li>Tìm theo <strong>số thứ tự</strong> — gõ số nguyên: <code>28</code> → bài 028</li>
+          <li>Tìm theo <strong>lời bài hát</strong> — nhấn nút 🔍 để chuyển chế độ</li>
+          <li>Lọc theo <strong>danh mục</strong> qua dropdown bên dưới search</li>
+        </ul>
+        <h4>Điều hướng nhanh</h4>
+        <p>Dùng các nút <strong>1–100, 101–200...</strong> để nhảy đến nhóm bài nhanh. Nhấn <strong>◀ ▶</strong> để chuyển bài liên tiếp trong danh sách đang hiển thị.</p>
       </div>
+
+      <!-- Phím Tắt (F9) -->
+      <div class="help-pane hidden" id="help-tab-shortcuts">
+        <p style="margin-bottom:1rem;">Tất cả phím tắt hoạt động khi <strong>không đang nhập text</strong>. Trên iPad/Mobile dùng các nút trên giao diện.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          <div>
+            <h4>Điều hướng</h4>
+            <table class="shortcut-table">
+              <tr><td><kbd>↑</kbd> / <kbd>↓</kbd></td><td>Bài trước / Tiếp theo</td></tr>
+              <tr><td><kbd>PageUp</kbd> / <kbd>PageDown</kbd></td><td>Trang trước / Tiếp</td></tr>
+              <tr><td><kbd>Space</kbd></td><td>Cuộn xuống 70% màn hình</td></tr>
+              <tr><td><kbd>Shift</kbd>+<kbd>Space</kbd></td><td>Cuộn lên</td></tr>
+            </table>
+            <h4>Dịch giọng</h4>
+            <table class="shortcut-table">
+              <tr><td><kbd>←</kbd> / <kbd>→</kbd></td><td>Dịch -1 / +1 cung</td></tr>
+              <tr><td><kbd>0</kbd></td><td>Reset về tông gốc</td></tr>
+            </table>
+          </div>
+          <div>
+            <h4>Xem & Hiển thị</h4>
+            <table class="shortcut-table">
+              <tr><td><kbd>Ctrl</kbd>+<kbd>+</kbd></td><td>Phóng to</td></tr>
+              <tr><td><kbd>Ctrl</kbd>+<kbd>-</kbd></td><td>Thu nhỏ</td></tr>
+              <tr><td><kbd>F</kbd></td><td>Toàn màn hình</td></tr>
+              <tr><td><kbd>P</kbd></td><td>In bài nhạc</td></tr>
+              <tr><td><kbd>D</kbd></td><td>Chuyển Dark/Light mode</td></tr>
+            </table>
+            <h4>Hợp âm & Tiện ích</h4>
+            <table class="shortcut-table">
+              <tr><td><kbd>C</kbd></td><td>Bật/tắt chế độ thêm hợp âm</td></tr>
+              <tr><td><kbd>H</kbd></td><td>Highlight hợp âm</td></tr>
+              <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>Hoàn tác hợp âm</td></tr>
+              <tr><td><kbd>Ctrl</kbd>+<kbd>Y</kbd></td><td>Làm lại hợp âm</td></tr>
+              <tr><td><kbd>?</kbd></td><td>Mở hướng dẫn này</td></tr>
+              <tr><td><kbd>Esc</kbd></td><td>Đóng popup / Thoát fullscreen</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dịch Giọng -->
       <div class="help-pane hidden" id="help-tab-transpose">
-        <p>Bam nut tang/giam tong trong thanh trang phia tren ban nhac. Reset de ve tong goc. Trang thai luu tu dong.</p>
+        <p>Nhấn nút <strong>+1 / -1</strong> trên thanh trạng thái phía trên bản nhạc để dịch từng cung. Nhấn <strong>Reset</strong> để về tông gốc.</p>
+        <h4>Capo</h4>
+        <p>Dùng nút <strong>Capo</strong> để đặt capo tại vị trí cụ thể. Hệ thống sẽ tính toán lại hợp âm tương ứng.</p>
+        <h4>Dịch giọng trong Setlist</h4>
+        <p>Khi thêm bài vào Setlist, bạn có thể đặt dịch giọng mặc định cho từng bài — ví dụ bài này +2 cung, bài kia -1 cung. Setlist sẽ tự động áp dụng khi play.</p>
       </div>
+
+      <!-- Hợp âm -->
       <div class="help-pane hidden" id="help-tab-chords">
-        <p>Bam "Them Hop Am" de vao che do sua. Bam cham tim (+) de them hop am. Bam chu hop am do de sua/xoa.</p>
+        <p>Nhấn <strong>+ Thêm Hợp Âm</strong> để vào chế độ chỉnh sửa. Bấm vào dấu <strong>+</strong> màu xanh trên khuông nhạc để thêm hợp âm tại vị trí đó.</p>
+        <h4>Bộ hợp âm (Sets)</h4>
+        <ul>
+          <li><strong>HD</strong> — Bộ mặc định của ban hát</li>
+          <li><strong>default</strong> — Hợp âm gốc trong file MusicXML</li>
+          <li>Tạo bộ mới bằng nút <strong>+ Bộ mới</strong> để lưu nhiều phiên bản</li>
+        </ul>
+        <h4>Lưu hợp âm</h4>
+        <p>Nhấn <strong>💾 Lưu</strong> để lưu vào server. Nhấn <strong>Ghi vào File</strong> để lưu vĩnh viễn vào file XML gốc (chỉ Admin/Ban Hát).</p>
       </div>
-      <div class="help-pane hidden" id="help-tab-lyric">
-        <p>Bam "Loi Nhac" tren toolbar. Hop am hien thi mau do phia tren loi ca. Ho tro dich giong. Bam "Ban Nhac" de quay lai.</p>
-      </div>
+
+      <!-- Gọn nhẹ -->
       <div class="help-pane hidden" id="help-tab-compact">
-        <p>Bam "Gon Nhe" tren toolbar. Bam gear de chon: An Khoa Fa / An Be Phu / An Not Chum / An Ten Bai.</p>
+        <p>Nhấn <strong>📐 Gọn Nhẹ</strong> trên toolbar để bật chế độ đơn giản hóa bản nhạc. Nhấn <strong>⚙</strong> bên cạnh để tùy chỉnh:</p>
+        <ul>
+          <li>✅ <strong>Ẩn Khóa Fa</strong> — Chỉ hiển thị khuông cao âm (treble)</li>
+          <li>✅ <strong>Ẩn Bè Phụ</strong> — Chỉ giữ giai điệu chính</li>
+          <li>✅ <strong>Ẩn Nốt Chùm</strong> — Mỗi nhịp chỉ một nốt cao nhất</li>
+          <li>✅ <strong>Ẩn Tên Bài</strong> — Gọn cho màn hình nhỏ</li>
+        </ul>
+        <p>Chế độ Gọn Nhẹ lý tưởng cho iPad, điện thoại, hoặc khi muốn đọc lời nhanh.</p>
       </div>
-      <div class="help-pane hidden" id="help-tab-tips">
-        <h4>Phim tat</h4>
-        <ul><li>Up/Down: Bai truoc/tiep</li><li>Left/Right: Trang truoc/tiep</li><li>Ctrl+/-: Zoom</li><li>Esc: Dong popup</li><li>?: Mo huong dan nay</li></ul>
+
+      <!-- Setlist -->
+      <div class="help-pane hidden" id="help-tab-setlist">
+        <p>Setlist cho phép tạo danh sách bài hát cho một buổi thờ phượng. Click vào Setlist để xem danh sách bài, dùng <strong>◀ ▶</strong> hoặc phím <kbd>↑↓</kbd> để chuyển bài.</p>
+        <h4>Tạo và quản lý</h4>
+        <ul>
+          <li>Tạo Setlist mới từ tab <strong>Setlist</strong> trong sidebar</li>
+          <li>Thêm bài hát bằng cách tìm kiếm trong popup Add</li>
+          <li>Mỗi bài có thể có <strong>dịch giọng riêng</strong> và <strong>bộ hợp âm riêng</strong></li>
+          <li>Kéo thả để sắp xếp thứ tự bài</li>
+        </ul>
       </div>
+
     </div>
     <div style="padding:.75rem 1.25rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
-      <span style="font-size:.78rem;color:var(--text-secondary);">SheetApp - 983 bai Thanh Ca</span>
-      <button id="btn-close-help-footer" class="btn btn-ghost btn-sm">Dong</button>
+      <span style="font-size:.78rem;color:var(--text-secondary);">SheetApp — Nhạc Thánh Ca Tương Tác | Nhấn <kbd style="padding:.1rem .35rem;border:1px solid var(--border);border-radius:4px;font-size:.75rem;">?</kbd> để mở bất cứ lúc nào</span>
+      <button id="btn-close-help-footer" class="btn btn-ghost btn-sm">Đóng</button>
     </div>
   </div>
 </div>
-<style>
-.help-tab{padding:.35rem .8rem;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:.78rem;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .15s;}
-.help-tab:hover{background:var(--bg-overlay);color:var(--text);}
-.help-tab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
-.help-pane{display:none;}.help-pane.active{display:block;}
-.help-body h4{font-size:.9rem;font-weight:600;margin:.75rem 0 .4rem;padding-bottom:.35rem;border-bottom:1px solid var(--border);}
-.help-body p,.help-body li{font-size:.87rem;color:var(--text-secondary);line-height:1.6;}
-.help-body ul{padding-left:1.2rem;}
-</style>
-<script>
-(function(){document.addEventListener('DOMContentLoaded',function(){
-  var modal=document.getElementById('help-modal');
-  var btnOpen=document.getElementById('btn-help');
-  var btnClose=document.getElementById('btn-close-help');
-  var btnCloseF=document.getElementById('btn-close-help-footer');
-  function open(){modal&&modal.classList.remove('hidden');}
-  function close(){modal&&modal.classList.add('hidden');}
-  if(btnOpen)btnOpen.addEventListener('click',open);
-  if(btnClose)btnClose.addEventListener('click',close);
-  if(btnCloseF)btnCloseF.addEventListener('click',close);
-  if(modal)modal.addEventListener('click',function(e){if(e.target===modal)close();});
-  document.addEventListener('keydown',function(e){
-    if(e.key==='?'&&!e.ctrlKey&&!e.metaKey&&document.activeElement.tagName!=='INPUT'&&document.activeElement.tagName!=='TEXTAREA'){
-      if(modal&&modal.classList.contains('hidden'))open();
-    }
-    if(e.key==='Escape'&&modal&&!modal.classList.contains('hidden'))close();
-  });
-  document.querySelectorAll('.help-tab').forEach(function(tab){
-    tab.addEventListener('click',function(){
-      document.querySelectorAll('.help-tab').forEach(function(t){t.classList.remove('active');});
-      document.querySelectorAll('.help-pane').forEach(function(p){p.classList.remove('active');p.classList.add('hidden');});
-      tab.classList.add('active');
-      var pane=document.getElementById('help-tab-'+tab.dataset.tab);
-      if(pane){pane.classList.remove('hidden');pane.classList.add('active');}
-    });
-  });
-});})();
-</script>
+
 
 <!-- ===== PWA INSTALL INSTRUCTION MODAL ===== -->
 <div id="pwa-install-modal" class="modal-overlay hidden">

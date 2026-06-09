@@ -3,8 +3,8 @@
  * v3: pointerdown instant, không preventDefault trên action buttons,
  *     visual feedback qua CSS :active (không cần JS), dedup bằng pointerId
  */
-'use strict';
 const LibraryUI = (() => {
+  'use strict';
 
   let songs        = [];
   let activeSongId = null;
@@ -246,17 +246,14 @@ const LibraryUI = (() => {
         );
       } else {
         filtered = filtered.filter(s => {
-          const num = String(s.httlvnId || '').padStart(3, '0');
-          const qNum = parseInt(q, 10);
           // Match theo tên bài
           const titleMatch = s.title?.toLowerCase().includes(q);
-          // Match theo số: so sánh số nguyên (tìm "1" khớp bài 001)
-          const numExact = !isNaN(qNum) && s.httlvnId === qNum;
-          // Match theo chuỗi số padded ("001", "01", "1" đều tìm bài 1)
-          const numStr = num.includes(q.padStart ? q : q);
-          // Match khi q là chuỗi toàn số: so khớp cả num padded
+          // Match theo số httlvnId (chỉ khi query là chuỗi toàn số)
           const isNumQuery = /^\d+$/.test(q);
-          const numMatch = isNumQuery ? (numExact || num === q.padStart(3, '0') || num.endsWith(q.padStart(q.length, '0'))) : false;
+          if (!isNumQuery) return titleMatch;
+          const qNum = parseInt(q, 10);
+          // So sánh số nguyên chính xác: "50" → bài 50 (050), không ra 150, 250
+          const numMatch = !isNaN(qNum) && s.httlvnId === qNum;
           return titleMatch || numMatch;
         });
       }
@@ -402,7 +399,14 @@ const LibraryUI = (() => {
       item.addEventListener('click', async () => {
         modal.classList.add('hidden');
         const currentSet = window.ChordCanvas?.getCurrentSet?.() || 'HD';
-        const result = await ApiService.setlists.addItem({ setlist_id: parseInt(item.dataset.id), song_id: songId, chord_profile: currentSet });
+        // BUG-E fix: truyền transpose_key = transpose hiện tại (không để mặc định 0)
+        const currentTranspose = window.Store?.get?.('currentTranspose') ?? 0;
+        const result = await ApiService.setlists.addItem({
+          setlist_id: parseInt(item.dataset.id),
+          song_id: songId,
+          chord_profile: currentSet,
+          transpose_key: currentTranspose
+        });
         if (result) window.App?.showToast('Đã thêm bài hát vào Setlist', 'success');
       });
     });

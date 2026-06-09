@@ -61,6 +61,11 @@ class SongService {
             if (isset($data[$f])) { $fields[] = "$f = ?"; $params[] = $data[$f]; }
         }
         if (isset($data['categoryId'])) { $fields[] = 'category_id = ?'; $params[] = intval($data['categoryId']); }
+        // INC-7 fix: Cho phép admin update httlvnId (số thứ tự bài hát)
+        if (array_key_exists('httlvnId', $data)) {
+            $fields[] = 'httlvnId = ?';
+            $params[] = $data['httlvnId'] !== '' && $data['httlvnId'] !== null ? intval($data['httlvnId']) : null;
+        }
         if (!$fields) return ['error' => 'No data to update'];
         $params[] = $id;
         DB::run("UPDATE songs SET " . implode(', ', $fields) . " WHERE id = ?", $params);
