@@ -119,24 +119,56 @@ const SetlistUI = (() => {
       
       const toneBadge = item.transpose_key && item.transpose_key != 0 ? `<span class="tag tag-purple">Tone: ${item.transpose_key > 0 ? '+' : ''}${parseInt(item.transpose_key)}</span>` : '';
       const chordBadge = item.chord_profile && item.chord_profile !== 'default' ? `<span class="tag">🎸 ${_esc(item.chord_profile)}</span>` : '';
+      const bpmBadge = item.bpm ? `<span class="tag tag-blue" title="${_esc(String(item.beats_per_measure || 4))}/4 nhịp">♩${_esc(String(item.bpm))} BPM</span>` : '';
+      const isAdmin = window.Auth && window.Auth.canEdit && window.Auth.canEdit();
 
       el.innerHTML = `
-        <div class="song-item-info">
+        <div class="song-item-info" style="flex:1;min-width:0;">
           <div class="song-item-title">${idx + 1}. ${_esc(title)}</div>
-          <div class="song-item-meta text-xs" style="display:flex;gap:4px;margin-top:4px;">
-            ${toneBadge} ${chordBadge}
+          <div class="song-item-meta text-xs" style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;">
+            ${toneBadge} ${chordBadge} ${bpmBadge}
           </div>
         </div>
-        <button class="icon-btn-xs text-danger btn-del-item" title="Xóa khỏi list">✕</button>
+        <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+          ${isAdmin ? `<button class="icon-btn-xs btn-save-bpm" title="Lưu BPM hiện tại vào bài này" style="color:var(--accent);font-size:.7rem;padding:.2rem .4rem;">♩Lưu BPM</button>` : ''}
+          <button class="icon-btn-xs text-danger btn-del-item" title="Xóa khỏi list">✕</button>
+        </div>
       `;
       
       el.addEventListener('click', async (e) => {
-        if (e.target.closest('.btn-del-item')) return;
+        if (e.target.closest('.btn-del-item') || e.target.closest('.btn-save-bpm')) return;
         _currentIndex = idx;
-        await renderSetlistItems(); // Phải await để DOM cập nhật active trước khi load
+        await renderSetlistItems();
         playCurrentItem();
       });
-      
+
+      // Nút lưu BPM hiện tại vào item này
+      const saveBpmBtn = el.querySelector('.btn-save-bpm');
+      if (saveBpmBtn) {
+        saveBpmBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const currentBpm   = window.Metronome?.getBpm?.() ?? null;
+          const currentBeats = window.Metronome?.getBeatsPerMeasure?.() ?? 4;
+          if (!currentBpm) {
+            window.App?.showToast?.('Chưa có BPM. Mở máy gõ nhịp trước!', 'warning');
+            return;
+          }
+          saveBpmBtn.textContent = '...';
+          saveBpmBtn.disabled = true;
+          try {
+            await window.ApiService.setlists.updateItem(item.id, { bpm: currentBpm, beats_per_measure: currentBeats });
+            item.bpm = currentBpm;
+            item.beats_per_measure = currentBeats;
+            window.App?.showToast?.(`✅ Đã lưu ♩${currentBpm} BPM cho "${title}"`, 'success');
+            await renderSetlistItems();
+          } catch(err) {
+            window.App?.showToast?.('Lỗi lưu BPM', 'error');
+            saveBpmBtn.textContent = '♩Lưu BPM';
+            saveBpmBtn.disabled = false;
+          }
+        });
+      }
+
       const delBtn = el.querySelector('.btn-del-item');
       if (delBtn) {
         delBtn.addEventListener('click', async (e) => {
@@ -191,6 +223,12 @@ const SetlistUI = (() => {
     // Đưa cả profile lẫn transpose_key qua bên App
     window.App?.loadSongWithProfile?.(songObj, item.chord_profile, item.transpose_key);
     document.querySelector('.toolbar-left')?.classList.add('in-setlist');
+
+    // Apply BPM đã lưu cho bài này (nếu có)
+    if (item.bpm && window.Metronome) {
+      window.Metronome.setBpmAndBeats(parseInt(item.bpm), parseInt(item.beats_per_measure) || 4);
+      window.App?.showToast?.(`♩ ${item.bpm} BPM`, 'info', 1800);
+    }
   }
 
   function promptAddSong(songId) {

@@ -27,10 +27,31 @@ class SetlistService {
         DB::run("DELETE FROM setlists WHERE id = ?", [$id]);
     }
 
-    public static function addItem(int $setlistId, string $songId, string $chordProfile, int $transposeKey): void {
+    public static function addItem(int $setlistId, string $songId, string $chordProfile, int $transposeKey, ?int $bpm = null, ?int $beatsPerMeasure = null): void {
         $order = DB::run("SELECT IFNULL(MAX(display_order), 0) + 1 FROM setlist_items WHERE setlist_id = ?", [$setlistId])->fetchColumn();
-        DB::run("INSERT INTO setlist_items (setlist_id, song_id, display_order, chord_profile, transpose_key) VALUES (?, ?, ?, ?, ?)",
-            [$setlistId, $songId, $order, $chordProfile, $transposeKey]);
+        DB::run(
+            "INSERT INTO setlist_items (setlist_id, song_id, display_order, chord_profile, transpose_key, bpm, beats_per_measure) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [$setlistId, $songId, $order, $chordProfile, $transposeKey, $bpm, $beatsPerMeasure]
+        );
+    }
+
+    /**
+     * Update BPM và beats_per_measure cho 1 item (PATCH)
+     * Fields được phép update: chord_profile, transpose_key, bpm, beats_per_measure, display_order
+     */
+    public static function updateItem(int $itemId, array $data): bool {
+        $allowed = ['chord_profile', 'transpose_key', 'bpm', 'beats_per_measure', 'display_order'];
+        $fields = []; $params = [];
+        foreach ($allowed as $f) {
+            if (array_key_exists($f, $data)) {
+                $fields[] = "$f = ?";
+                $params[] = $data[$f] !== '' && $data[$f] !== null ? (in_array($f, ['transpose_key','bpm','beats_per_measure','display_order']) ? (int)$data[$f] : $data[$f]) : null;
+            }
+        }
+        if (!$fields) return false;
+        $params[] = $itemId;
+        DB::run("UPDATE setlist_items SET " . implode(', ', $fields) . " WHERE id = ?", $params);
+        return true;
     }
 
     public static function removeItem(int $itemId): void {

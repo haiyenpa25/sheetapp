@@ -381,7 +381,18 @@ const Metronome = (() => {
     }
   }
 
-  return { init, play, stop, togglePlay, setBpm, showPanel, hidePanel, togglePanel };
+  function getBpm() { return _bpm; }
+  function getBeatsPerMeasure() { return _beatsPerMeasure; }
+
+  /** Đặt cả BPM + nhịp cùng lúc (dùng khi play setlist item) */
+  function setBpmAndBeats(bpm, beats) {
+    if (bpm && bpm >= 30 && bpm <= 250) _bpm = bpm;
+    if (beats && beats >= 1 && beats <= 12) _beatsPerMeasure = beats;
+    _updateBpmUI();
+    _renderBeatDots();
+  }
+
+  return { init, play, stop, togglePlay, setBpm, getBpm, getBeatsPerMeasure, setBpmAndBeats, showPanel, hidePanel, togglePanel };
 })();
 
 window.Metronome = Metronome;

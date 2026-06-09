@@ -53,6 +53,7 @@ const ApiService = (() => {
     create:     (data)          => _json('POST',   'api/index.php?route=setlists', data),
     delete:     (id)            => _request(`api/index.php?route=setlists&id=${id}`, { method: 'DELETE' }),
     addItem:    (data)          => _json('POST', 'api/index.php?route=setlists&action=add_item', data),
+    updateItem: (id, data)      => _json('POST', `api/index.php?route=setlists&action=update_item&id=${id}`, data),
     removeItem: (id)            => _request(`api/index.php?route=setlists&action=remove_item&id=${id}`, { method: 'DELETE' }),
   };
 
