@@ -303,3 +303,115 @@
     </div>
   </div>
 </div>
+
+<script>
+/* ===== HELP MODAL INIT ===== */
+(function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    var modal   = document.getElementById('help-modal');
+    var btnOpen = document.getElementById('btn-help');
+    var btnClose  = document.getElementById('btn-close-help');
+    var btnCloseF = document.getElementById('btn-close-help-footer');
+
+    function openHelp(tabId) {
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      if (tabId) {
+        document.querySelectorAll('.help-tab').forEach(function(t) { t.classList.remove('active'); });
+        document.querySelectorAll('.help-pane').forEach(function(p) { p.classList.remove('active'); p.classList.add('hidden'); });
+        var tab = document.querySelector('.help-tab[data-tab="' + tabId + '"]');
+        var pane = document.getElementById('help-tab-' + tabId);
+        if (tab) tab.classList.add('active');
+        if (pane) { pane.classList.remove('hidden'); pane.classList.add('active'); }
+      }
+    }
+    function closeHelp() { modal && modal.classList.add('hidden'); }
+
+    if (btnOpen)   btnOpen.addEventListener('click', function() { openHelp(); });
+    if (btnClose)  btnClose.addEventListener('click', closeHelp);
+    if (btnCloseF) btnCloseF.addEventListener('click', closeHelp);
+    if (modal)     modal.addEventListener('click', function(e) { if (e.target === modal) closeHelp(); });
+
+    document.querySelectorAll('.help-tab').forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.help-tab').forEach(function(t) { t.classList.remove('active'); });
+        document.querySelectorAll('.help-pane').forEach(function(p) { p.classList.remove('active'); p.classList.add('hidden'); });
+        tab.classList.add('active');
+        var pane = document.getElementById('help-tab-' + tab.dataset.tab);
+        if (pane) { pane.classList.remove('hidden'); pane.classList.add('active'); }
+      });
+    });
+
+    document.addEventListener('keydown', function(e) {
+      var tag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+      if (['input','textarea','select'].includes(tag)) return;
+      if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
+        if (modal && modal.classList.contains('hidden')) openHelp('shortcuts');
+        else closeHelp();
+      }
+    });
+
+    window._helpModalOpen = openHelp;
+  });
+})();
+
+/* ===== TRANSPOSE PICK MODAL INIT ===== */
+(function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    var modal     = document.getElementById('transpose-pick-modal');
+    var customIn  = document.getElementById('transpose-pick-custom');
+    var btnOk     = document.getElementById('btn-transpose-pick-ok');
+    var btnCancel = document.getElementById('btn-transpose-pick-cancel');
+    var btnClose  = document.getElementById('btn-close-transpose-pick');
+    var _cb = null;
+
+    function closePick(val) {
+      if (modal) modal.classList.add('hidden');
+      if (_cb) { _cb(val); _cb = null; }
+    }
+
+    document.querySelectorAll('.tp-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.tp-btn').forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        if (customIn) customIn.value = btn.dataset.v;
+      });
+    });
+
+    if (customIn) {
+      customIn.addEventListener('input', function() {
+        var v = parseInt(customIn.value) || 0;
+        document.querySelectorAll('.tp-btn').forEach(function(b) {
+          b.classList.toggle('active', parseInt(b.dataset.v) === v);
+        });
+      });
+      customIn.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); closePick(parseInt(customIn.value) || 0); }
+        if (e.key === 'Escape') { e.preventDefault(); closePick(null); }
+      });
+    }
+
+    if (btnOk)     btnOk.addEventListener('click',    function() { closePick(parseInt(customIn ? customIn.value : 0) || 0); });
+    if (btnCancel) btnCancel.addEventListener('click', function() { closePick(null); });
+    if (btnClose)  btnClose.addEventListener('click',  function() { closePick(null); });
+    if (modal)     modal.addEventListener('click', function(e) { if (e.target === modal) closePick(null); });
+
+    /* Public API: window.TransposePick.show(songName, defaultVal) → Promise<number|null> */
+    window.TransposePick = {
+      show: function(songName, defaultVal) {
+        if (!modal) return Promise.resolve(0);
+        var defV = defaultVal !== undefined ? (parseInt(defaultVal) || 0) : 0;
+        if (customIn) customIn.value = defV;
+        document.querySelectorAll('.tp-btn').forEach(function(b) {
+          b.classList.toggle('active', parseInt(b.dataset.v) === defV);
+        });
+        var nameEl = document.getElementById('transpose-pick-song-name');
+        if (nameEl) nameEl.textContent = songName || '';
+        modal.classList.remove('hidden');
+        setTimeout(function() { if (customIn) customIn.select(); }, 80);
+        return new Promise(function(resolve) { _cb = resolve; });
+      }
+    };
+  });
+})();
+</script>

@@ -221,10 +221,21 @@ const SetlistUI = (() => {
 
   async function addSongToSetlist(setId, songId) {
     const songIndex = _currentSetlist && _currentSetlist.items ? _currentSetlist.items.length : 0;
-    
-    let toneStr = prompt("Nhập số cung dịch giọng cho bài này (vd: -2, 0, +1):", "0");
-    if (toneStr === null) return; // Hủy
-    let transpose_key = parseInt(toneStr) || 0;
+
+    // INC-3 fix: dùng TransposePick modal thay vì prompt()
+    const songName = _allSongsCache.find(s => String(s.id) === String(songId))?.title || 'Bài hát';
+    const currentTranspose = window.Store?.get?.('currentTranspose') ?? 0;
+
+    let transpose_key;
+    if (window.TransposePick) {
+      transpose_key = await window.TransposePick.show(songName, currentTranspose);
+      if (transpose_key === null) return; // Hủy
+    } else {
+      // Fallback nếu modal chưa load
+      const toneStr = prompt('Nhập số cung dịch giọng (vd: -2, 0, +1):', String(currentTranspose));
+      if (toneStr === null) return;
+      transpose_key = parseInt(toneStr) || 0;
+    }
 
     const currentSet = window.ChordCanvas?.getCurrentSet?.() || 'HD';
 

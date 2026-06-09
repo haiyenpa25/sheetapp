@@ -1785,3 +1785,146 @@ body.dark-mode #btn-toolbar-metronome.active {
   body.dark-mode #osmd-container svg { filter: none !important; }
 }
 
+
+/* =============================================================
+   HELP MODAL — Keyboard Shortcuts Table & Styles (F9)
+   ============================================================= */
+
+.help-tab {
+  padding: .35rem .8rem;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: .78rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s;
+}
+.help-tab:hover { background: var(--bg-overlay); color: var(--text); }
+.help-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.help-pane { display: none; }
+.help-pane.active { display: block; }
+
+.help-body h4 {
+  font-size: .9rem; font-weight: 600;
+  margin: .75rem 0 .4rem;
+  padding-bottom: .35rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.help-body p, .help-body li {
+  font-size: .87rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+.help-body ul { padding-left: 1.25rem; }
+.help-body code {
+  font-family: var(--font-mono, monospace);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: .05rem .35rem;
+  font-size: .82rem;
+  color: var(--accent);
+}
+
+/* Keyboard key pill */
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: .1rem .4rem;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--bg-surface);
+  color: var(--text);
+  font-family: var(--font-mono, monospace);
+  font-size: .75rem;
+  font-weight: 600;
+  line-height: 1.4;
+  box-shadow: 0 1px 0 rgba(0,0,0,.12);
+  white-space: nowrap;
+}
+body.dark-mode kbd {
+  background: #1e293b;
+  border-color: #475569;
+  color: #e2e8f0;
+  box-shadow: 0 1px 0 rgba(0,0,0,.4);
+}
+
+/* Shortcut table (2-column layout) */
+.shortcut-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: .25rem;
+}
+.shortcut-table tr { border-bottom: 1px solid var(--border); }
+.shortcut-table tr:last-child { border-bottom: none; }
+.shortcut-table td {
+  padding: .35rem .25rem;
+  font-size: .82rem;
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+.shortcut-table td:first-child {
+  white-space: nowrap;
+  padding-right: .75rem;
+  min-width: 120px;
+}
+.shortcut-table td:first-child kbd { margin-right: 2px; }
+
+/* Dark mode */
+body.dark-mode .shortcut-table tr { border-bottom-color: #1e293b; }
+
+/* =============================================================
+   TRANSPOSE PICK MODAL (INC-3)
+   ============================================================= */
+
+.tp-btn {
+  padding: .4rem;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text);
+  font-size: .82rem;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  cursor: pointer;
+  text-align: center;
+  transition: all .15s;
+  line-height: 1;
+}
+.tp-btn:hover {
+  border-color: var(--accent);
+  background: rgba(109,40,217,.07);
+  color: var(--accent);
+}
+.tp-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(109,40,217,.35);
+}
+.tp-btn.tp-zero { /* Nút 0 có style đặc biệt khi default */
+  border-color: rgba(109,40,217,.4);
+  color: var(--accent);
+}
+.tp-btn.tp-zero.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+body.dark-mode .tp-btn {
+  background: var(--bg-raised);
+  border-color: #374151;
+  color: #d1d5db;
+}
+body.dark-mode .tp-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(109,40,217,.12);
+}
