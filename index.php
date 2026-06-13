@@ -127,7 +127,15 @@ echo cssTag('fab.css');
       <button id="btn-metronome-toggle-play" class="btn-metronome-play" title="Bật/Tắt âm gõ nhịp">🔊 Bật nhịp</button>
       <button id="btn-metronome-tap" class="btn-metronome-tap" title="Gõ liên tục theo tốc độ để tính BPM">TAP</button>
     </div>
-    
+
+    <!-- Lưu BPM vào Setlist (chỉ hiện khi đang play setlist) -->
+    <div id="metronome-save-bpm-row" class="metronome-setting-row" style="display:none;border-top:1px solid var(--border);padding-top:.55rem;margin-top:.2rem;">
+      <span class="metronome-setting-label" style="font-size:.72rem;color:var(--text-muted);">Setlist:</span>
+      <button id="btn-metronome-save-bpm" class="btn btn-primary btn-xs" style="font-size:.72rem;font-weight:700;padding:.2rem .6rem;" title="Lưu BPM này vào bài hát đang chọn trong Setlist">
+        💾 Lưu BPM
+      </button>
+    </div>
+
     <!-- Metronome Volume & Sound Select -->
     <div class="metronome-settings">
       <div class="metronome-setting-row">

@@ -117,10 +117,17 @@ const SetlistUI = (() => {
       el.className = 'song-item';
       if (_currentIndex === idx) el.classList.add('active');
       
-      const toneBadge = item.transpose_key && item.transpose_key != 0 ? `<span class="tag tag-purple">Tone: ${item.transpose_key > 0 ? '+' : ''}${parseInt(item.transpose_key)}</span>` : '';
-      const chordBadge = item.chord_profile && item.chord_profile !== 'default' ? `<span class="tag">🎸 ${_esc(item.chord_profile)}</span>` : '';
-      const bpmBadge = item.bpm ? `<span class="tag tag-blue" title="${_esc(String(item.beats_per_measure || 4))}/4 nhịp">♩${_esc(String(item.bpm))} BPM</span>` : '';
-      const isAdmin = window.Auth && window.Auth.canEdit && window.Auth.canEdit();
+      const toneBadge = item.transpose_key && item.transpose_key != 0 
+        ? `<span class="tag tag-purple">Tone: ${item.transpose_key > 0 ? '+' : ''}${parseInt(item.transpose_key)}</span>` 
+        : '';
+      const chordBadge = item.chord_profile && item.chord_profile !== 'default' 
+        ? `<span class="tag">🎸 ${_esc(item.chord_profile)}</span>` 
+        : '';
+      const bpmBadge = item.bpm 
+        ? `<span class="tag tag-blue" title="Tempo đã lưu cho bài này">♩ ${_esc(String(item.bpm))} BPM</span>` 
+        : '';
+      // Fix: dùng Auth.isBanhat() (banhat + admin) thay vì canEdit() không tồn tại
+      const canSaveBpm = window.Auth && (window.Auth.isAdmin?.() || window.Auth.isBanhat?.());
 
       el.innerHTML = `
         <div class="song-item-info" style="flex:1;min-width:0;">
@@ -130,7 +137,7 @@ const SetlistUI = (() => {
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
-          ${isAdmin ? `<button class="icon-btn-xs btn-save-bpm" title="Lưu BPM hiện tại vào bài này" style="color:var(--accent);font-size:.7rem;padding:.2rem .4rem;">♩Lưu BPM</button>` : ''}
+          ${canSaveBpm ? `<button class="btn-save-bpm" title="Lưu BPM máy gõ nhịp hiện tại vào bài này trong Setlist" style="background:none;border:1px solid var(--accent);border-radius:5px;color:var(--accent);font-size:.68rem;font-weight:700;padding:.15rem .4rem;cursor:pointer;white-space:nowrap;">♩ Lưu BPM</button>` : ''}
           <button class="icon-btn-xs text-danger btn-del-item" title="Xóa khỏi list">✕</button>
         </div>
       `;
@@ -188,6 +195,7 @@ const SetlistUI = (() => {
     _currentSetlist = null;
     _currentIndex = -1;
     fetchSetlists();
+    _syncMetronomeSaveBtnVisibility(); // Ẩn nút luưu BPM khi thoát setlist
   }
 
   async function playCurrentItem() {
@@ -229,6 +237,8 @@ const SetlistUI = (() => {
       window.Metronome.setBpmAndBeats(parseInt(item.bpm), parseInt(item.beats_per_measure) || 4);
       window.App?.showToast?.(`♩ ${item.bpm} BPM`, 'info', 1800);
     }
+    // Cập nhật nút Lưu BPM trong metronome panel
+    _syncMetronomeSaveBtnVisibility();
   }
 
   function promptAddSong(songId) {
@@ -447,9 +457,71 @@ const SetlistUI = (() => {
     document.getElementById('btn-prev-song')?.addEventListener('click', (e) => {
       if (_currentSetlist) { e.preventDefault(); e.stopPropagation(); prev(); }
     }, true);
+
+    // ── Nút "💾 Lưu BPM" trong Metronome Panel ──
+    // Chỉ hiện khi đang play một bài trong setlist
+    const saveBpmPanelBtn = document.getElementById('btn-metronome-save-bpm');
+    const saveBpmPanelRow = document.getElementById('metronome-save-bpm-row');
+    if (saveBpmPanelBtn && saveBpmPanelRow) {
+      saveBpmPanelBtn.addEventListener('click', async () => {
+        if (!_currentSetlist || _currentIndex < 0 || _currentIndex >= _currentSetlist.items.length) {
+          window.App?.showToast?.('Chưa chọn bài nào trong Setlist', 'warning');
+          return;
+        }
+        const item    = _currentSetlist.items[_currentIndex];
+        const bpm     = window.Metronome?.getBpm?.() ?? null;
+        const beats   = window.Metronome?.getBeatsPerMeasure?.() ?? 4;
+        if (!bpm) {
+          window.App?.showToast?.('Chưa có BPM. Dùng slider hoặc TAP để chỉnh trước!', 'warning');
+          return;
+        }
+        const songTitle = _allSongsCache.find(s => String(s.id) === String(item.song_id))?.title || 'Bài hát';
+        saveBpmPanelBtn.textContent = '...';
+        saveBpmPanelBtn.disabled = true;
+        try {
+          await window.ApiService.setlists.updateItem(item.id, { bpm, beats_per_measure: beats });
+          item.bpm = bpm;
+          item.beats_per_measure = beats;
+          saveBpmPanelBtn.textContent = `✅ Đã lưu ${bpm} BPM`;
+          setTimeout(() => {
+            saveBpmPanelBtn.textContent = '💾 Lưu BPM';
+            saveBpmPanelBtn.disabled = false;
+          }, 2000);
+          window.App?.showToast?.(`✅ Đã lưu ♩${bpm} BPM cho "${songTitle}"`, 'success');
+          // Cập nhật badge trong setlist sidebar
+          renderSetlistItems();
+        } catch (err) {
+          window.App?.showToast?.('Lỗi lưu BPM', 'error');
+          saveBpmPanelBtn.textContent = '💾 Lưu BPM';
+          saveBpmPanelBtn.disabled = false;
+        }
+      });
+    }
   }
 
-  return { init, fetchSetlists, next, prev, getCurrentSetlist: () => _currentSetlist, getCurrentIndex: () => _currentIndex, promptAddSong };
+  /** Cập nhật hiển thị nút Lưu BPM trong metronome panel */
+  function _syncMetronomeSaveBtnVisibility() {
+    const row = document.getElementById('metronome-save-bpm-row');
+    if (!row) return;
+    const inSetlist = _currentSetlist && _currentIndex >= 0 && _currentIndex < (_currentSetlist.items?.length ?? 0);
+    const canSave = inSetlist && window.Auth && (window.Auth.isAdmin?.() || window.Auth.isBanhat?.());
+    row.style.display = canSave ? 'flex' : 'none';
+    // Cập nhật tooltip với tên bài đang phát
+    if (canSave) {
+      const item = _currentSetlist.items[_currentIndex];
+      const songName = _allSongsCache.find(s => String(s.id) === String(item.song_id))?.title || '';
+      const btn = document.getElementById('btn-metronome-save-bpm');
+      if (btn && songName) btn.title = `Lưu BPM vào: "${songName}"`;
+    }
+  }
+
+  return { 
+    init, fetchSetlists, next, prev, 
+    getCurrentSetlist: () => _currentSetlist, 
+    getCurrentIndex: () => _currentIndex, 
+    promptAddSong,
+    syncMetronomeSaveBtn: _syncMetronomeSaveBtnVisibility
+  };
 })();
 
 window.SetlistUI = SetlistUI;
